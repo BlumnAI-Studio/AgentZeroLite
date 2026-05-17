@@ -56,6 +56,9 @@ public partial class SettingsPanel
 
             SelectComboTag(cbTtsProvider, v.TtsProvider);
             pbTtsOpenAIKey.Password = v.TtsOpenAIApiKey;
+            tbSupertonicPython.Text = v.SupertonicPythonPath;
+            tbSupertonicSteps.Text = v.SupertonicSteps.ToString();
+            SelectComboTag(cbSupertonicLang, string.IsNullOrWhiteSpace(v.SupertonicLanguage) ? "ko" : v.SupertonicLanguage);
             PreloadSingleItem(cbTtsVoice, v.TtsVoice);
             ApplyTtsProviderUi(v.TtsProvider);
 
@@ -220,6 +223,7 @@ public partial class SettingsPanel
         bool needsVoice = provider != TtsProviderNames.Off;
         grdTtsVoice.Visibility = needsVoice ? Visibility.Visible : Visibility.Collapsed;
         grdTtsOpenAIKey.Visibility = provider == TtsProviderNames.OpenAITts ? Visibility.Visible : Visibility.Collapsed;
+        spTtsSupertonic.Visibility = provider == TtsProviderNames.Supertonic ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private VoiceSettings ReadVoiceFromUi()
@@ -240,6 +244,10 @@ public partial class SettingsPanel
         v.TtsProvider = ReadComboTag(cbTtsProvider, TtsProviderNames.Off);
         v.TtsOpenAIApiKey = pbTtsOpenAIKey.Password ?? "";
         v.TtsVoice = (cbTtsVoice.SelectedItem as string) ?? cbTtsVoice.Text ?? v.TtsVoice;
+        v.SupertonicPythonPath = tbSupertonicPython.Text?.Trim() ?? "";
+        v.SupertonicLanguage = ReadComboTag(cbSupertonicLang, "ko");
+        if (int.TryParse(tbSupertonicSteps.Text, out var st) && st >= 5 && st <= 12)
+            v.SupertonicSteps = st;
 
         v.InputDeviceId = (cbVoiceInputDevice.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
         v.VadThreshold = 100 - (int)slVoiceSensitivity.Value;
@@ -352,15 +360,7 @@ public partial class SettingsPanel
     private static ISpeechToText? CreateSttProvider(VoiceSettings v) => VoiceRuntimeFactory.BuildStt(v);
 
     /// <summary>Build the active <see cref="ITextToSpeech"/>; returns null when TTS is Off.</summary>
-    private static ITextToSpeech? CreateTtsProvider(VoiceSettings v)
-    {
-        return v.TtsProvider switch
-        {
-            TtsProviderNames.WindowsTts => new WindowsTts(),
-            TtsProviderNames.OpenAITts => new OpenAiTts(v.TtsOpenAIApiKey),
-            _ => null,
-        };
-    }
+    private static ITextToSpeech? CreateTtsProvider(VoiceSettings v) => VoiceRuntimeFactory.BuildTts(v);
 
     // ── event handlers ────────────────────────────────────────────────
 
@@ -578,6 +578,12 @@ public partial class SettingsPanel
                     tbTtsStatus.Foreground = voices.Count == 0
                         ? System.Windows.Media.Brushes.Goldenrod
                         : System.Windows.Media.Brushes.LightGreen;
+                    break;
+                case TtsProviderNames.Supertonic:
+                    foreach (var voice in SuperTonicTts.BuiltinVoices)
+                        cbTtsVoice.Items.Add(voice);
+                    tbTtsStatus.Text = $"✓ {SuperTonicTts.BuiltinVoices.Length} Supertonic voice(s) listed (builtin).";
+                    tbTtsStatus.Foreground = System.Windows.Media.Brushes.LightGreen;
                     break;
                 default:
                     tbTtsStatus.Text = "Pick a non-Off provider first.";
@@ -889,5 +895,47 @@ public partial class SettingsPanel
             tbVoiceTranscript.AppendText(line + Environment.NewLine);
             tbVoiceTranscript.ScrollToEnd();
         }), DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// "Check Install" — runs <c>{python} -m pip show supertonic</c> and surfaces
+    /// the result into <c>tbTtsStatus</c>. First-class probe because Supertonic
+    /// is the only provider that needs a separate pip install — Windows TTS and
+    /// OpenAI TTS are reachable as soon as their settings are filled in.
+    /// </summary>
+    private async void OnSupertonicProbe(object sender, RoutedEventArgs e)
+    {
+        btnSupertonicProbe.IsEnabled = false;
+        tbTtsStatus.Text = "Probing Supertonic install…";
+        tbTtsStatus.Foreground = System.Windows.Media.Brushes.SkyBlue;
+        try
+        {
+            var python = tbSupertonicPython.Text?.Trim() ?? "";
+            var tts = new SuperTonicTts(python);
+            var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                tbTtsStatus.Text = msg;
+                tbTtsStatus.Foreground = System.Windows.Media.Brushes.SkyBlue;
+            })));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var ok = await Task.Run(async () => await tts.EnsureReadyAsync(progress, cts.Token));
+            tbTtsStatus.Text = ok
+                ? "✓ Supertonic ready."
+                : "✗ Supertonic not found. Run: pip install supertonic";
+            tbTtsStatus.Foreground = ok
+                ? System.Windows.Media.Brushes.LightGreen
+                : System.Windows.Media.Brushes.OrangeRed;
+            AppLogger.Log($"[Voice-TTS] Supertonic probe | python='{python}' ready={ok}");
+        }
+        catch (Exception ex)
+        {
+            tbTtsStatus.Text = $"✗ Probe error: {ex.Message}";
+            tbTtsStatus.Foreground = System.Windows.Media.Brushes.OrangeRed;
+            AppLogger.LogError("[Voice-TTS] Supertonic probe failed", ex);
+        }
+        finally
+        {
+            btnSupertonicProbe.IsEnabled = true;
+        }
     }
 }

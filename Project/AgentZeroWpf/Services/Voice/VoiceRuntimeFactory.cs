@@ -36,6 +36,11 @@ internal static class VoiceRuntimeFactory
         {
             TtsProviderNames.WindowsTts => new WindowsTts(),
             TtsProviderNames.OpenAITts => new OpenAiTts(v.TtsOpenAIApiKey),
+            TtsProviderNames.Supertonic => new SuperTonicTts(v.SupertonicPythonPath)
+            {
+                Steps = v.SupertonicSteps,
+                Language = v.SupertonicLanguage,
+            },
             _ => null,
         };
     }

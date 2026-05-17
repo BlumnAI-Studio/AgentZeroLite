@@ -43,6 +43,14 @@ public static class TtsProviderNames
 
     /// <summary>OpenAI tts-1 cloud API.</summary>
     public const string OpenAITts = "OpenAITTS";
+
+    /// <summary>
+    /// Supertone Inc's local ONNX TTS, invoked via the <c>pip install supertonic</c>
+    /// Python CLI. 10 builtin voices (M1..M5 / F1..F5), 31 languages incl. Korean.
+    /// First AgentZero provider that depends on a user-side pip install — the
+    /// Voice tab probes for it and surfaces the install command when missing.
+    /// </summary>
+    public const string Supertonic = "Supertonic";
 }
 
 /// <summary>
@@ -104,6 +112,24 @@ public sealed class VoiceSettings
 
     /// <summary>OpenAITTS provider API key. Stored even when another provider is active.</summary>
     public string TtsOpenAIApiKey { get; set; } = "";
+
+    // ── Supertonic (pip-installed local CLI) ─────────────────────────────
+
+    /// <summary>
+    /// Python interpreter used to launch <c>python -m supertonic</c>. Empty →
+    /// bare <c>"python"</c> on PATH. Lets advanced users point at a venv or a
+    /// pyenv shim without polluting system PATH.
+    /// </summary>
+    public string SupertonicPythonPath { get; set; } = "";
+
+    /// <summary>ONNX inference steps, 5..12 (default 8 per Supertone model card).</summary>
+    public int SupertonicSteps { get; set; } = 8;
+
+    /// <summary>
+    /// BCP-47 short tag passed as <c>--lang</c>. Empty → <c>"na"</c> upstream
+    /// fallback (auto-detect). Korean = <c>"ko"</c>.
+    /// </summary>
+    public string SupertonicLanguage { get; set; } = "ko";
 
     // ── Capture / VAD ────────────────────────────────────────────────────
 

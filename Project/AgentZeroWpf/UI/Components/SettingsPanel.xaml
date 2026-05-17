@@ -1076,6 +1076,7 @@
                                     <ComboBoxItem Content="Off  (no voice output)" Tag="Off"/>
                                     <ComboBoxItem Content="Windows TTS  (System.Speech, offline)" Tag="WindowsTTS"/>
                                     <ComboBoxItem Content="OpenAI TTS  (tts-1)" Tag="OpenAITTS"/>
+                                    <ComboBoxItem Content="Supertonic  (pip — on-device ONNX)" Tag="Supertonic"/>
                                 </ComboBox>
                             </Grid>
 
@@ -1105,6 +1106,55 @@
                                 <PasswordBox x:Name="pbTtsOpenAIKey" Grid.Column="1"
                                              Style="{StaticResource DarkPasswordBox}"/>
                             </Grid>
+
+                            <StackPanel x:Name="spTtsSupertonic" Visibility="Collapsed">
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Python" FontFamily="Consolas" FontSize="10"
+                                               Foreground="#888899" VerticalAlignment="Center"/>
+                                    <TextBox x:Name="tbSupertonicPython" Grid.Column="1"
+                                             Style="{StaticResource DarkTextBox}"
+                                             ToolTip="Python interpreter — leave empty to use 'python' from PATH; point at a venv for isolation."/>
+                                    <Button x:Name="btnSupertonicProbe" Grid.Column="2"
+                                            Content="Check Install" Padding="10,3" Margin="6,0,0,0"
+                                            Style="{StaticResource DarkButton}"
+                                            Click="OnSupertonicProbe"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Language" FontFamily="Consolas" FontSize="10"
+                                               Foreground="#888899" VerticalAlignment="Center"/>
+                                    <ComboBox x:Name="cbSupertonicLang" Grid.Column="1"
+                                              Style="{StaticResource DarkComboBox}">
+                                        <ComboBoxItem Content="Korean  (ko)" Tag="ko"/>
+                                        <ComboBoxItem Content="English  (en)" Tag="en"/>
+                                        <ComboBoxItem Content="Japanese  (ja)" Tag="ja"/>
+                                        <ComboBoxItem Content="Chinese  (zh)" Tag="zh"/>
+                                        <ComboBoxItem Content="Auto  (na — script-detect)" Tag="na"/>
+                                    </ComboBox>
+                                    <TextBox x:Name="tbSupertonicSteps" Grid.Column="2" Margin="6,0,0,0"
+                                             Style="{StaticResource DarkTextBox}"
+                                             ToolTip="ONNX steps 5..12 (default 8). Higher = better quality, lower = faster."/>
+                                </Grid>
+
+                                <TextBlock TextWrapping="Wrap" FontFamily="Consolas" FontSize="10"
+                                           Foreground="#808080" LineHeight="14" Margin="0,0,0,6">
+                                    <Run>Not installed? Run </Run>
+                                    <Run FontWeight="Bold" Foreground="#00FFAA">pip install supertonic</Run>
+                                    <Run>. First synth downloads ~400 MB model to </Run>
+                                    <Run FontWeight="Bold" Foreground="#FFB347">~/.cache/supertonic3/</Run>
+                                    <Run>. Model is OpenRAIL-M licensed.</Run>
+                                </TextBlock>
+                            </StackPanel>
 
                             <DockPanel Margin="0,4,0,0">
                                 <Button x:Name="btnTtsSave" DockPanel.Dock="Right"
