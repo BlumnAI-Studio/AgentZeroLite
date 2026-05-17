@@ -654,6 +654,7 @@ EF Core가 자동 마이그레이션).
 | [**pencil-creator**](https://github.com/psmon/pencil-creator) | 하네스를 활용해 디자인 시스템에 새 템플릿을 들이는 실험. **3축 지원**: ① MS Blend XAML 리서칭, ② 일반 웹페이지 디자인 이식, ③ `designmd.ai` MD 검색 기반 템플릿 |
 | [**memorizer-v1**](https://github.com/psmon/memorizer-v1) | [Aaronontheweb/memorizer-v1](https://github.com/Aaronontheweb/memorizer-v1) 포크 — *벡터 검색 기반 에이전트 메모리 MCP 서버*. 향후 **하네스의 문서/메모리 시스템**으로 도약 예정 (하네스 에이전트들이 일회성 컨텍스트 대신 장기·검색 가능한 공용 메모리를 공유하도록) |
 | [**DeskWeb**](https://github.com/psmon/DeskWeb) | qooxdoo 기반 Windows XP 스타일 **WebOS** — **Claude Code Skill 4종**(`deskweb-convention` / `-app` / `-game` / `-llm`)이 내장되어, 포크 후 *바이브 코딩*만으로 자기만의 WebOS 변종을 빠르게 만든다. "메모장 앱 추가", "Three.js 체스 + LLM 대전", "AI 챗봇이 데스크톱을 조작" 같은 짧은 지시만 던지면 스킬이 프로젝트 컨벤션에 맞춰 코드를 생성. 데모: <https://webos.webnori.com/> |
+| [**CodeScan**](https://github.com/psmon/CodeScan) | 빠른 CLI/TUI/GUI **코드 스캐너 + 인덱서** — 10여 개 언어의 클래스/메서드/주석 구조를 추출하고 `git blame` 으로 풍부화한 뒤 로컬 SQLite(FTS5 트라이그램 + Neo4j 스타일 그래프 + Cypher 서브셋 쿼리)에 적재, 2D/3D 웹 그래프 뷰어까지 제공. .NET 10 네이티브 AOT 단일 바이너리, winget / brew / npm 으로 설치. 향후 하네스 연계: AgentZero 의 에이전트들에게 *구조화된 코드 맵*을 제공해 단순 파일 grep 을 대체하는 방향 |
 
 ---
 
