@@ -23,4 +23,11 @@ public class AppWindowState
     /// Persists across sessions so the user's preference is remembered.
     /// </summary>
     public bool IsBotDocked { get; set; } = true;
+
+    /// <summary>
+    /// Whether the WORKSPACES side panel is fully collapsed so the Console can use
+    /// the freed horizontal space (M0022). When true the SidePanel column shrinks
+    /// to the chevron rail width.
+    /// </summary>
+    public bool IsSidebarCollapsed { get; set; } = false;
 }

@@ -53,6 +53,27 @@ public partial class ScrapPagePanel : UserControl
         Unloaded += OnUnloaded;
     }
 
+    /// <summary>Raised when the operator presses DETACH / DockBack — MainWindow handles the reparent.</summary>
+    public event EventHandler? DetachRequested;
+
+    /// <summary>Called by MainWindow to flip the DETACH button label after a reparent.</summary>
+    public void SetDetached(bool detached)
+    {
+        if (detached)
+        {
+            btnDetach.Content = "⤡  DOCK BACK";
+            btnDetach.ToolTip = "Return Scrap to the main window";
+        }
+        else
+        {
+            btnDetach.Content = "⤢  DETACH";
+            btnDetach.ToolTip = "Detach to a floating window";
+        }
+    }
+
+    private void OnDetachClick(object sender, RoutedEventArgs e)
+        => DetachRequested?.Invoke(this, EventArgs.Empty);
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_picker is not null) return;

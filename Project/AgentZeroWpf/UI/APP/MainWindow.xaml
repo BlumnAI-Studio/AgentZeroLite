@@ -517,8 +517,9 @@
 
                         <!-- Title (left) -->
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                            <Polygon Points="8,0 16,8 8,16 0,8" Fill="{StaticResource CyberCyanBrush}"
-                                     Opacity="0.8" Margin="0,0,8,0"/>
+                            <Image Source="pack://application:,,,/Assets/agent-bot.png"
+                                   Width="18" Height="18" Margin="0,0,8,0"
+                                   RenderOptions.BitmapScalingMode="Fant"/>
                             <TextBlock Text="AGENT" FontFamily="Consolas" FontSize="13" FontWeight="Bold"
                                        Foreground="{StaticResource CyberCyanBrush}"/>
                             <TextBlock Text="ZERO" FontFamily="Consolas" FontSize="13" FontWeight="Bold"
@@ -556,8 +557,8 @@
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="48"/>                    <!-- ActivityBar -->
-                        <ColumnDefinition Width="200" MinWidth="140"/>    <!-- SidePanel (resizable) -->
-                        <ColumnDefinition Width="4"/>                     <!-- topSplitter (Pencil) -->
+                        <ColumnDefinition x:Name="SidePanelColumn" Width="200" MinWidth="140"/>    <!-- SidePanel (resizable, M0022 collapsible) -->
+                        <ColumnDefinition x:Name="SidePanelSplitterColumn" Width="4"/>             <!-- topSplitter (Pencil) -->
                         <ColumnDefinition Width="*" MinWidth="300"/>      <!-- Content -->
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -584,14 +585,19 @@
 
                             <!-- Top icons -->
                             <StackPanel Orientation="Vertical" VerticalAlignment="Top" Margin="4,8,0,0">
-                                <!-- AgentCLI Icon (CommandPrompt) — M0019 rename:
-                                     "Agent Bot" → "AgentCLI" + CLI icon. The internal
-                                     actor / window types keep their AgentBot* names
-                                     (stable Akka path /user/stage/bot); only the
-                                     user-visible label changes. -->
+                                <!-- AgentBot Icon (M0022 rename + bot avatar):
+                                     M0019 had flipped this to "AgentCLI" + CommandPrompt
+                                     glyph. M0022 reverts the label to AgentBot and
+                                     adopts the operator-curated bot artwork from
+                                     Assets/agent-bot.png. Internal actor / window
+                                     types keep their AgentBot* names regardless. -->
                                 <Button x:Name="btnActivityBot" Style="{StaticResource ActivityBarIcon}"
-                                        Content="&#xE756;" ToolTip="AgentCLI"
-                                        Click="OnActivityBotClick"/>
+                                        ToolTip="AgentBot"
+                                        Click="OnActivityBotClick">
+                                    <Image Source="pack://application:,,,/Assets/agent-bot.png"
+                                           Width="32" Height="32"
+                                           RenderOptions.BitmapScalingMode="Fant"/>
+                                </Button>
 
                                 <!-- WebDev Icon (Globe) — opens the WebDev workspace
                                      (sample list + full-window WebView2). Same panel
@@ -607,6 +613,22 @@
                                         Content="&#xE70F;" ToolTip="Scrap — window spy + text capture"
                                         Click="OnActivityScrapClick"/>
 
+                                <!-- Harness View Icon (M0022-6) — WebView2 over the
+                                     published harness-view dashboard. Mint accent so it
+                                     reads as the "operator's dashboard" entry next to
+                                     the other tooling icons. -->
+                                <Button x:Name="btnActivityHarness" Style="{StaticResource ActivityBarIcon}"
+                                        Content="&#xE9D9;" ToolTip="Harness View — dashboard"
+                                        Click="OnActivityHarnessClick"/>
+
+                                <!-- Note Icon (M0022-7) — promote NOTE from a cramped
+                                     bottom-panel tab to a full-overlay so the document
+                                     viewer + file tree + clipboard get the entire right
+                                     content area. -->
+                                <Button x:Name="btnActivityNote" Style="{StaticResource ActivityBarIcon}"
+                                        Content="&#xE70B;" ToolTip="Note — markdown / files / clipboard"
+                                        Click="OnActivityNoteClick"/>
+
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -618,14 +640,33 @@
                             <!-- Scrollable SidePanel Content -->
                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Margin="0,8">
-                                    <!-- Workspaces Header -->
-                                    <StackPanel Orientation="Horizontal" Margin="12,0,0,8">
-                                        <Rectangle Width="3" Height="10" Fill="{StaticResource CyberCyanBrush}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="WORKSPACES" FontSize="10" FontWeight="Bold"
-                                                   Foreground="{StaticResource CyberCyanBrush}" FontFamily="Consolas"/>
-                                    </StackPanel>
+                                    <!-- Workspaces Header — M0022 collapse toggle.
+                                         The "‹" button shrinks the SidePanel column
+                                         down to a 32-px rail; the same button (now
+                                         showing "›" + stretched to fill the rail)
+                                         is the expand affordance. Margin is set in
+                                         code-behind so the button stays clickable
+                                         when the column collapses. -->
+                                    <DockPanel x:Name="SidebarHeaderPanel"
+                                               Margin="12,0,8,8" LastChildFill="False">
+                                        <Button x:Name="btnSidebarCollapse" DockPanel.Dock="Right"
+                                                Style="{StaticResource SmallButton}"
+                                                Content="‹" FontFamily="Segoe UI" FontSize="14"
+                                                FontWeight="Bold"
+                                                Foreground="{StaticResource CyberCyanBrush}"
+                                                Padding="6,0" MinWidth="28"
+                                                ToolTip="Collapse WORKSPACES panel (M0022)"
+                                                Click="OnToggleSidebarCollapseClick"/>
+                                        <StackPanel x:Name="SidebarHeaderLabel" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Rectangle Width="3" Height="10" Fill="{StaticResource CyberCyanBrush}" Margin="0,0,6,0"/>
+                                            <TextBlock Text="WORKSPACES" FontSize="10" FontWeight="Bold"
+                                                       Foreground="{StaticResource CyberCyanBrush}" FontFamily="Consolas"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DockPanel>
 
                                     <!-- Workspaces (formerly "DIRECTORIES / CLI Groups" — unified naming) -->
+                                    <StackPanel x:Name="SidebarBody">
                                     <StackPanel x:Name="pnlCliGroups" Margin="12,4,0,0"/>
 
                                     <!-- Add Workspace button -->
@@ -666,6 +707,7 @@
                                             Cursor="Hand" HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Left"
                                             Click="OnNewSessionClick" ToolTip="Add Terminal Session"/>
+                                    </StackPanel> <!-- /SidebarBody -->
                                 </StackPanel>
                             </ScrollViewer>
                         </DockPanel>
@@ -768,7 +810,7 @@
 
                                 <!-- Tabs -->
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button x:Name="btnBottomTabBot" Content="AGENT CLI"
+                                    <Button x:Name="btnBottomTabBot" Content="AGENT BOT"
                                             Click="OnBottomTabBotClick"
                                             Style="{StaticResource FlatButton}"
                                             Background="{StaticResource EditorBg}"
@@ -790,7 +832,14 @@
                                             Foreground="{StaticResource TextDim}"
                                             FontSize="10" FontWeight="Bold"
                                             BorderThickness="0" Padding="14,6" Margin="0"/>
+                                    <!-- M0022-7: NOTE moved to the ActivityBar overlay so it uses
+                                         the entire right content area instead of being cramped
+                                         into this 30~150px bottom strip. The button stays in
+                                         XAML (Visibility=Collapsed) only to keep MainWindow.cs
+                                         references compiling; the new entry point is
+                                         btnActivityNote / OnActivityNoteClick. -->
                                     <Button x:Name="btnBottomTabNote" Content="NOTE"
+                                            Visibility="Collapsed"
                                             Click="OnBottomTabNoteClick"
                                             Style="{StaticResource FlatButton}"
                                             Background="Transparent"
@@ -862,6 +911,25 @@
                                                Grid.Column="1" Grid.ColumnSpan="3"
                                                Grid.Row="0" Grid.RowSpan="3"
                                                Visibility="Collapsed"/>
+
+                    <!-- ===== Harness View (full overlay) — M0022-6 =====
+                         WebView2 over the published harness-view dashboard.
+                         Same overlay pattern; toggled from OnActivityHarnessClick. -->
+                    <components:HarnessViewPanel x:Name="HarnessViewPage"
+                                                 Grid.Column="1" Grid.ColumnSpan="3"
+                                                 Grid.Row="0" Grid.RowSpan="3"
+                                                 Visibility="Collapsed"/>
+
+                    <!-- ===== Note Page (full overlay) — M0022-7 =====
+                         Hosts the reparented NoteWindow Grid (file tree +
+                         document viewer + clipboard) so the markdown surface
+                         can use the entire right content area. Same overlay
+                         pattern; toggled from OnActivityNoteClick. -->
+                    <ContentControl x:Name="NotePage"
+                                    Grid.Column="1" Grid.ColumnSpan="3"
+                                    Grid.Row="0" Grid.RowSpan="3"
+                                    Visibility="Collapsed"
+                                    Background="{StaticResource EditorBg}"/>
 
                 </Grid> <!-- /Sidebar + Content Row 1 -->
 

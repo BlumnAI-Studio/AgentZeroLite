@@ -1,0 +1,57 @@
+<UserControl x:Class="AgentZeroWpf.UI.Components.HarnessViewPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Background="{DynamicResource EditorBg}">
+    <!--
+        M0022-6 — Harness View overlay. WebView2 hosting the published
+        harness-view dashboard so operators can read PDSA / mission / agent
+        cards inside the shell without leaving the app.
+    -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- Toolbar -->
+            <RowDefinition Height="*"/>      <!-- WebView2 -->
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource ToolbarBg}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
+                Padding="10,5">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="btnReload" Content="↻  Reload"
+                            Style="{DynamicResource SmallButton}"
+                            FontSize="11"
+                            Foreground="{DynamicResource TextDim}"
+                            Padding="10,3"
+                            ToolTip="Reload the harness-view page"
+                            Click="OnReloadClick"/>
+                    <Button x:Name="btnOpenExternal" Content="⇲  External"
+                            Style="{DynamicResource SmallButton}"
+                            FontSize="11"
+                            Foreground="{DynamicResource TextDim}"
+                            Padding="10,3" Margin="6,0,0,0"
+                            ToolTip="Open in the system default browser"
+                            Click="OnOpenExternalClick"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Rectangle Width="3" Height="10" Fill="{DynamicResource CyberMintBrush}"
+                               Margin="0,0,6,0" RadiusX="1" RadiusY="1"/>
+                    <TextBlock Text="HARNESS VIEW" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource CyberMintBrush}" FontFamily="Consolas"
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="txtUrl"
+                               Text="https://psmon.github.io/AgentZeroLite/Home/harness-view/#dashboard"
+                               FontSize="10" Foreground="{DynamicResource TextDim}"
+                               FontFamily="Consolas" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- WebView2 host -->
+        <wv2:WebView2 x:Name="webview" Grid.Row="1"
+                      DefaultBackgroundColor="#1E1E1E"/>
+    </Grid>
+</UserControl>

@@ -91,10 +91,10 @@
 
         <!-- Content area -->
         <Grid x:Name="contentArea" Grid.Row="1">
-            <!-- Empty state -->
-            <TextBlock x:Name="txtEmpty" Text="Select a file to view"
-                       FontSize="14" Foreground="#858585" FontFamily="Consolas"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!-- M0022-7: empty-state TextBlock removed. The file tree to the left
+                 already nudges the operator toward selecting something, so a
+                 second "Select a file to view" placeholder just steals space. -->
+            <TextBlock x:Name="txtEmpty" Text="" Visibility="Collapsed"/>
 
             <!-- Markdown rendered view -->
             <components:MarkdownViewer x:Name="mdViewer" Visibility="Collapsed"/>

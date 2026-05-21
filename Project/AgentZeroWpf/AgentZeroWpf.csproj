@@ -68,6 +68,7 @@
   <!-- Icon resources -->
   <ItemGroup>
     <Resource Include="agentzero.ico" />
+    <Resource Include="Assets\agent-bot.png" />
   </ItemGroup>
 
   <!-- Mermaid.js bundle for offline rendering -->

@@ -73,6 +73,16 @@
                 <Button x:Name="btnSelect" Content="SELECT"
                         Style="{DynamicResource FlatButton}" Margin="4,0,0,0"
                         Click="OnSelectByHwnd"/>
+                <!-- M0022-5: Detach / DockBack toggle. When the panel is hosted
+                     in MainWindow this button pops it into a FloatingScrapWindow;
+                     when it is hosted there, the same control re-docks back. -->
+                <Button x:Name="btnDetach"
+                        Content="⤢  DETACH"
+                        Style="{DynamicResource FlatButton}" Margin="12,0,0,0"
+                        FontSize="10" FontWeight="Bold"
+                        Foreground="{DynamicResource CyberMintBrush}"
+                        ToolTip="Detach to a floating window"
+                        Click="OnDetachClick"/>
             </StackPanel>
         </Border>
 

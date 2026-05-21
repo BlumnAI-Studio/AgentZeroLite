@@ -12,7 +12,8 @@ public sealed record WindowStateSnapshot(
     bool IsMaximized,
     int LastActiveGroupIndex,
     int LastActiveTabIndex,
-    bool IsBotDocked);
+    bool IsBotDocked,
+    bool IsSidebarCollapsed);
 
 public sealed record CliDefinitionSnapshot(
     int Id,
@@ -59,7 +60,8 @@ public static class CliWorkspacePersistence
                 state.IsMaximized,
                 state.LastActiveGroupIndex,
                 state.LastActiveTabIndex,
-                state.IsBotDocked);
+                state.IsBotDocked,
+                state.IsSidebarCollapsed);
     }
 
     public static void SaveWindowState(
@@ -70,7 +72,8 @@ public static class CliWorkspacePersistence
         bool isMaximized,
         int lastActiveGroupIndex,
         int lastActiveTabIndex,
-        bool isBotDocked)
+        bool isBotDocked,
+        bool isSidebarCollapsed)
     {
         using var db = new AppDbContext();
         var state = db.AppWindowStates.Find(1) ?? new AppWindowState();
@@ -82,6 +85,7 @@ public static class CliWorkspacePersistence
         state.LastActiveGroupIndex = lastActiveGroupIndex;
         state.LastActiveTabIndex = lastActiveTabIndex;
         state.IsBotDocked = isBotDocked;
+        state.IsSidebarCollapsed = isSidebarCollapsed;
 
         if (db.AppWindowStates.Any(row => row.Id == 1))
             db.AppWindowStates.Update(state);

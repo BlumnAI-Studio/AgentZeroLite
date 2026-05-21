@@ -28,10 +28,87 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         Closed += OnClosed;
         PreviewKeyDown += OnGlobalKeyDown;
+        SourceInitialized += OnSourceInitializedForMaximize;
         txtVersion.Text = AppVersionProvider.GetDisplayVersion();
 
         // Mirror AppLogger entries into the embedded LOG tab
         AppLogger.EntryAdded += OnAppLogEntryForBottomTab;
+    }
+
+    // ====================================================================
+    //  M0022-1 — application-style fullscreen.
+    //  WindowStyle="None" + WindowState.Maximized normally covers the
+    //  whole monitor (taskbar included). Hooking WM_GETMINMAXINFO lets us
+    //  clamp the maximize rectangle to the work area so the taskbar stays
+    //  visible, matching standard Windows app behaviour.
+    // ====================================================================
+
+    private void OnSourceInitializedForMaximize(object? sender, EventArgs e)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero) return;
+        var source = HwndSource.FromHwnd(handle);
+        source?.AddHook(MaximizeWndProc);
+    }
+
+    private const int WM_GETMINMAXINFO = 0x0024;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO info);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int left, top, right, bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int x, y; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    private IntPtr MaximizeWndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != WM_GETMINMAXINFO) return IntPtr.Zero;
+
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+        IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor != IntPtr.Zero)
+        {
+            var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            if (GetMonitorInfo(monitor, ref mi))
+            {
+                RECT work = mi.rcWork;
+                RECT all  = mi.rcMonitor;
+                mmi.ptMaxPosition.x = work.left - all.left;
+                mmi.ptMaxPosition.y = work.top  - all.top;
+                mmi.ptMaxSize.x     = work.right  - work.left;
+                mmi.ptMaxSize.y     = work.bottom - work.top;
+                mmi.ptMaxTrackSize.x = mmi.ptMaxSize.x;
+                mmi.ptMaxTrackSize.y = mmi.ptMaxSize.y;
+                Marshal.StructureToPtr(mmi, lParam, true);
+                handled = true;
+            }
+        }
+        return IntPtr.Zero;
     }
 
     /// <summary>Mirror an AppLogger entry to the embedded LOG tab (bottom panel).</summary>
@@ -267,6 +344,11 @@ public partial class MainWindow : Window
             SwitchToCliPanel();
             if (_activeGroupIndex >= 0) ActivateGroup(_activeGroupIndex);
         };
+
+        // M0022-5: Scrap detach/dock-back reparent the same UserControl
+        // between MainWindow and FloatingScrapWindow so in-flight capture
+        // state survives the round trip.
+        ScrapPage.DetachRequested += OnScrapDetachRequested;
 
         // DB 초기화 + 상태 복원
         try
@@ -849,6 +931,12 @@ public partial class MainWindow : Window
         Height = Math.Max(ws.Height, 300);
         if (ws.IsMaximized) WindowState = System.Windows.WindowState.Maximized;
         _isBotEmbedded = ws.IsBotDocked;
+
+        // M0022-3: restore sidebar-collapsed state. Apply after layout is real
+        // (Loaded handler will call this again via ApplySidebarCollapsed if
+        // controls aren't ready yet here).
+        if (ws.IsSidebarCollapsed)
+            Dispatcher.BeginInvoke(() => ApplySidebarCollapsed(true, persist: false));
     }
 
     private void SaveWindowState()
@@ -863,7 +951,8 @@ public partial class MainWindow : Window
             isMax,
             _activeGroupIndex,
             _activeConsoleTab,
-            _isBotEmbedded);
+            _isBotEmbedded,
+            _isSidebarCollapsed);
     }
 
     private void SaveCliGroups()
@@ -958,6 +1047,9 @@ public partial class MainWindow : Window
     // =========================================================================
 
     private Window? _scrapWindow;
+    private AgentZeroWpf.UI.Components.FloatingScrapWindow? _floatingScrapWindow;
+    private Grid? _scrapOriginalParent;
+    private int _scrapOriginalIndex = -1;
     private AgentBotWindow? _botWindow;
     private IActorRef? _botActorRef;
     private bool _isAppClosing;
@@ -968,6 +1060,15 @@ public partial class MainWindow : Window
     /// Persisted in <c>AppWindowState.IsBotDocked</c>.
     /// </summary>
     private bool _isBotEmbedded = true;
+
+    /// <summary>
+    /// Whether the WORKSPACES side panel is fully collapsed (M0022). Persisted via
+    /// <c>AppWindowState.IsSidebarCollapsed</c>.
+    /// </summary>
+    private bool _isSidebarCollapsed = false;
+
+    /// <summary>Cached width of the side panel column to restore after expanding back from collapsed state.</summary>
+    private GridLength _sidePanelWidthBeforeCollapse = new GridLength(200);
 
     /// <summary>Current filter string for the SESSIONS panel. Case-insensitive substring match.</summary>
     private string _sessionFilter = "";
@@ -1714,9 +1815,11 @@ public partial class MainWindow : Window
     private string? _noteEmbeddedDir;
 
     /// <summary>
-    /// Activate the NOTE tab in the bottom panel. Lazily creates a NoteWindow
-    /// for the active workspace and reparents its content into the tab host
-    /// (terminal is untouched — it just becomes non-visible via tab switch).
+    /// Activate the NOTE overlay (M0022-7). Lazily creates a NoteWindow for the
+    /// active workspace and reparents its content into <see cref="NotePage"/> so
+    /// the file tree + document viewer + clipboard can use the entire right
+    /// content area. Earlier versions docked the note content into the bottom
+    /// panel's NOTE tab — that strip was too small for productive work.
     /// </summary>
     private void OpenNoteTab()
     {
@@ -1727,7 +1830,7 @@ public partial class MainWindow : Window
         // Rebuild note if the active workspace has changed
         if (_noteWindow is not null && _noteEmbeddedDir != dirPath)
         {
-            NoteHost.Content = null;
+            NotePage.Content = null;
             _noteWindow.Close();
             _noteWindow = null;
         }
@@ -1738,12 +1841,38 @@ public partial class MainWindow : Window
             var content = _noteWindow.DetachContent();
             _noteWindow.SetEmbeddedMode(true);
             if (content is not null)
-                NoteHost.Content = content;
+                NotePage.Content = content;
             _noteWindow.InitializeCore(); // no Window.Show() ⇒ wire up manually
             _noteEmbeddedDir = dirPath;
         }
 
-        SwitchBottomTab(BottomTab.Note);
+        CloseWebDev();
+        CloseSettings();
+        CloseScrap();
+        CloseHarnessView();
+        EnterOverlayMode();
+        NotePage.Visibility = Visibility.Visible;
+    }
+
+    private void OnActivityNoteClick(object sender, RoutedEventArgs e)
+    {
+        if (NotePage.Visibility == Visibility.Visible)
+        {
+            CloseNote();
+            return;
+        }
+        OpenNoteTab();
+    }
+
+    private void CloseNote()
+    {
+        if (NotePage.Visibility != Visibility.Visible) return;
+        NotePage.Visibility = Visibility.Collapsed;
+        if (WebDevPage.Visibility != Visibility.Visible &&
+            SettingsPanel.Visibility != Visibility.Visible &&
+            ScrapPage.Visibility != Visibility.Visible &&
+            HarnessViewPage.Visibility != Visibility.Visible)
+            ExitOverlayMode();
     }
 
 
@@ -2880,18 +3009,74 @@ public partial class MainWindow : Window
     private void OnWindowStateChanged(object? sender, EventArgs e)
         => MaxRestoreButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
 
+    // ====================================================================
+    //  M0022-3 \u2014 WORKSPACES side panel collapse toggle.
+    //  Collapsed mode shrinks the column to a 24-px rail showing only the
+    //  chevron toggle so the console area can absorb the freed width. State
+    //  persists via AppWindowState.IsSidebarCollapsed.
+    // ====================================================================
+
+    private void OnToggleSidebarCollapseClick(object sender, RoutedEventArgs e)
+        => ApplySidebarCollapsed(!_isSidebarCollapsed, persist: true);
+
+    private void ApplySidebarCollapsed(bool collapsed, bool persist)
+    {
+        if (collapsed)
+        {
+            if (!_isSidebarCollapsed)
+                _sidePanelWidthBeforeCollapse = SidePanelColumn.Width;
+
+            // The header DockPanel's normal Margin (12,0,8,8) eats 20px
+            // horizontal; in collapsed mode we drop that so the chevron
+            // button stays clickable inside the 32-px rail.
+            SidebarHeaderPanel.Margin = new Thickness(0, 4, 0, 4);
+            SidePanelColumn.MinWidth = 32;
+            SidePanelColumn.Width = new GridLength(32);
+            SidePanelSplitterColumn.Width = new GridLength(0);
+            SidebarBody.Visibility = Visibility.Collapsed;
+            SidebarHeaderLabel.Visibility = Visibility.Collapsed;
+            btnSidebarCollapse.Content = "\u203A";
+            btnSidebarCollapse.ToolTip = "Expand WORKSPACES panel";
+            btnSidebarCollapse.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+        }
+        else
+        {
+            SidebarHeaderPanel.Margin = new Thickness(12, 0, 8, 8);
+            SidePanelColumn.MinWidth = 140;
+            SidePanelColumn.Width = _sidePanelWidthBeforeCollapse.Value > 32
+                ? _sidePanelWidthBeforeCollapse
+                : new GridLength(200);
+            SidePanelSplitterColumn.Width = new GridLength(4);
+            SidebarBody.Visibility = Visibility.Visible;
+            SidebarHeaderLabel.Visibility = Visibility.Visible;
+            btnSidebarCollapse.Content = "\u2039";
+            btnSidebarCollapse.ToolTip = "Collapse WORKSPACES panel (M0022)";
+            btnSidebarCollapse.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+        }
+
+        _isSidebarCollapsed = collapsed;
+        if (persist)
+        {
+            try { SaveWindowState(); }
+            catch (Exception ex) { AppLogger.Log($"[M0022] SaveWindowState after sidebar toggle failed: {ex.Message}"); }
+        }
+    }
+
     // =========================================================================
     //  ActivityBar navigation (Phase 1 redesign)
     // =========================================================================
 
     private void OnActivityBotClick(object sender, RoutedEventArgs e)
     {
-        // Bot icon must take over from any active overlay (WebDev / Settings / Scrap).
-        // All overlays collapse CliPanel + BotDockArea, and a bot toggle
-        // would otherwise be invisible until the overlay closes.
+        // Bot icon must take over from any active overlay (WebDev / Settings /
+        // Scrap / HarnessView / Note). All overlays collapse CliPanel +
+        // BotDockArea, and a bot toggle would otherwise be invisible because
+        // the overlay still covers the entire right area.
         CloseWebDev();
         CloseScrap();
         CloseSettings();
+        CloseHarnessView();
+        CloseNote();
         OnSidebarBotClick(sender, e);
     }
 
@@ -2905,6 +3090,14 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnActivityScrapClick(object sender, RoutedEventArgs e)
     {
+        // While the panel is detached, the ActivityBar icon focuses the floating
+        // window instead of toggling the (now-empty) overlay slot.
+        if (_floatingScrapWindow is not null)
+        {
+            _floatingScrapWindow.Activate();
+            return;
+        }
+
         if (ScrapPage.Visibility == Visibility.Visible)
         {
             CloseScrap();
@@ -2912,8 +3105,112 @@ public partial class MainWindow : Window
         }
         CloseWebDev();
         CloseSettings();
+        CloseHarnessView();
         EnterOverlayMode();
         ScrapPage.Visibility = Visibility.Visible;
+    }
+
+    // ====================================================================
+    //  M0022-6 — Harness View overlay toggle (full-overlay, ActivityBar 4th).
+    // ====================================================================
+
+    private void OnActivityHarnessClick(object sender, RoutedEventArgs e)
+    {
+        if (HarnessViewPage.Visibility == Visibility.Visible)
+        {
+            CloseHarnessView();
+            return;
+        }
+        CloseWebDev();
+        CloseSettings();
+        CloseScrap();
+        EnterOverlayMode();
+        HarnessViewPage.Visibility = Visibility.Visible;
+    }
+
+    private void CloseHarnessView()
+    {
+        if (HarnessViewPage.Visibility != Visibility.Visible) return;
+        HarnessViewPage.Visibility = Visibility.Collapsed;
+        if (WebDevPage.Visibility != Visibility.Visible &&
+            SettingsPanel.Visibility != Visibility.Visible &&
+            ScrapPage.Visibility != Visibility.Visible &&
+            NotePage.Visibility != Visibility.Visible)
+            ExitOverlayMode();
+    }
+
+    // ====================================================================
+    //  M0022-5 — Scrap detach / dock-back. Reparents the ScrapPagePanel
+    //  UserControl between MainWindow's overlay slot and a
+    //  FloatingScrapWindow. ScrapPagePanel keeps all of its in-flight state
+    //  (selected HWND, captured text, picker subscriptions) because we move
+    //  the same instance, never duplicate it.
+    // ====================================================================
+
+    private void OnScrapDetachRequested(object? sender, EventArgs e)
+    {
+        if (_floatingScrapWindow is null) DetachScrapToFloatingWindow();
+        else DockBackScrapFromFloatingWindow();
+    }
+
+    private void DetachScrapToFloatingWindow()
+    {
+        if (_floatingScrapWindow is not null) return;
+        if (ScrapPage.Parent is not Grid parentGrid) return;
+
+        _scrapOriginalParent = parentGrid;
+        _scrapOriginalIndex = parentGrid.Children.IndexOf(ScrapPage);
+        parentGrid.Children.Remove(ScrapPage);
+
+        // Releasing ScrapPage from the overlay slot also closes the visual
+        // overlay; restore the underlying CLI surface so the user can keep
+        // using the terminal while Scrap floats.
+        if (ScrapPage.Visibility == Visibility.Visible)
+            ScrapPage.Visibility = Visibility.Collapsed;
+        if (WebDevPage.Visibility != Visibility.Visible &&
+            SettingsPanel.Visibility != Visibility.Visible)
+            ExitOverlayMode();
+
+        ScrapPage.SetDetached(true);
+
+        _floatingScrapWindow = new AgentZeroWpf.UI.Components.FloatingScrapWindow(
+            ScrapPage, DockBackScrapFromFloatingWindow)
+        {
+            Owner = this,
+        };
+        _floatingScrapWindow.Closed += (_, _) =>
+        {
+            // Closed runs after our re-dock path; nothing to do if already null.
+            _floatingScrapWindow = null;
+        };
+        _floatingScrapWindow.Show();
+        ScrapPage.Visibility = Visibility.Visible;
+    }
+
+    private void DockBackScrapFromFloatingWindow()
+    {
+        var floating = _floatingScrapWindow;
+        if (floating is null || _scrapOriginalParent is null) return;
+
+        AgentZeroWpf.UI.Components.ScrapPagePanel? panel = null;
+        try { panel = floating.ReleaseContent(); }
+        catch (Exception ex) { AppLogger.Log($"[M0022] DockBack release failed: {ex.Message}"); }
+
+        _floatingScrapWindow = null;
+        floating.Close();
+
+        if (panel is null) return;
+        panel.SetDetached(false);
+
+        int idx = Math.Clamp(_scrapOriginalIndex, 0, _scrapOriginalParent.Children.Count);
+        _scrapOriginalParent.Children.Insert(idx, panel);
+
+        // Show Scrap as the active overlay after re-dock so the operator sees
+        // their work without having to click the ActivityBar icon again.
+        CloseWebDev();
+        CloseSettings();
+        EnterOverlayMode();
+        panel.Visibility = Visibility.Visible;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -2964,6 +3261,7 @@ public partial class MainWindow : Window
         }
         CloseSettings();
         CloseScrap();
+        CloseHarnessView();
         EnterOverlayMode();
         WebDevPage.Visibility = Visibility.Visible;
     }
@@ -2978,7 +3276,9 @@ public partial class MainWindow : Window
         if (WebDevPage.Visibility != Visibility.Visible) return;
         WebDevPage.Visibility = Visibility.Collapsed;
         if (SettingsPanel.Visibility != Visibility.Visible &&
-            ScrapPage.Visibility != Visibility.Visible)
+            ScrapPage.Visibility != Visibility.Visible &&
+            HarnessViewPage.Visibility != Visibility.Visible &&
+            NotePage.Visibility != Visibility.Visible)
             ExitOverlayMode();
     }
 
@@ -2991,7 +3291,9 @@ public partial class MainWindow : Window
         if (SettingsPanel.Visibility != Visibility.Visible) return;
         SettingsPanel.Visibility = Visibility.Collapsed;
         if (WebDevPage.Visibility != Visibility.Visible &&
-            ScrapPage.Visibility != Visibility.Visible)
+            ScrapPage.Visibility != Visibility.Visible &&
+            HarnessViewPage.Visibility != Visibility.Visible &&
+            NotePage.Visibility != Visibility.Visible)
             ExitOverlayMode();
     }
 
@@ -3004,7 +3306,9 @@ public partial class MainWindow : Window
         if (ScrapPage.Visibility != Visibility.Visible) return;
         ScrapPage.Visibility = Visibility.Collapsed;
         if (WebDevPage.Visibility != Visibility.Visible &&
-            SettingsPanel.Visibility != Visibility.Visible)
+            SettingsPanel.Visibility != Visibility.Visible &&
+            HarnessViewPage.Visibility != Visibility.Visible &&
+            NotePage.Visibility != Visibility.Visible)
             ExitOverlayMode();
     }
 
