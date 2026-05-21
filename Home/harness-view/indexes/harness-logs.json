@@ -15,7 +15,7 @@
     "build-doctor": 6,
     "code-coach": 23,
     "kakashi-copy": 1,
-    "mission-records": 20,
+    "mission-records": 22,
     "pre-commit-review": 8,
     "release-build-pipeline": 6,
     "security-guard": 8,
@@ -742,6 +742,22 @@
       "time": null,
       "title": "M0020-수행결과",
       "size": 48702
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0021-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0021-수행결과",
+      "size": 42732
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0022-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0022-수행결과",
+      "size": 7958
     }
   ]
 }

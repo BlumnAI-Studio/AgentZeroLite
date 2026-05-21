@@ -10,15 +10,49 @@
     "cancelled"
   ],
   "counts": {
-    "all": 21,
+    "all": 23,
     "inbox": 1,
     "in_progress": 2,
-    "done": 18,
+    "done": 20,
     "partial": 0,
     "blocked": 0,
     "cancelled": 0
   },
   "items": [
+    {
+      "id": "M0022",
+      "file": "harness/missions/M0022-UI개선l.md",
+      "title": "UI 개선 — 전체화면 / AgentBot 리네임 / WORKSPACE 접기 / 앱 아이콘 / Scrap Detach / 하네스뷰 메뉴 / Voice Note 확장",
+      "operator": "psmon",
+      "language": "ko",
+      "status": "done",
+      "priority": "medium",
+      "created": "2026-05-22",
+      "recordFile": "harness/logs/mission-records/M0022-수행결과.md",
+      "recordStatus": "done",
+      "recordStarted": "2026-05-22T00:00:00+09:00",
+      "recordFinished": "2026-05-22T06:00:00+09:00",
+      "designFile": "Docs/design/M0022-ui-refresh.pen",
+      "modified": "2026-05-21",
+      "size": 2819
+    },
+    {
+      "id": "M0021",
+      "file": "harness/missions/M0021-RemoteShell.md",
+      "title": "Remote Shell (SSH) 지원 — CMD/PW5/PW7 CLI 정의에 원격 모드 추가",
+      "operator": "psmon",
+      "language": "ko",
+      "status": "done",
+      "priority": "medium",
+      "created": "2026-05-18",
+      "recordFile": "harness/logs/mission-records/M0021-수행결과.md",
+      "recordStatus": "done",
+      "recordStarted": "2026-05-18T10:00:00+09:00",
+      "recordFinished": "2026-05-18T11:30:00+09:00",
+      "designFile": null,
+      "modified": "2026-05-18",
+      "size": 1747
+    },
     {
       "id": "M0020",
       "file": "harness/missions/M0020-SuperTonic-영입.md",

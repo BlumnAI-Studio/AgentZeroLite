@@ -24,6 +24,10 @@
     {
       "type": "pen",
       "file": "M0012-active-session-panel.pen"
+    },
+    {
+      "type": "pen",
+      "file": "M0022-ui-refresh.pen"
     }
   ]
 }
