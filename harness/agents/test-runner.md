@@ -13,7 +13,13 @@ triggers:
   - "최근 유닛테스트 이력알려줘"
   - "최근 유닛테스트 이력 알려줘"
   - "test history"
-description: Owns dotnet test execution. NEVER auto-runs — only fires on the explicit triggers above. Records *why* the run happened and the outcome under harness/logs/test-runner/ so future improvements can mine the history.
+auto_invoke_on:
+  - condition: "Claude authored a NEW test method or test class in the current task AND the test is NOT an LLM-smoke class"
+    mode: author-verify
+    scope: "ONLY the newly-added test class/method via --filter"
+    ask_first_when:
+      - "the new test class touches Whisper / Gemma / Webnori / any on-device LLM"
+description: Owns dotnet test execution. Default = never auto-runs. One narrow exception (Author-verify): when Claude writes a new test in the same task, it must filter-run just that new test once before reporting done — LLM-smoke tests still require user permission. Records *why* the run happened and the outcome under harness/logs/test-runner/ so future improvements can mine the history.
 ---
 
 # Test Runner
@@ -25,23 +31,25 @@ LLM-backed smoke tests (Whisper, Gemma, Webnori) are slow — a full
 testhosts (see `harness/knowledge/test-runner/dotnet-test-execution.md`'s 12 GB
 incident). Running them after every code change is more friction than
 signal. The user has therefore chosen: **tests run only when the user
-asks, never as a side effect of another task.**
+asks — with one narrow exception for newly-authored tests (see
+Author-verify mode below).**
 
 This agent is the single owner of `dotnet test` invocation in the
 harness. Build-doctor, test-sentinel, and the release pipeline all
 delegate execution here (or skip it entirely).
 
-## Triggers — three modes
+## Triggers — four modes
 
 | Mode | Trigger | What it does |
 |---|---|---|
 | **Scoped** | "연관된 유닛테스트 수행해" / "관련 …" / "run related unit tests" | git diff → infer changed scope → run only matching tests via `--filter` |
 | **Full**   | "전체 유닛테스트 수행해" / "run all unit tests" | Full headless suite (and AgentTest if desktop session) |
 | **History**| "유닛테스트 이력" / "최근 유닛테스트 이력알려줘" / "test history" | No execution — read recent `harness/logs/test-runner/*.md` and summarize |
+| **Author-verify** *(auto)* | Claude authored a new test in the current task | One `--filter` run scoped to ONLY the new test class/method. LLM-smoke → ask first. |
 
-Anything else does NOT trigger this agent. Code changes, refactors,
-fixes, builds, releases — none of them auto-invoke. The user explicitly
-asks; the agent runs.
+Everything else (code changes in non-test files, refactors, fixes, builds,
+releases) does NOT trigger this agent. The Author-verify mode is the only
+non-user-initiated path, and it is deliberately narrow.
 
 ## Procedure — Mode "Scoped" (related tests)
 
@@ -102,6 +110,46 @@ with explicit user OK.
 5. **[Required]** Write a brief log under `harness/logs/test-runner/`
    marking `mode: history` so the audit trail records the query.
 
+## Procedure — Mode "Author-verify" (auto, narrow)
+
+Goal: when Claude authors a new unit test in the same task, prove the test
+actually exercises what its name claims — without paying the full-suite
+cost. A test that compiles but asserts nothing is worse than no test.
+
+**When this mode fires.** End of a task where Claude added at least one
+new `[Fact]` / `[Theory]` method or created a new test class file under
+`Project/ZeroCommon.Tests/` or `Project/AgentTest/`. Pure renames, moves,
+or formatting changes do NOT fire it. If only existing tests were edited
+(behavior unchanged) it does NOT fire either.
+
+**Procedure:**
+1. Identify the newly-added test surface from the in-task diff:
+   - New `*Tests.cs` file → filter to the class name.
+   - New `[Fact]` / `[Theory]` inside an existing class → filter to
+     `ClassName.MethodName` if the test is the only new addition,
+     otherwise to `ClassName` (covers multiple new methods at once).
+2. **LLM-smoke guard.** If the test's class or assembly touches Whisper,
+   Gemma, Webnori, or any on-device LLM path (check `using` directives
+   + class name), **stop and ask the user**:
+   > "이 신규 테스트는 LLM-스모크에 해당해 CPU/RAM 부담이 큽니다. 지금
+   > 실행할까요, 아니면 사용자 트리거 시점까지 미룰까요?"
+   Honor whatever they say. Default if no answer: defer.
+3. Single foreground call with the filter (canon R1):
+   ```bash
+   dotnet test Project/ZeroCommon.Tests/ZeroCommon.Tests.csproj \
+     --filter "FullyQualifiedName~NewTestClass.NewTestMethod"
+   ```
+   For tests under `AgentTest`, only run if a desktop session is
+   available (canon R5).
+4. **[Required]** `tasklist | grep -iE "testhost|vstest"` after the run.
+5. **[Required]** Write log per "Log format" below with `mode: author-verify`,
+   `reason: "newly authored in task: <one-line task summary>"`, and the
+   filter string. Even a pass case logs — the audit trail is the point.
+
+**Scope discipline.** Author-verify fires at most once per task. If Claude
+adds five new tests across two files in one task, run a single filtered
+call covering both classes (`~ClassA|~ClassB`). Do not loop.
+
 ## Log format
 
 Path: `harness/logs/test-runner/{yyyy-MM-dd-HH-mm}-{mode}-{title}.md`
@@ -110,9 +158,9 @@ Path: `harness/logs/test-runner/{yyyy-MM-dd-HH-mm}-{mode}-{title}.md`
 ---
 date: {ISO 8601}
 agent: test-runner
-mode: scoped | full | history
-trigger: "{trigger phrase the user actually said}"
-reason: "{why this run is happening — verbatim user context or "history query"}"
+mode: scoped | full | history | author-verify
+trigger: "{trigger phrase the user said, OR 'auto: new test authored in task' for author-verify}"
+reason: "{why this run is happening — verbatim user context, 'history query', or 'newly authored in task: <summary>'}"
 scope: ["Project/ZeroCommon.Tests"]
 filter: "FullyQualifiedName~Foo"  # only for scoped mode
 tests_passed: 42
@@ -143,9 +191,15 @@ expected slowdown for LLM smoke, missing testhost cleanup, etc.}
 
 ## What the Runner does NOT do
 
-- Does **not** run after `git commit`, `git push`, code refactors, build
-  successes, or release pipelines. Those used to auto-run tests; the
-  policy is now "explicit only" (`harness/knowledge/test-runner/unit-test-policy.md`).
+- Does **not** run after `git commit`, `git push`, code refactors of
+  non-test files, build successes, or release pipelines. The policy is
+  "explicit only" with the single Author-verify exception
+  (`harness/knowledge/test-runner/unit-test-policy.md`).
+- Does **not** auto-run LLM-smoke tests even in Author-verify mode —
+  always asks the user first when the new test touches an on-device LLM
+  path.
+- Does **not** widen Author-verify scope. If the user wants more, they
+  invoke Scoped or Full explicitly.
 - Does **not** audit test landscape structure / boundary integrity /
   coverage gaps — that is `test-sentinel`'s job, and Sentinel does
   *not* execute tests. Two roles, separate concerns.
@@ -167,8 +221,10 @@ expected slowdown for LLM smoke, missing testhost cleanup, etc.}
 
 | Axis | Measure | Scale |
 |---|---|---|
-| Trigger discipline | Did the run only happen because the user explicitly asked? | Pass/Fail |
-| Scope accuracy (Scoped mode) | Filter correctly hit the changed classes (no false negatives, minimal false positives) | A/B/C/D |
+| Trigger discipline | Did the run only happen because the user asked, OR because Author-verify legitimately fired (new test in task, non-LLM or user-approved LLM)? | Pass/Fail |
+| Scope accuracy (Scoped + Author-verify) | Filter correctly hit the changed/new classes (no false negatives, minimal false positives) | A/B/C/D |
+| Author-verify narrowness | Author-verify fired at most once per task and stayed scoped to ONLY the new test class/method | Pass/Fail |
+| LLM-smoke guard | If the new test touched on-device LLM, asked user before running | Pass/Fail |
 | Test-execution hygiene | Followed `dotnet-test-execution.md` canon; testhost cleared; no parallel calls | Pass/Fail |
 | Log completeness | `reason`, `scope`, `result` filled; future reader can audit *why* | A/B/C/D |
 | History query usefulness | Trends + actionable patterns surfaced (not just a list) | A/B/C/D |

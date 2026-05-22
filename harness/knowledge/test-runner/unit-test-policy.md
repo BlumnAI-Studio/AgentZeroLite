@@ -7,12 +7,35 @@
 
 ## Rule
 
-**Unit tests are never auto-triggered.** They run only when the user issues one
-of the explicit triggers listed in `harness/agents/test-runner.md` frontmatter
-(scoped / full / history modes).
+**Unit tests are never auto-triggered — with one narrow exception.**
 
-Any other interaction (code edits, refactors, fixes, builds, releases, commits)
-**does not** invoke `dotnet test`. The user asks; the agent runs. Period.
+Default: tests run only when the user issues one of the explicit triggers
+listed in `harness/agents/test-runner.md` frontmatter (scoped / full / history
+modes).
+
+**Exception — Author-verify (added 2026-05-23).** When Claude *authors a new
+unit test in the same task* (adds a new `[Fact]`/`[Theory]` method, or creates
+a new test class), Claude **must** verify just that newly-added test with a
+narrowly-scoped `--filter` run before reporting the task done. A test that
+compiles but doesn't actually exercise what its name claims is a false-pass;
+catching that immediately costs one filtered run, while finding it weeks
+later costs hours of debugging on a "green" suite.
+
+The exception is bounded:
+- Scope = ONLY the new test class/method. Use `--filter "FullyQualifiedName~NewTestClass"`
+  or `~NewTestClass.NewTestMethod`. Do not widen.
+- One filtered run per task — not per file edit.
+- LLM-smoke guard (Whisper / Gemma / Webnori / any on-device LLM test): the
+  CPU/RAM cost still applies. **Ask the user before running**; report the
+  expected duration and let them decide. The point of the exception is to
+  catch broken assertions cheaply, not to spin up the local LLM behind their
+  back.
+- Pure refactors (test untouched, only renamed or moved) do NOT trigger
+  the exception.
+
+Any other interaction (code edits in non-test files, refactors, fixes, builds,
+releases, commits) **does not** invoke `dotnet test`. The user asks; the
+agent runs. Period.
 
 ## Why
 
@@ -37,7 +60,10 @@ Any other interaction (code edits, refactors, fixes, builds, releases, commits)
 | Activity | Auto? |
 |---|:---:|
 | `dotnet build` after code edits (catch compile errors) | yes |
-| `dotnet test` (any project, any filter)               | **no** |
+| `dotnet test` after code edits to non-test files       | **no** |
+| `dotnet test` filtered to a **newly-authored** non-LLM test | **yes** (Author-verify exception — one filtered run) |
+| `dotnet test` filtered to a newly-authored LLM-smoke test (Whisper/Gemma/Webnori) | **ask first** |
+| `dotnet test` (full suite, any project)                | **no** |
 | `release-build-pipeline` security-guard step          | yes (release only) |
 | `release-build-pipeline` build-doctor step            | yes (release only, build only) |
 | `release-build-pipeline` test step                    | **removed** — does not exist anymore |
@@ -51,6 +77,9 @@ Any other interaction (code edits, refactors, fixes, builds, releases, commits)
 - **"테스트 점검해" / "coverage check"** → test-sentinel. Structural audit only. **No execution.**
 - **"코드 리뷰해줘" / pre-commit** → code-coach. No tests.
 - **"버그 픽스했어"** → no tests by default. If the user wants to verify, they ask.
+- **Claude wrote a new `[Fact]` in `FooTests.cs`** → Author-verify exception fires. Run `dotnet test ZeroCommon.Tests --filter "FullyQualifiedName~FooTests.NewFactName"` before reporting done. If `FooTests` is an LLM-smoke class, ask the user first.
+- **Claude added a new test class `BarTests.cs`** → same — filter to `~BarTests`. One run.
+- **Claude renamed or moved an existing test without changing logic** → no run. Refactor only.
 
 ## Coordination with test-sentinel
 
