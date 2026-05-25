@@ -31,7 +31,8 @@ public partial class AgentBotWindow : Window
     //   - remember which model/template the active session uses for labels.
     private bool _aiSendInFlight;
     private System.Diagnostics.Stopwatch? _aiSendStopwatch;
-    private string? _aiActiveChatFamily;          // "gemma" / "llama31" — for bubble label
+    private string? _aiActiveChatFamily;          // "gemma" / "llama31" / "external" — for Vulkan-recovery hint logic
+    private string? _aiActiveBubbleLabel;         // What to print next to "◂" on the result bubble (e.g. "Gemma", "Nemotron", "gemma-4-e4b")
     private bool _aiAgentLoopRegistered;          // SetAgentLoopCallbacks + Bindings sent?
 
     // Akka Actor 연동
@@ -1138,6 +1139,9 @@ public partial class AgentBotWindow : Window
         {
             var entry = LlmModelCatalog.FindById(LlmService.CurrentSettings.ModelId);
             _aiActiveChatFamily = entry.ChatFamily;
+            _aiActiveBubbleLabel = entry.ChatFamily.Equals("llama31", StringComparison.OrdinalIgnoreCase)
+                ? "Nemotron"
+                : "Gemma";
             displayName = entry.DisplayName;
 
             // Save Options only persists JSON; LlmService.CurrentSettings is
@@ -1169,6 +1173,16 @@ public partial class AgentBotWindow : Window
             _aiActiveChatFamily = "external";
             var modelId = savedSettings.ResolveExternalModel();
             displayName = $"{savedSettings.External.Provider} · {modelId}";
+            // Strip the org prefix ("google/...", "nvidia/...", "qwen/...") so
+            // the bubble label is short but still identifies the actual model
+            // the server picked. Previously this branch fell through to the
+            // family-based fallback which always said "Gemma" — so users who
+            // saved Nemotron / Qwen via Webnori a2 saw "Gemma" labels on
+            // Nemotron answers. UI staleness, not a routing bug.
+            var slash = modelId.IndexOf('/');
+            _aiActiveBubbleLabel = slash >= 0 && slash < modelId.Length - 1
+                ? modelId.Substring(slash + 1)
+                : modelId;
 
             // Heads-up: the AIMODE toolchain is Gemma-4-shaped. Non-Gemma
             // external models won't emit the JSON envelopes the agent loop
@@ -1326,9 +1340,10 @@ public partial class AgentBotWindow : Window
     {
         ClearAiGenerationStatus();
         var family = _aiActiveChatFamily ?? "gemma";
-        var label = family.Equals("llama31", StringComparison.OrdinalIgnoreCase)
-            ? "Nemotron"
-            : "Gemma";
+        // _aiActiveBubbleLabel is captured at AIMODE start so the External
+        // branch surfaces the actual model id (e.g. "Nemotron-Nano-4B"),
+        // not the hardcoded "Gemma" fallback that used to live here.
+        var label = _aiActiveBubbleLabel ?? (family.Equals("llama31", StringComparison.OrdinalIgnoreCase) ? "Nemotron" : "Gemma");
         var sw = _aiSendStopwatch;
         sw?.Stop();
         var elapsed = sw?.ElapsedMilliseconds ?? r.ElapsedMs;
