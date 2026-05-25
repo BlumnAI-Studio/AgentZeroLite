@@ -28,6 +28,10 @@
     {
       "type": "pen",
       "file": "M0022-ui-refresh.pen"
+    },
+    {
+      "type": "pen",
+      "file": "M0023-architecture.pen"
     }
   ]
 }

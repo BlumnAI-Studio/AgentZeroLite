@@ -196,8 +196,8 @@
       "name": "unit-test-policy.md",
       "title": "unit-test-policy",
       "heading": "Unit-test execution policy",
-      "size": 3562,
-      "modified": "2026-05-03"
+      "size": 5485,
+      "modified": "2026-05-22"
     },
     {
       "id": "harness/knowledge/test-sentinel/voice-roundtrip-testing.md",
@@ -352,8 +352,8 @@
           "type": "file",
           "name": "unit-test-policy.md",
           "path": "test-runner/unit-test-policy.md",
-          "size": 3562,
-          "modified": "2026-05-03"
+          "size": 5485,
+          "modified": "2026-05-22"
         }
       ]
     },

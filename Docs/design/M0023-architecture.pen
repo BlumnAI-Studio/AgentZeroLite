@@ -1,0 +1,3143 @@
+{
+  "version": "2.11",
+  "children": [
+    {
+      "type": "frame",
+      "id": "v1PUv",
+      "x": 0,
+      "y": 0,
+      "name": "Core Architecture",
+      "width": 1440,
+      "height": 1100,
+      "fill": "#F5F6FA",
+      "cornerRadius": 12,
+      "stroke": {
+        "thickness": 1,
+        "fill": "#E5E7EB"
+      },
+      "layout": "vertical",
+      "gap": 20,
+      "padding": [
+        28,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "z6ZfvT",
+          "name": "header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "sYweW",
+              "name": "titleText",
+              "fill": "#1B1F3B",
+              "content": "AgentZero Lite — Core Architecture",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "kiCPI",
+              "name": "subTitle",
+              "fill": "#475569",
+              "content": "M0023 / codescan v0.7.2 of D:\\Code\\AI\\AgentZeroLite  ·  596 files · 3,478 methods · scan 2026-05-25",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NjBbk",
+          "name": "metaRow",
+          "width": "fill_container",
+          "gap": 10,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Z7mtya",
+              "name": "chip1",
+              "fill": "#EDE9FE",
+              "cornerRadius": 14,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#8B5CF6"
+              },
+              "gap": 6,
+              "padding": [
+                6,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YamST",
+                  "name": "chip1Text",
+                  "fill": "#5B21B6",
+                  "content": "net10.0-windows · WPF",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mtyPk",
+              "name": "chip2",
+              "fill": "#CFFAFE",
+              "cornerRadius": 14,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#06B6D4"
+              },
+              "gap": 6,
+              "padding": [
+                6,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "R066uC",
+                  "name": "chip2Text",
+                  "fill": "#164E63",
+                  "content": "Akka.NET actor system",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "VhEJj",
+              "name": "chip3",
+              "fill": "#FEF3C7",
+              "cornerRadius": 14,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F59E0B"
+              },
+              "gap": 6,
+              "padding": [
+                6,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "qjiyl",
+                  "name": "chip3Text",
+                  "fill": "#78350F",
+                  "content": "EF Core + SQLite",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Yxcdw",
+              "name": "chip4",
+              "fill": "#FFE4E6",
+              "cornerRadius": 14,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F43F5E"
+              },
+              "gap": 6,
+              "padding": [
+                6,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "M1atH",
+                  "name": "chip4Text",
+                  "fill": "#881337",
+                  "content": "ConPTY · native DLLs",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JTzUz",
+          "name": "main row",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "G7RZ5",
+              "name": "col WPF",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "y0BZ4o",
+                  "name": "wpfHead",
+                  "width": "fill_container",
+                  "fill": "#DBEAFE",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#3B82F6"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "aKt28",
+                      "name": "wpfHeadT",
+                      "fill": "#1E40AF",
+                      "content": "WPF HOST  (AgentZeroWpf)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "DCNOo",
+                      "name": "wpfHeadS",
+                      "fill": "#1D4ED8",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "net10.0-windows  ·  WinExe  ·  -cli dispatch in App.OnStartup",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "mVEk7",
+                  "name": "wpfBody",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UUszX",
+                      "name": "wRow1",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gT3KU",
+                          "name": "wDot1",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "ae33m",
+                          "name": "wTxt1",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "App.xaml.cs  ·  single-instance mutex  ·  -cli vs GUI branch",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p58KKn",
+                      "name": "wRow2",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "A9CKT",
+                          "name": "wDot2",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "yK4i5",
+                          "name": "wTxt2",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "MainWindow  ·  WM_COPYDATA receiver  ·  hosts terminal tabs",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZxtEg",
+                      "name": "wRow3",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mk7qH",
+                          "name": "wDot3",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "dHZeB",
+                          "name": "wTxt3",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "AgentBotWindow  ·  chat / voice / key mode UI",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m1ICB",
+                      "name": "wRow4",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "aWYs7",
+                          "name": "wDot4",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "lz4Iz",
+                          "name": "wTxt4",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "ConPtyTerminalSession  ·  ITerminalSession impl  ·  wraps conpty.dll",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pgiP7",
+                      "name": "wRow5",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ZK7KY",
+                          "name": "wDot5",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "x7SuXn",
+                          "name": "wTxt5",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "MermaidRenderer + WebView2  ·  offline Mermaid/Markdown preview",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CGZ04",
+                      "name": "wRow6",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FmA45",
+                          "name": "wDot6",
+                          "width": 6,
+                          "height": 6,
+                          "fill": "#3B82F6",
+                          "cornerRadius": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "qJOg8",
+                          "name": "wTxt6",
+                          "fill": "#1B1F3B",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "VoiceCaptureService / VoicePlaybackService  ·  WPF-side audio",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aRO57",
+                  "name": "wpfRule",
+                  "width": "fill_container",
+                  "fill": "#FEF2F2",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#F87171"
+                  },
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sz8ga",
+                      "name": "wpfRuleT",
+                      "fill": "#991B1B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⚠ Rule: AgentZeroWpf → ZeroCommon, never reversed",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MbRF6",
+              "name": "col Actors",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "gaYf1",
+                  "name": "aHead",
+                  "width": "fill_container",
+                  "fill": "#CFFAFE",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#06B6D4"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zPuPw",
+                      "name": "aHeadT",
+                      "fill": "#164E63",
+                      "content": "AKKA ACTOR SYSTEM  (ZeroCommon)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "OowuN",
+                      "name": "aHeadS",
+                      "fill": "#155E75",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "net10.0  ·  WPF/Win32-free  ·  ActorSystemManager.Initialize()",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvBfd",
+                  "name": "aTree",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PMq89",
+                      "name": "t1",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "/user/stage   ▸ StageActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uZkiY",
+                      "name": "t1s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "   supervisor · message broker · bot/voice/workspace owner",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DY1lj",
+                      "name": "t2",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "    └─ /bot   ▸ AgentBotActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NLqoa",
+                      "name": "t2s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "           UI gateway · chat/key mode · peer routing · intro tracking",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "kFEQz",
+                      "name": "t3",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "          └─ /loop   ▸ AgentLoopActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "F1puFB",
+                      "name": "t3s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "                  THE agent · owns IAgentLoop · Idle→Thinking→Generating→Acting→Done",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "d0xXo",
+                      "name": "t4",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "    ├─ /ws-<name>   ▸ WorkspaceActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "MYVl4",
+                      "name": "t4s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "           one per workspace (folder)",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "R14nGb",
+                      "name": "t5",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "          └─ /term-<id>   ▸ TerminalActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "m7t7uJ",
+                      "name": "t5s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "                  wraps one ITerminalSession (seam → WPF)",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "S1YwzI",
+                      "name": "t6",
+                      "fill": "#0E7490",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "    └─ /voice-stream   ▸ VoiceStreamActor",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "i1du8",
+                      "name": "t6s",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "           STT/TTS worker actors hang off this branch",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Zdm8T",
+                  "name": "aSup",
+                  "width": "fill_container",
+                  "fill": "#F0F9FF",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#7DD3FC"
+                  },
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    10,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iOQTJ",
+                      "name": "aSupT",
+                      "fill": "#075985",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Support  ·  ActorNameSanitizer · AgentEventStream · Messages.cs",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "i1kZb",
+                      "name": "aSupT2",
+                      "fill": "#0369A1",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Name-sanitize user input before path; shutdown is fire-and-forget (UI deadlock fix)",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Khx1g",
+              "name": "col AgentLoop",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fkvfO",
+                  "name": "lHead",
+                  "width": "fill_container",
+                  "fill": "#EDE9FE",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#8B5CF6"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sQql4",
+                      "name": "lHeadT",
+                      "fill": "#5B21B6",
+                      "content": "AGENT LOOP  (ZeroCommon/Llm/Tools)",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z123vX",
+                      "name": "lHeadS",
+                      "fill": "#6D28D9",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "M0013 vocabulary  ·  Anthropic / Claude Agent SDK aligned",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R1Mpgt",
+                  "name": "lIface",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zCUe2",
+                      "name": "lI1",
+                      "fill": "#5B21B6",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "interface IAgentLoop",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L2oBz2",
+                      "name": "lI2",
+                      "fill": "#6B7280",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "   RunAsync(prompt, toolbelt) → AgentLoopRun",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aO1mD",
+                      "name": "lI3",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "   backend-agnostic contract — one loop per session",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Bpvxh",
+                  "name": "lImpls",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yEH2R",
+                      "name": "lImpA",
+                      "width": "fill_container",
+                      "fill": "#F5F3FF",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#C4B5FD"
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cgJNA",
+                          "name": "lImpA1",
+                          "fill": "#5B21B6",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "⊕  LocalAgentLoop",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "GgWv1",
+                          "name": "lImpA2",
+                          "fill": "#4C1D95",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "LLamaSharp + GBNF grammar  ·  on-device · uses ILocalLlm / ILocalChatSession",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P9DFJ",
+                      "name": "lImpB",
+                      "width": "fill_container",
+                      "fill": "#F5F3FF",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#C4B5FD"
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tIDCY",
+                          "name": "lImpB1",
+                          "fill": "#5B21B6",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "⊕  ExternalAgentLoop",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "y11Z7",
+                          "name": "lImpB2",
+                          "fill": "#4C1D95",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "OpenAI-compat REST  ·  Webnori / OpenAI / LM Studio / Ollama",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u2XmV",
+                  "name": "lSide",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 5,
+                  "padding": [
+                    12,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mPEwH",
+                      "name": "lS1",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "AgentLoopGuards  ·  repeat / hard-stop / transient-retry defense",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rYVTR",
+                      "name": "lS2",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "IAgentToolbelt  ·  side-effect surface  ·  WorkspaceTerminalToolHost impl",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L67wcN",
+                      "name": "lS3",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "LlmProviderFactory  ·  picks local vs external by ExternalLlmSettings",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "veA2Q",
+          "name": "bottom row",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "xMjry",
+              "name": "persist",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CZaSB",
+                  "name": "pHead",
+                  "width": "fill_container",
+                  "fill": "#FEF3C7",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#F59E0B"
+                  },
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sJEVT",
+                      "name": "pHt",
+                      "fill": "#78350F",
+                      "content": "PERSISTENCE  ·  EF Core + SQLite",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "n1qlpL",
+                      "name": "pHs",
+                      "fill": "#92400E",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "%LOCALAPPDATA%\\AgentZeroLite\\agentZeroLite.db",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wgERN",
+                  "name": "pBody",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uDelx",
+                      "name": "pB1",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "AppDbContext.InitializeDatabase()",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "PCzlC",
+                      "name": "pB2",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Migrations live in ZeroCommon/Data/Migrations/",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "q5J8K",
+                      "name": "pB3",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Seeded CliDefinition (CMD, PW5, PW7, Claude) — IsBuiltIn = true",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aruO7",
+                      "name": "pB4",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CliWorkspacePersistence  ·  SessionHeartbeats",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kkORT",
+              "name": "native",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KSrIz",
+                  "name": "nHead",
+                  "width": "fill_container",
+                  "fill": "#FFF7ED",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#FDBA74"
+                  },
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "stDmB",
+                      "name": "nHt",
+                      "fill": "#9A3412",
+                      "content": "NATIVE DLLs  ·  ConPTY + Mermaid",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "k6BB3",
+                      "name": "nHs",
+                      "fill": "#C2410C",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "copied from $(NuGetPackageRoot) at build time",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BEH5K",
+                  "name": "nBody",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j20wr",
+                      "name": "nB1",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "conpty.dll  ·  Microsoft.Terminal.Control.dll",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Isbpw",
+                      "name": "nB2",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "hard-coded version pin in AgentZeroWpf.csproj",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "JDouK",
+                      "name": "nB3",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Assets/mermaid.min.js (embedded resource)",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rAJbI",
+                      "name": "nB4",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "WebView2 hosts MarkdownViewer + MermaidRenderer",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hX45E",
+              "name": "ipc",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MGRMb",
+                  "name": "iHead",
+                  "width": "fill_container",
+                  "fill": "#FFE4E6",
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#F43F5E"
+                  },
+                  "layout": "vertical",
+                  "gap": 3,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "x6U4AI",
+                      "name": "iHt",
+                      "fill": "#881337",
+                      "content": "CLI ↔ GUI IPC  ·  WM_COPYDATA + MMF",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "YiVNf",
+                      "name": "iHs",
+                      "fill": "#9F1239",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "single exe — CliHandler in -cli mode talks to GUI",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b3FQcz",
+                  "name": "iBody",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#E5E7EB"
+                  },
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l7NDb",
+                      "name": "iB1",
+                      "fill": "#1B1F3B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "marker 0x414C  \"AL\"  ·  WM_COPYDATA",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zamhm",
+                      "name": "iB2",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "GUI writes JSON to MMF AgentZeroLite_* — CLI polls (5 s)",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BjPTb",
+                      "name": "iB3",
+                      "fill": "#475569",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CliHandler · CliTerminalIpcHelper · CliSessionAccessHelper",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "rsCps",
+      "x": 0,
+      "y": 1140,
+      "name": "Graph 1 — Actor Topology",
+      "width": 700,
+      "height": 900,
+      "fill": "#F5F6FA",
+      "cornerRadius": 12,
+      "stroke": {
+        "thickness": 1,
+        "fill": "#E5E7EB"
+      },
+      "layout": "vertical",
+      "gap": 16,
+      "padding": [
+        24,
+        28
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "HAMcx",
+          "name": "gTitle",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "OAyQH",
+              "name": "gT1",
+              "fill": "#1B1F3B",
+              "content": "Graph 1 — Actor Topology & Message Flow",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "f5PKOV",
+              "name": "gT2",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "who sends what to whom  ·  source: Messages.cs + AgentBotActor.cs + AgentLoopActor.cs",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "YBPp5",
+          "name": "gStageWrap",
+          "width": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "KyTjD",
+              "name": "gStage",
+              "fill": "#CFFAFE",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#06B6D4"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                16
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bOW1c",
+                  "name": "gStageT",
+                  "fill": "#0E7490",
+                  "content": "/user/stage",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "JaCuu",
+                  "name": "gStageS",
+                  "fill": "#155E75",
+                  "content": "StageActor — supervisor",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gewO5",
+          "name": "gArr1",
+          "width": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "n9fRp",
+              "name": "gArr1Txt",
+              "fill": "#0E7490",
+              "content": "↓  routes Bot/Workspace/Voice msgs",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fVdVk",
+          "name": "gMidRow",
+          "width": "fill_container",
+          "gap": 14,
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "GZL7u",
+              "name": "gBot",
+              "fill": "#DBEAFE",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#3B82F6"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "iTBLx",
+                  "name": "gBotT",
+                  "fill": "#1E40AF",
+                  "content": "/bot",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "MW3fb",
+                  "name": "gBotS",
+                  "fill": "#1D4ED8",
+                  "content": "AgentBotActor (UI gateway)",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mwa03",
+              "name": "gArrR",
+              "layout": "vertical",
+              "padding": [
+                6,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "u02PaP",
+                  "name": "gArrR1",
+                  "fill": "#5B21B6",
+                  "content": "⇄",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "PwgUP",
+                  "name": "gArrR2",
+                  "fill": "#5B21B6",
+                  "content": "StartGenerate / AgentLoopRun",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rlpux",
+              "name": "gLoop",
+              "fill": "#EDE9FE",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#8B5CF6"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "zThzN",
+                  "name": "gLoopT",
+                  "fill": "#5B21B6",
+                  "content": "/bot/loop",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "CttLY",
+                  "name": "gLoopS",
+                  "fill": "#6D28D9",
+                  "content": "AgentLoopActor (THE agent)",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uJ0rl",
+          "name": "gArr2",
+          "width": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "wLYTg",
+              "name": "gArr2T",
+              "fill": "#0E7490",
+              "content": "↓  TerminalCommand  /  VoiceFrame",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "T9e4BU",
+          "name": "gBotRow",
+          "width": "fill_container",
+          "gap": 14,
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "zIuVh",
+              "name": "gWs",
+              "fill": "#CFFAFE",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#06B6D4"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "d4vmf",
+                  "name": "gWsT",
+                  "fill": "#0E7490",
+                  "content": "/ws-<name>",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "AZTgI",
+                  "name": "gWsS",
+                  "fill": "#155E75",
+                  "content": "WorkspaceActor",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "EFrD9",
+              "name": "gArrW",
+              "fill": "#0E7490",
+              "content": "→",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "meMiH",
+              "name": "gTerm",
+              "fill": "#CFFAFE",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#06B6D4"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "c1qFAQ",
+                  "name": "gTermT",
+                  "fill": "#0E7490",
+                  "content": "/term-<id>",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "sCN2y",
+                  "name": "gTermS",
+                  "fill": "#155E75",
+                  "content": "TerminalActor → ITerminalSession",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "hN0lD",
+              "name": "gSpacer",
+              "fill": "#94A3B8",
+              "content": "  ·  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "w06jQz",
+              "name": "gVoice",
+              "fill": "#FFE4E6",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#F43F5E"
+              },
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bIlkG",
+                  "name": "gVoiceT",
+                  "fill": "#881337",
+                  "content": "/voice-stream",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "OVRCe",
+                  "name": "gVoiceS",
+                  "fill": "#9F1239",
+                  "content": "VoiceStreamActor + STT/TTS",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "e6zt3w",
+          "name": "gLegend",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 8,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#E5E7EB"
+          },
+          "layout": "vertical",
+          "gap": 4,
+          "padding": [
+            10,
+            14
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "WFAOM",
+              "name": "gLegT",
+              "fill": "#1B1F3B",
+              "content": "Message types (Messages.cs)",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "eDCMW",
+              "name": "gLegL1",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "SendBotChat  ·  ClearConversation  ·  SetPeerRoute  →  /bot",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "A99jFA",
+              "name": "gLegL2",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "StartGenerate  →  /loop      AgentLoopRun / FsmState  ←  /loop",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "SboEy",
+              "name": "gLegL3",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "TerminalSend  ·  TerminalRead  →  /ws-*/term-*",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "E756kw",
+              "name": "gLegL4",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "VoiceFrame  ·  TtsRequest  ·  SttResult  →  /voice-stream",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "pPGdS",
+      "x": 740,
+      "y": 1140,
+      "name": "Graph 2 — Agent Loop Polymorphism",
+      "width": 700,
+      "height": 900,
+      "fill": "#F5F6FA",
+      "cornerRadius": 12,
+      "stroke": {
+        "thickness": 1,
+        "fill": "#E5E7EB"
+      },
+      "layout": "vertical",
+      "gap": 16,
+      "padding": [
+        24,
+        28
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "itvuH",
+          "name": "pTitle",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "ousqG",
+              "name": "pT1",
+              "fill": "#1B1F3B",
+              "content": "Graph 2 — IAgentLoop Polymorphism",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "L00J3P",
+              "name": "pT2",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "interface seam that lets one actor host any LLM backend  ·  ZeroCommon/Llm/Tools/",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "a8j4pm",
+          "name": "pIfaceWrap",
+          "width": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "moYZu",
+              "name": "pIface",
+              "fill": "#EDE9FE",
+              "cornerRadius": 12,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#8B5CF6"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                12,
+                18
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mYx0U",
+                  "name": "pIfT",
+                  "fill": "#5B21B6",
+                  "content": "« interface »   IAgentLoop",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "y2jpt0",
+                  "name": "pIfS",
+                  "fill": "#6D28D9",
+                  "content": "RunAsync(prompt, toolbelt, ct) : AgentLoopRun",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "IVRuL",
+                  "name": "pIfS2",
+                  "fill": "#6D28D9",
+                  "content": "IAgentLoop.cs — 741 B contract",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "e0vXG",
+          "name": "pArrSplit",
+          "width": "fill_container",
+          "gap": 60,
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Z5WiN",
+              "name": "pArrL",
+              "fill": "#5B21B6",
+              "content": "↙ implements",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "neAny",
+              "name": "pArrR",
+              "fill": "#5B21B6",
+              "content": "implements ↘",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "FNk3d",
+          "name": "pImplRow",
+          "width": "fill_container",
+          "gap": 12,
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "I4qIYN",
+              "name": "pLocal",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#A78BFA"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                12,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "z43Ofd",
+                  "name": "pLT",
+                  "fill": "#5B21B6",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LocalAgentLoop",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "KMRvJ",
+                  "name": "pLS",
+                  "fill": "#6D28D9",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "on-device · LLamaSharp + GBNF grammar",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "p31fF8",
+                  "name": "pLD",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "deps: ILocalLlm · ILocalChatSession · LlmModelLocator",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "n8iCK",
+                  "name": "pLM",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "21,654 B · M0013 rename Reactor→AgentLoop",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "jz8nc",
+              "name": "pExt",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#A78BFA"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                12,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "h5NLhn",
+                  "name": "pET",
+                  "fill": "#5B21B6",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "ExternalAgentLoop",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "NWfbg",
+                  "name": "pES",
+                  "fill": "#6D28D9",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "OpenAI-compat REST · Webnori/OpenAI/LMStudio/Ollama",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "bia1X",
+                  "name": "pED",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "deps: OpenAiCompatibleProvider · ExternalChatSession",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "tn3cJ",
+                  "name": "pEM",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "methods: GenerateOneTurnAsync · ExecuteToolAsync · ExtractFirstJsonObject",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PJHUR",
+          "name": "pInfra",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#E5E7EB"
+          },
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            12,
+            14
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "V3gBA",
+              "name": "pInfraT",
+              "fill": "#1B1F3B",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Shared infrastructure (both impls)",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "bZiym",
+              "name": "pR1",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YtQqR",
+                  "name": "pR1Tag",
+                  "width": 80,
+                  "fill": "#FFE4E6",
+                  "cornerRadius": 6,
+                  "padding": [
+                    4,
+                    8
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "g5fquy",
+                      "name": "pR1TagT",
+                      "fill": "#881337",
+                      "content": "guards",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "B3PWe",
+                  "name": "pR1Tx",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "AgentLoopGuards — repeat / hard-stop / transient-retry defenses (7,945 B)",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "a79i0",
+              "name": "pR2",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "v3ylk2",
+                  "name": "pR2Tag",
+                  "width": 80,
+                  "fill": "#CFFAFE",
+                  "cornerRadius": 6,
+                  "padding": [
+                    4,
+                    8
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uAdWD",
+                      "name": "pR2TagT",
+                      "fill": "#164E63",
+                      "content": "toolbelt",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "YBCuW",
+                  "name": "pR2Tx",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "IAgentToolbelt — side-effect surface · WorkspaceTerminalToolHost wires terminal/file/net tools",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DDpKb",
+              "name": "pR3",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "HFffr",
+                  "name": "pR3Tag",
+                  "width": 80,
+                  "fill": "#DBEAFE",
+                  "cornerRadius": 6,
+                  "padding": [
+                    4,
+                    8
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FCBKv",
+                      "name": "pR3TagT",
+                      "fill": "#1E40AF",
+                      "content": "factory",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "BieRC",
+                  "name": "pR3Tx",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LlmProviderFactory — picks Local vs External by ExternalLlmSettings.ActiveProvider",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BYSja",
+              "name": "pR4",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bS3us",
+                  "name": "pR4Tag",
+                  "width": 80,
+                  "fill": "#FEF3C7",
+                  "cornerRadius": 6,
+                  "padding": [
+                    4,
+                    8
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XGrF5",
+                      "name": "pR4TagT",
+                      "fill": "#78350F",
+                      "content": "result",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 10,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "d3Zo7",
+                  "name": "pR4Tx",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "AgentLoopRun — one RunAsync result · feeds AgentLoopActor FSM",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PaLKP",
+          "name": "pNote",
+          "width": "fill_container",
+          "fill": "#FEF3C7",
+          "cornerRadius": 8,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#F59E0B"
+          },
+          "layout": "vertical",
+          "padding": [
+            8,
+            12
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "TZlHG",
+              "name": "pNoteT",
+              "fill": "#78350F",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "⌘ AgentBotActor is the UI gateway · AgentLoopActor is the agent",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "600"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "WUSht",
+      "x": 0,
+      "y": 2080,
+      "name": "Graph 3 — IPC + Terminal Seam",
+      "width": 1440,
+      "height": 780,
+      "fill": "#F5F6FA",
+      "cornerRadius": 12,
+      "stroke": {
+        "thickness": 1,
+        "fill": "#E5E7EB"
+      },
+      "layout": "vertical",
+      "gap": 16,
+      "padding": [
+        24,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "Vscq3",
+          "name": "sTitle",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "WJ7Bo",
+              "name": "sT1",
+              "fill": "#1B1F3B",
+              "content": "Graph 3 — IPC Handshake & Terminal Seam",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "TrgSx",
+              "name": "sT2",
+              "fill": "#475569",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "single exe · -cli sub-process talks to GUI host via WM_COPYDATA + MMF · then crosses ITerminalSession seam",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "e9Au3",
+          "name": "sCliLane",
+          "width": "fill_container",
+          "fill": "#FFE4E6",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#FB7185"
+          },
+          "padding": [
+            14,
+            18
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "zHibs",
+              "name": "sCliLabel",
+              "width": 140,
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fD4Fj",
+                  "name": "sCliLabT",
+                  "fill": "#881337",
+                  "content": "CLI PROCESS",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "mPt9E",
+                  "name": "sCliLabS",
+                  "fill": "#9F1239",
+                  "content": "AgentZeroLite.exe -cli",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eLlKN",
+              "name": "sB1",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F43F5E"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "xk53X",
+                  "name": "sB1T",
+                  "fill": "#881337",
+                  "content": "-cli arg dispatch",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "NqV8v",
+                  "name": "sB1S",
+                  "fill": "#9F1239",
+                  "content": "App.OnStartup",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "frih6",
+              "name": "sArr1",
+              "fill": "#881337",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "SRO0s",
+              "name": "sB2",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F43F5E"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LcI4z",
+                  "name": "sB2T",
+                  "fill": "#881337",
+                  "content": "CliHandler.Run",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "zXe48",
+                  "name": "sB2S",
+                  "fill": "#9F1239",
+                  "content": "FindWindow + SendMessage",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Wm8m8",
+              "name": "sArr2",
+              "fill": "#881337",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "If1hH",
+              "name": "sB3",
+              "fill": "#FEF3C7",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F59E0B"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "h0kOKf",
+                  "name": "sB3T",
+                  "fill": "#78350F",
+                  "content": "WM_COPYDATA  marker 0x414C \"AL\"",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "F5dvEQ",
+                  "name": "sB3S",
+                  "fill": "#92400E",
+                  "content": "payload: JSON cmd",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "p0l4p",
+              "name": "sArr3",
+              "fill": "#881337",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "vUMJA",
+              "name": "sB4",
+              "fill": "#FEF3C7",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#F59E0B"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OZ7H7",
+                  "name": "sB4T",
+                  "fill": "#78350F",
+                  "content": "MMF poll  AgentZeroLite_*",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "UFrgQ",
+                  "name": "sB4S",
+                  "fill": "#92400E",
+                  "content": "5 s timeout · --no-wait skips",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Q1M7l",
+          "name": "sGuiLane",
+          "width": "fill_container",
+          "fill": "#DBEAFE",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#60A5FA"
+          },
+          "padding": [
+            14,
+            18
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "PKTeS",
+              "name": "sGuiLabel",
+              "width": 140,
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ADeve",
+                  "name": "sGuiLabT",
+                  "fill": "#1E40AF",
+                  "content": "GUI PROCESS",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "oAjcI",
+                  "name": "sGuiLabS",
+                  "fill": "#1D4ED8",
+                  "content": "single-instance host",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sEeUg",
+              "name": "sG1",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#3B82F6"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "twaZv",
+                  "name": "sG1T",
+                  "fill": "#1E40AF",
+                  "content": "MainWindow.WndProc",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "TBkst",
+                  "name": "sG1S",
+                  "fill": "#1D4ED8",
+                  "content": "validates marker AL",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "U83Vv",
+              "name": "sGa1",
+              "fill": "#1E40AF",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "HWw4B",
+              "name": "sG2",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#3B82F6"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J9QC2R",
+                  "name": "sG2T",
+                  "fill": "#1E40AF",
+                  "content": "CliTerminalIpcHelper",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "PJg0i",
+                  "name": "sG2S",
+                  "fill": "#1D4ED8",
+                  "content": "TryResolveSession",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "W5pvE",
+              "name": "sGa2",
+              "fill": "#1E40AF",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "OagnA",
+              "name": "sG3",
+              "fill": "#EDE9FE",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#8B5CF6"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "gsopt",
+                  "name": "sG3T",
+                  "fill": "#5B21B6",
+                  "content": "« seam »  ITerminalSession",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "EKSlc",
+                  "name": "sG3S",
+                  "fill": "#6D28D9",
+                  "content": "actor ⇋ WPF boundary",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "M4MzjH",
+              "name": "sGa3",
+              "fill": "#1E40AF",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "IJF8g",
+              "name": "sG4",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#3B82F6"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "z0p7k",
+                  "name": "sG4T",
+                  "fill": "#1E40AF",
+                  "content": "ConPtyTerminalSession",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "aFJcR",
+                  "name": "sG4S",
+                  "fill": "#1D4ED8",
+                  "content": "WPF-side impl",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "cukgb",
+              "name": "sGa4",
+              "fill": "#1E40AF",
+              "content": "  →  ",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "svjPx",
+              "name": "sG5",
+              "fill": "#FFF7ED",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#FDBA74"
+              },
+              "layout": "vertical",
+              "gap": 1,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "g3UNu",
+                  "name": "sG5T",
+                  "fill": "#9A3412",
+                  "content": "conpty.dll",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "EeoGw",
+                  "name": "sG5S",
+                  "fill": "#C2410C",
+                  "content": "native pseudo-tty",
+                  "fontFamily": "Inter",
+                  "fontSize": 9,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hcETw",
+          "name": "sCallRow",
+          "width": "fill_container",
+          "gap": 14,
+          "children": [
+            {
+              "type": "frame",
+              "id": "UpviD",
+              "name": "sCall1",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#E5E7EB"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oK0sa",
+                  "name": "sCall1T",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Why the ITerminalSession seam matters",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "NB5oe",
+                  "name": "sCall1L1",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Actor-layer code (ZeroCommon) must NOT import WPF/Win32. To reach the UI, go through AgentEventStream / SetBotUiCallback.",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "l7lua",
+                  "name": "sCall1L2",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Impls: ConPtyTerminalSession (prod) · MockTerminalSession (AgentTest) · FakeTerminalSession (unit) · ScriptedTerminalHost (loop)",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gN2jQ",
+              "name": "sCall2",
+              "width": "fill_container",
+              "fill": "#FFFFFF",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#E5E7EB"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wvgku",
+                  "name": "sCall2T",
+                  "fill": "#1B1F3B",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Return path (response)",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "bxqVp",
+                  "name": "sCall2L1",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "GUI handler writes JSON to MMF AgentZeroLite_<corr-id> · CLI polls MMF (5 s) · returns JSON to stdout / parses for caller.",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "dgLaS",
+                  "name": "sCall2L2",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "IpcMemoryMappedResponseWriter · CliConsoleModels · CliSessionAccessHelper",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "p7mSo",
+              "name": "sCall3",
+              "width": "fill_container",
+              "fill": "#F0FDF4",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#86EFAC"
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                10,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Axzfs",
+                  "name": "sCall3T",
+                  "fill": "#166534",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Verify it yourself  (CLAUDE.md)",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "I5X9A",
+                  "name": "sCall3L1",
+                  "fill": "#15803D",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "AgentZeroLite.exe -cli status   ·   PowerShell helper: AgentZeroLite.ps1 (-NoNewWindow -Wait)",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "QXl6d",
+                  "name": "sCall3L2",
+                  "fill": "#15803D",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "All native data stays local — no auto-update path, releases ship only via GitHub Actions.",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -13,16 +13,32 @@
   ],
   "counts": {
     "build-doctor": 6,
-    "code-coach": 23,
+    "code-coach": 24,
     "kakashi-copy": 1,
-    "mission-records": 22,
+    "mission-records": 23,
     "pre-commit-review": 8,
     "release-build-pipeline": 6,
     "security-guard": 8,
-    "tamer": 18,
+    "tamer": 19,
     "test-runs": 0
   },
   "items": [
+    {
+      "category": "code-coach",
+      "file": "harness/logs/code-coach/2026-05-25-21-55-agentbot-gemma-toolcall-rca.md",
+      "date": "2026-05-25",
+      "time": "21:55",
+      "title": "agentbot gemma toolcall rca",
+      "size": 11598
+    },
+    {
+      "category": "tamer",
+      "file": "harness/logs/tamer/2026-05-23-07-42-relax-unit-test-policy-author-verify.md",
+      "date": "2026-05-23",
+      "time": "07:42",
+      "title": "relax unit test policy author verify",
+      "size": 6016
+    },
     {
       "category": "tamer",
       "file": "harness/logs/tamer/2026-05-10-15-30-webnori-a1-a2-model-survey.md",
@@ -758,6 +774,14 @@
       "time": null,
       "title": "M0022-수행결과",
       "size": 7958
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0023-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0023-수행결과",
+      "size": 8207
     }
   ]
 }

@@ -3,6 +3,26 @@
   "sort": "semver-desc",
   "items": [
     {
+      "file": "v1.7.2.md",
+      "title": "v1.7.2",
+      "heading": "codescan integration + M0023 architecture visualization",
+      "path": "v1.7.2.md",
+      "size": 4310,
+      "modified": "2026-05-25",
+      "author": null,
+      "committed": null
+    },
+    {
+      "file": "v1.7.1.md",
+      "title": "v1.7.1",
+      "heading": "Unit-test policy relaxed: Author-verify exception",
+      "path": "v1.7.1.md",
+      "size": 3875,
+      "modified": "2026-05-22",
+      "author": "psmon",
+      "committed": "2026-05-23"
+    },
+    {
       "file": "v1.7.0.md",
       "title": "v1.7.0",
       "heading": "OS-control surface (mission M0014)",
@@ -146,34 +166,34 @@
   "contributors": [
     {
       "name": "psmon",
-      "commits": 118,
+      "commits": 122,
       "percent": 100
     }
   ],
   "contributorsAll": [
     {
       "name": "psmon",
-      "commits": 118,
+      "commits": 122,
       "percent": 100
     }
   ],
   "contributorsRecent": [
     {
       "name": "psmon",
-      "commits": 18,
+      "commits": 14,
       "percent": 100
     }
   ],
   "contributorsWindowDays": 14,
   "commitStats": {
-    "totalAllTime": 118,
-    "last7d": 8,
-    "last30d": 118
+    "totalAllTime": 122,
+    "last7d": 7,
+    "last30d": 104
   },
   "topChangedFiles": [
     {
       "path": "harness/harness.config.json",
-      "commits": 16
+      "commits": 14
     },
     {
       "path": "Home/harness-view/css/components.css",
@@ -181,15 +201,15 @@
     },
     {
       "path": "Home/harness-view/data/pdsa-insight.json",
-      "commits": 11
-    },
-    {
-      "path": "harness/agents/code-coach.md",
-      "commits": 10
+      "commits": 12
     },
     {
       "path": "Home/harness-view/scripts/build-indexes.js",
       "commits": 10
+    },
+    {
+      "path": "harness/agents/code-coach.md",
+      "commits": 9
     }
   ]
 }

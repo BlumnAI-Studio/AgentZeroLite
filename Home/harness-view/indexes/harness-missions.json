@@ -10,15 +10,32 @@
     "cancelled"
   ],
   "counts": {
-    "all": 23,
+    "all": 24,
     "inbox": 1,
     "in_progress": 2,
-    "done": 20,
+    "done": 21,
     "partial": 0,
     "blocked": 0,
     "cancelled": 0
   },
   "items": [
+    {
+      "id": "M0023",
+      "file": "harness/missions/M0023-아키텍처문서업데이트.md",
+      "title": "codescan + 펜슬로 AgentZero 아키텍처 시각화",
+      "operator": "psmon",
+      "language": "ko",
+      "status": "done",
+      "priority": "medium",
+      "created": "2026-05-25",
+      "recordFile": "harness/logs/mission-records/M0023-수행결과.md",
+      "recordStatus": "done",
+      "recordStarted": "2026-05-25T00:00:00+09:00",
+      "recordFinished": "2026-05-25T00:00:00+09:00",
+      "designFile": "Docs/design/M0023-architecture.pen",
+      "modified": "2026-05-25",
+      "size": 1799
+    },
     {
       "id": "M0022",
       "file": "harness/missions/M0022-UI개선l.md",
