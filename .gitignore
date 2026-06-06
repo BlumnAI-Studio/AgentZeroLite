@@ -465,3 +465,4 @@ env.json
 /.dotnet
 .mcp.json
 /.playwright-mcp
+Project/Plugins/agent-band.zip
