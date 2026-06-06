@@ -57,6 +57,15 @@ public sealed partial class WebDevHost
 
     public event Action<MusicTickInfo>? MusicTick;
     public event Action<float>? MusicAmplitude; // ~10 Hz throttled
+    /// <summary>
+    /// Fast spectrum stream (~30 Hz) — emitted on every PCM frame, throttled
+    /// so the WebView2 dispatcher stays light. Independent of the slow AST
+    /// inference tick (1.5 s) so the plugin's bar visualizer feels real-time
+    /// instead of polling.
+    /// </summary>
+    public event Action<float[]>? MusicSpectrum;
+    private long _lastSpectrumEmit;
+    private const int SpectrumEmitThrottleMs = 33; // ~30 Hz
 
     public bool IsMusicLive =>
         _musicLoopback is { IsCapturing: true }
@@ -198,6 +207,28 @@ public sealed partial class WebDevHost
             if (over > 0) _musicRollingPcm.RemoveRange(0, over);
         }
         _musicSpectrum.Push(pcm);
+
+        // Stream spectrum bars to the plugin at ~30 Hz, independent of the
+        // slow AST inference cadence. Each compute is one Hann-windowed FFT
+        // (cheap) — emitting more often than the visual frame rate isn't
+        // worth the WebView2 postMessage traffic, hence the 33 ms throttle.
+        if (MusicSpectrum is not null)
+        {
+            var now = Environment.TickCount64;
+            if (now - _lastSpectrumEmit >= SpectrumEmitThrottleMs)
+            {
+                _lastSpectrumEmit = now;
+                try
+                {
+                    var bars = _musicSpectrum.ComputeBars(MusicSpectrumBars);
+                    MusicSpectrum.Invoke(bars);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Log($"[WebDev:Music] spectrum emit failed: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+        }
     }
 
     private void OnMusicAmplitude(float rms)

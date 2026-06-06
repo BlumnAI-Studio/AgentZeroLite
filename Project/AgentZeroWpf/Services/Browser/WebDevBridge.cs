@@ -63,6 +63,7 @@ public sealed class WebDevBridge
             // M0025 — Agent Band live music ticks.
             _noteHost.MusicTick             += OnMusicTick;
             _noteHost.MusicAmplitude        += OnMusicAmplitude;
+            _noteHost.MusicSpectrum         += OnMusicSpectrum;
         }
 
         TokenUsageCollector.Instance.TickCompleted += OnTokenTick;
@@ -83,6 +84,7 @@ public sealed class WebDevBridge
             try { _noteHost.NoteSpeaking         -= OnNoteSpeaking;        } catch { }
             try { _noteHost.MusicTick            -= OnMusicTick;           } catch { }
             try { _noteHost.MusicAmplitude       -= OnMusicAmplitude;      } catch { }
+            try { _noteHost.MusicSpectrum        -= OnMusicSpectrum;       } catch { }
         }
         try { TokenUsageCollector.Instance.TickCompleted -= OnTokenTick; } catch { }
         try { TokenRemainingCollector.Instance.TickCompleted -= OnTokenRemainingTick; } catch { }
@@ -156,6 +158,12 @@ public sealed class WebDevBridge
 
     private void OnMusicAmplitude(float rms) =>
         PostEvent("music.amplitude", new { rms });
+
+    // 30 Hz spectrum stream — decoupled from the slow AST inference tick so
+    // the plugin's visualiser can move on every audio frame, not just when
+    // a new classification is ready.
+    private void OnMusicSpectrum(float[] bars) =>
+        PostEvent("music.spectrum", new { spectrum = bars });
 
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {

@@ -163,6 +163,10 @@
       onTick:      (handler) => on('music.tick', handler),
       // Amplitude: { rms } — throttled ~10 Hz.
       onAmplitude: (handler) => on('music.amplitude', handler),
+      // Spectrum: { spectrum: float[32] } — throttled ~30 Hz, decoupled
+      // from the slow AST inference tick (1.5 s). Plugins drive bar
+      // visualisers off this stream for buttery realtime feel.
+      onSpectrum:  (handler) => on('music.spectrum', handler),
     },
 
     // LLM-backed text summarization. maxChars defaults to 6000 host-side;

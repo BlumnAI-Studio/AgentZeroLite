@@ -1,14 +1,18 @@
-// agent-band.js — M0025 Agent Band plugin.
+// agent-band.js — M0025 Agent Band plugin (v0.2.0).
 //
-// Listens to `window.zero.music.onTick` (AudioSet labels + 32-bin spectrum
-// from the AST classifier running natively) and turns it into a live stage
-// where performer sprites fade in / play / fade out in response to the
-// instruments + vocals the model hears.
-//
-// No external libs — vanilla Canvas 2D. The sprite class loads individual
-// PNG frames (loaded lazily on first need) and cycles them at a per-state
-// frame rate. Background is one stage PNG scaled to fit, with the top
-// portion allowed to crop so performer space at the bottom stays generous.
+// v0.2 changelog (operator feedback):
+//   • host now emits a 30 Hz `music.spectrum` event independent of the slow
+//     1.5 s AST tick — bars feel real-time
+//   • lower SCORE_PRESENT + hysteresis (SCORE_KEEP) so AudioSet's typically
+//     low sigmoid scores still spawn performers, and once a performer is on
+//     stage it stays unless silence dominates
+//   • parent-category fallbacks ("Plucked string instrument" / "Brass" / …)
+//     because the AST top-K often emits parent classes higher than the
+//     specific sub-class
+//   • new stage layout: vocals reserved in canvas center, instruments split
+//     into L/R wings sorted by ORDER_RANK, sprite width capped so a single
+//     performer doesn't fill the screen
+//   • asymmetric attack/release lerp on the bars (fast snap up, smooth decay)
 
 (function () {
   'use strict';
@@ -20,83 +24,90 @@
   const IDLE_FPS        = 4;
   const PERFORMER_FRAMES = 4;
 
-  // Score thresholds: above ACTIVE → performer is "playing", above PRESENT →
-  // "idle on stage", below → fade out after PERSIST_TICKS misses.
-  const SCORE_ACTIVE    = 0.30;
-  const SCORE_PRESENT   = 0.15;
-  const PERSIST_TICKS   = 4;   // 4 ticks ≈ 6 s of silence before exit
-  const FADE_MS         = 600;
-  const MAX_PERFORMERS  = 6;   // crowd cap so the stage stays readable
+  // Score gating — tuned against AST AudioSet sigmoid distributions which
+  // typically hover 0.05–0.25 even for clean hits (multilabel + 527 classes).
+  // PRESENT = first-time spawn threshold. KEEP = stays-on-stage threshold
+  // (hysteresis — once a performer is up, it takes less to keep them).
+  // ACTIVE = play-animation threshold; below that they idle.
+  const SCORE_ACTIVE    = 0.12;
+  const SCORE_PRESENT   = 0.05;
+  const SCORE_KEEP      = 0.025;
+  const PERSIST_TICKS   = 8;   // ~12 s of unseen labels before fade out
+  const FADE_MS         = 700;
+  const MAX_PERFORMERS  = 8;
+
+  // Layout — sprite width is capped so 1 performer doesn't blow up to fill
+  // the whole canvas; the unused space stays as empty stage on the sides.
+  const MAX_SPRITE_W    = 140;
+  const MIN_SPRITE_W    = 70;
+  const MIN_GAP         = 14;
+  const STAGE_BASE_Y    = 0.94;  // ground line as fraction of canvas height
+  const SPRITE_TARGET_H = 0.55;  // sprite height as fraction of canvas height
 
   // Spectrum visual config.
   const SPEC_GRADIENT_FROM = [0x00, 0xe5, 0xff];
   const SPEC_GRADIENT_TO   = [0xff, 0x2d, 0x95];
+  const SPEC_ATTACK  = 0.40;   // bars going UP — fast snap
+  const SPEC_RELEASE = 0.10;   // bars going DOWN — smooth decay
 
   // ── AudioSet label → performer mapping ───────────────────────────────
   //
-  // AudioSet labels are noisy and many overlap (Guitar / Acoustic guitar /
-  // Electric guitar all imply a single guitar performer). We collapse them
-  // to canonical sprite IDs via regex; the first match wins. Vocals are
-  // intentionally fanned out across the 4 vocal sprites by rotating index
-  // so multiple co-singing labels don't collapse onto one performer.
-  //
-  // Sprites without a stable AudioSet label (viola / oboe / contrabass /
-  // tuba) are still ship-bundled so future model upgrades — or manual
-  // "summon X" hooks — can pull them in. They simply never spawn from
-  // AudioSet ticks.
+  // Tier 1: specific instrument labels (highest priority). The match-first
+  //   order matters — `\bcello\b` before `\bviolin\b` because both can co-occur.
+  // Tier 2: parent-category labels — these dominate the top-K when the
+  //   model can't decide between specific sub-classes. Map to a sensible
+  //   default sprite for the family.
+  // Vocals fan out across vocal-1..4 by per-tick round-robin so a "Singing"
+  //   + "Choir" co-occurrence shows two distinct singers instead of one.
   const VOCAL_ROTATION = ['vocal-1', 'vocal-2', 'vocal-3', 'vocal-4'];
   let vocalCursor = 0;
 
   function labelToPerformer(label) {
     const s = label.toLowerCase();
-    // Strings
-    if (/\bcello\b/.test(s))                 return 'cello';
-    if (/\bviolin|fiddle\b/.test(s))         return 'violin';
-    // Plucked
-    if (/\bharp\b/.test(s) && !/harpsichord/.test(s))
-                                             return 'harp';
-    if (/\bguitar\b/.test(s))                return 'guitar';
-    // Woodwinds
-    if (/\bflute\b/.test(s))                 return 'flute';
-    if (/\bclarinet\b/.test(s))              return 'clarinet';
-    // Brass
-    if (/french horn|\bhorn\b/.test(s))      return 'horn';
-    if (/\btrumpet\b/.test(s))               return 'trumpet';
-    if (/\btrombone\b/.test(s))              return 'trombone';
-    // Keys
-    if (/\bpiano\b/.test(s))                 return 'piano';
-    // Percussion (drum-kit, drum-machine, snare-drum, bass-drum all → drum)
-    if (/\bdrum\b/.test(s))                  return 'drum';
-    // Vocals — fan out across the 4 sprites so co-occurring vocal labels
-    // (Singing / Choir / Vocal music) feel like separate singers instead
-    // of one performer with conflicting scores.
-    if (/sing(ing)?|choir|vocal|chant|yodel|rapping/.test(s)) {
+
+    // ── Tier 1: specific instruments ──
+    if (/\bcello\b/.test(s))                                  return 'cello';
+    if (/\bviolin\b|\bfiddle\b/.test(s))                      return 'violin';
+    if (/\bharp\b/.test(s) && !/harpsichord/.test(s))         return 'harp';
+    if (/\bguitar\b/.test(s))                                 return 'guitar';
+    if (/\bflute\b/.test(s))                                  return 'flute';
+    if (/\bclarinet\b/.test(s))                               return 'clarinet';
+    if (/french horn|\bhorn\b/.test(s))                       return 'horn';
+    if (/\btrumpet\b/.test(s))                                return 'trumpet';
+    if (/\btrombone\b/.test(s))                               return 'trombone';
+    if (/\bpiano\b/.test(s))                                  return 'piano';
+    if (/\bdrum\b|cymbal|tom-tom|hi-hat|tabla/.test(s))       return 'drum';
+
+    // ── Vocals (fan out) ──
+    if (/sing(ing)?|choir|vocal|chant|yodel|rapping|hum/.test(s)) {
       const id = VOCAL_ROTATION[vocalCursor % VOCAL_ROTATION.length];
       vocalCursor++;
       return id;
     }
+
+    // ── Tier 2: parent-category fallbacks ──
+    // AST's top-K often features these higher than the specific sub-class.
+    if (/bowed string|orchestra|symphony|chamber music/.test(s)) return 'violin';
+    if (/plucked string/.test(s))                                 return 'guitar';
+    if (/woodwind|wind instrument/.test(s))                       return 'flute';
+    if (/\bbrass\b/.test(s))                                      return 'trumpet';
+    if (/keyboard \(musical\)/.test(s))                           return 'piano';
+    if (/percussion/.test(s))                                     return 'drum';
+
     return null;
   }
 
   // ── Sprite frame cache ───────────────────────────────────────────────
-  //
-  // Each performer × state has 4 frames at SPRITE_BASE/<id>-<state>-f<n>.png.
-  // Loaded lazily on first need; later draws skip any frame still pending.
-  const spriteCache = new Map(); // key="id|state" -> {frames:[HTMLImageElement], ready:boolean}
+  const spriteCache = new Map(); // key="id|state" -> {frames:[HTMLImageElement]}
 
   function ensureSpriteSet(id, state) {
     const key = id + '|' + state;
     let entry = spriteCache.get(key);
     if (entry) return entry;
-    entry = { frames: new Array(PERFORMER_FRAMES), readyCount: 0 };
+    entry = { frames: new Array(PERFORMER_FRAMES) };
     for (let i = 0; i < PERFORMER_FRAMES; i++) {
       const img = new Image();
-      // eslint-disable-next-line no-loop-func
-      img.onload = () => { entry.readyCount++; };
-      img.onerror = () => {
-        console.warn('[agent-band] sprite missing:', img.src);
-        entry.readyCount++;
-      };
+      img.onerror = () => console.warn('[agent-band] sprite missing:', img.src);
       img.src = `${SPRITE_BASE}${id}-${state}-f${i}.png`;
       entry.frames[i] = img;
     }
@@ -105,8 +116,6 @@
   }
 
   // ── Performer registry ───────────────────────────────────────────────
-  // One entry per visible performer. Created on first tick, mutated by
-  // subsequent ticks, fade-removed when no longer seen.
   /** @typedef {{
    *    id: string,
    *    score: number,
@@ -124,12 +133,11 @@
   function upsertPerformersFromLabels(labels) {
     tickCounter++;
     const now = performance.now();
-    vocalCursor = 0; // reset rotation per-tick so the same labels stay sticky
+    vocalCursor = 0; // reset rotation so same labels yield same vocal sprites
 
-    // First, group by performer id so multiple AudioSet entries (e.g.
-    // "Guitar" + "Acoustic guitar") collapse into one stage slot using
-    // the strongest score.
-    const collapsed = new Map(); // id -> bestScore
+    // Collapse multi-label hits onto a single sprite id with the strongest score
+    // ("Guitar" + "Acoustic guitar" → one guitar slot with max score).
+    const collapsed = new Map();
     for (const l of labels) {
       const id = labelToPerformer(l.name);
       if (!id) continue;
@@ -137,20 +145,23 @@
       if (prev === undefined || l.score > prev) collapsed.set(id, l.score);
     }
 
-    // Stage cap — keep only the top MAX_PERFORMERS by score from this
-    // tick PLUS anything currently on stage that's still active so we
-    // don't churn slots between two equally-scored performers.
-    const sortedNew = [...collapsed.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .filter(([, s]) => s >= SCORE_PRESENT);
+    // Hysteresis: PRESENT to spawn, KEEP to retain. Once a performer is on
+    // stage, a quieter version of the same label still counts as "seen this
+    // tick" — that's why a singer doesn't flicker on/off between ticks.
+    const ordered = [...collapsed.entries()].sort((a, b) => b[1] - a[1]);
 
-    for (const [id, score] of sortedNew) {
+    for (const [id, score] of ordered) {
+      const onStage = performers.has(id);
+      const required = onStage ? SCORE_KEEP : SCORE_PRESENT;
+      if (score < required) continue;
+
       if (!performers.has(id) && performers.size >= MAX_PERFORMERS) {
-        // No room — but allow eviction of a fading one before bouncing this.
+        // Evict a fading performer to make room; never bump an active one.
         const fadingId = [...performers.entries()].find(([, p]) => p.fading)?.[0];
         if (fadingId) performers.delete(fadingId);
         else continue;
       }
+
       let p = performers.get(id);
       if (!p) {
         p = {
@@ -170,11 +181,10 @@
         p.fading = false;
         p.fadeAt = 0;
       }
-      // Kick off frame load if not already cached.
       ensureSpriteSet(id, p.state);
     }
 
-    // Mark performers we didn't see for fade-out, evict after fade.
+    // Unseen-for-N-ticks → fade-out → evict.
     for (const [id, p] of performers) {
       if (p.lastSeenTick === tickCounter) continue;
       if (!p.fading && tickCounter - p.lastSeenTick >= PERSIST_TICKS) {
@@ -188,7 +198,65 @@
     }
   }
 
-  // ── Scene render ─────────────────────────────────────────────────────
+  // ── Stage layout — vocals center, instruments wings ──────────────────
+  //
+  // ORDER_RANK ascending = stage position from L→R. Vocals stay center
+  // regardless — we split the instruments by half over ORDER_RANK, put
+  // the lower-rank half (strings/plucked) on the left, higher-rank half
+  // (brass/keys/percussion) on the right, with vocals filling the middle.
+  const ORDER_RANK = {
+    'violin': 10, 'viola': 11, 'cello': 12, 'contrabass': 13,
+    'guitar': 20, 'harp': 21,
+    'flute': 30, 'clarinet': 31, 'oboe': 32,
+    'horn': 40, 'trumpet': 41, 'trombone': 42, 'tuba': 43,
+    'piano': 50, 'drum': 60,
+  };
+
+  function computeLayout(allPerformers, w, h) {
+    const layout = new Map();
+    if (allPerformers.length === 0) return layout;
+
+    const vocals = allPerformers.filter(p => p.id.startsWith('vocal-'));
+    const insts  = allPerformers
+      .filter(p => !p.id.startsWith('vocal-'))
+      .sort((a, b) => (ORDER_RANK[a.id] ?? 99) - (ORDER_RANK[b.id] ?? 99));
+
+    // Instruments split into L/R wings around the vocal cluster.
+    const half = Math.ceil(insts.length / 2);
+    // Reverse left wing so the inner element (closest to vocals) is the
+    // highest-ranked of the left group — gives a nice arc from violin
+    // (outer-left) → piano-ish (inner-left) → vocals → brass (inner-right)
+    // → drums (outer-right).
+    const leftWing  = insts.slice(0, half).reverse();
+    const rightWing = insts.slice(half);
+
+    const ordered = [...leftWing, ...vocals, ...rightWing];
+    const n = ordered.length;
+
+    // Compute slot dimensions. Total natural width = n × MAX_W + (n-1) × MIN_GAP.
+    // If it doesn't fit the canvas, scale down uniformly but not below MIN_W.
+    const naturalW = n * MAX_SPRITE_W + (n - 1) * MIN_GAP;
+    const scale = naturalW <= w ? 1 : (w - (n - 1) * MIN_GAP) / (n * MAX_SPRITE_W);
+    const spriteW = Math.max(MIN_SPRITE_W, MAX_SPRITE_W * scale);
+    const gap = Math.max(8, MIN_GAP * Math.max(scale, 0.5));
+    const totalW = n * spriteW + (n - 1) * gap;
+    const startX = (w - totalW) / 2;
+
+    const baseY = h * STAGE_BASE_Y;
+    const slotH = h * SPRITE_TARGET_H;
+
+    ordered.forEach((p, i) => {
+      layout.set(p.id, {
+        x: startX + i * (spriteW + gap),
+        baseY,
+        slotW: spriteW,
+        slotH,
+      });
+    });
+    return layout;
+  }
+
+  // ── Canvas refs ──────────────────────────────────────────────────────
   const stageCanvas = document.getElementById('stage');
   const stageCtx    = stageCanvas.getContext('2d');
   const specCanvas  = document.getElementById('spectrum');
@@ -217,91 +285,86 @@
     return { w, h, dpr };
   }
 
-  // Order performers across the stage from left → right; vocals upfront
-  // (vocal-1..4 sorted), then strings, brass, woodwinds, keys, perc — so
-  // an audience would see a roughly orchestral layout. Slot positions are
-  // recomputed every frame because the registry can change tick-to-tick.
-  const ORDER_RANK = {
-    'vocal-1': 0, 'vocal-2': 1, 'vocal-3': 2, 'vocal-4': 3,
-    'violin': 10, 'viola': 11, 'cello': 12, 'contrabass': 13,
-    'guitar': 20, 'harp': 21,
-    'flute': 30, 'clarinet': 31, 'oboe': 32,
-    'horn': 40, 'trumpet': 41, 'trombone': 42, 'tuba': 43,
-    'piano': 50, 'drum': 60,
-  };
-
-  function sortedPerformers() {
-    return [...performers.values()].sort(
-      (a, b) => (ORDER_RANK[a.id] ?? 99) - (ORDER_RANK[b.id] ?? 99));
-  }
-
   function drawStageBg(w, h) {
     if (!stageReady || !stageImg) {
       stageCtx.fillStyle = '#0b0d12';
       stageCtx.fillRect(0, 0, w, h);
       return;
     }
-    // Cover-fit, biased to bottom: scale so the image fills width and
-    // we drop the top crop. Performers sit on the bottom 30% area.
     const iw = stageImg.naturalWidth;
     const ih = stageImg.naturalHeight;
     const scale = Math.max(w / iw, h / ih);
     const dw = iw * scale;
     const dh = ih * scale;
     const dx = (w - dw) / 2;
-    const dy = h - dh; // bottom-aligned: top portion crops off, per mission
+    const dy = h - dh; // bottom-aligned: top crops, performer floor stays
     stageCtx.drawImage(stageImg, dx, dy, dw, dh);
   }
 
-  function drawPerformer(p, slotX, baseY, slotW, slotH, now) {
+  function drawPerformer(p, x, baseY, slotW, slotH, now) {
     const set = ensureSpriteSet(p.id, p.state);
     const frameIdx = Math.floor(now / 1000 * (p.state === 'play' ? PLAY_FPS : IDLE_FPS)) % PERFORMER_FRAMES;
     const img = set.frames[frameIdx];
     if (!img || !img.complete || img.naturalWidth === 0) return;
 
-    // Sprite aspect ratio — assume vertical character ~2:3 (h:w).
     const aspect = img.naturalHeight / img.naturalWidth;
     let drawW = slotW;
     let drawH = drawW * aspect;
     if (drawH > slotH) { drawH = slotH; drawW = drawH / aspect; }
 
-    const x = slotX + (slotW - drawW) / 2;
-    const y = baseY - drawH;
+    const dx = x + (slotW - drawW) / 2;
+    const dy = baseY - drawH;
 
-    // Fade-in (ramp 200 ms from add), fade-out (ramp FADE_MS).
     let alpha = 1;
     if (p.fading) {
-      const t = (now - p.fadeAt) / FADE_MS;
-      alpha = Math.max(0, 1 - t);
+      alpha = Math.max(0, 1 - (now - p.fadeAt) / FADE_MS);
     } else {
       const since = now - p.addedAt;
-      if (since < 240) alpha = Math.max(0.1, since / 240);
+      if (since < 280) alpha = Math.max(0.1, since / 280);
     }
 
-    // Subtle bob when playing — the spec model already drives sprite-frame
-    // motion so this is just a tiny anchor wobble to convey "alive".
-    const bob = p.state === 'play'
-      ? Math.sin(now / 120 + slotX) * 3
-      : 0;
+    const bob = p.state === 'play' ? Math.sin(now / 120 + x) * 3 : 0;
 
     stageCtx.save();
     stageCtx.globalAlpha = alpha;
-    // Soft glow for active performers
     if (p.state === 'play') {
-      stageCtx.shadowColor = `rgba(0, 229, 255, ${0.35 * alpha})`;
-      stageCtx.shadowBlur = 20;
+      stageCtx.shadowColor = `rgba(0, 229, 255, ${0.32 * alpha})`;
+      stageCtx.shadowBlur = 22;
     }
-    stageCtx.drawImage(img, x, y + bob, drawW, drawH);
+    stageCtx.drawImage(img, dx, dy + bob, drawW, drawH);
     stageCtx.restore();
   }
 
-  function drawSpectrum(bars) {
-    const { w, h } = fitCanvasToParent(specCanvas);
-    specCtx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
-    specCtx.clearRect(0, 0, w, h);
-    if (!bars || bars.length === 0) return;
+  // ── Spectrum with asymmetric attack/release lerp ─────────────────────
+  let lastSpectrum = null;       // most recent host snapshot
+  let smoothed = null;            // per-frame smoothed values
 
-    const n = bars.length;
+  function setSpectrum(bars) {
+    if (!bars || bars.length === 0) return;
+    lastSpectrum = bars;
+    if (!smoothed || smoothed.length !== bars.length) {
+      smoothed = new Float32Array(bars.length);
+    }
+  }
+
+  function tickSmoothSpectrum() {
+    if (!lastSpectrum || !smoothed) return;
+    for (let i = 0; i < lastSpectrum.length; i++) {
+      const cur = smoothed[i] || 0;
+      const tgt = lastSpectrum[i];
+      const k = tgt > cur ? SPEC_ATTACK : SPEC_RELEASE;
+      smoothed[i] = cur + (tgt - cur) * k;
+    }
+  }
+
+  function drawSpectrum() {
+    if (!smoothed) return;
+    const { w, h } = fitCanvasToParent(specCanvas);
+    const dpr = window.devicePixelRatio || 1;
+    specCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    specCtx.clearRect(0, 0, w, h);
+
+    const n = smoothed.length;
     const gap = 2;
     const barW = Math.max(2, (w - (n - 1) * gap) / n);
 
@@ -311,52 +374,46 @@
       const g = Math.round(SPEC_GRADIENT_FROM[1] + (SPEC_GRADIENT_TO[1] - SPEC_GRADIENT_FROM[1]) * t);
       const b = Math.round(SPEC_GRADIENT_FROM[2] + (SPEC_GRADIENT_TO[2] - SPEC_GRADIENT_FROM[2]) * t);
       specCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-      const v = Math.max(0.02, Math.min(1, bars[i]));
+      const v = Math.max(0.02, Math.min(1, smoothed[i]));
       const bh = v * (h - 4);
       specCtx.fillRect(i * (barW + gap), h - bh, barW, bh);
     }
   }
 
-  let lastSpectrum = null;
-  function setSpectrum(bars) {
-    // Latch the last spectrum so the RAF loop can keep painting between
-    // ticks (host emits ~1.5 s cadence; UI runs at 60 Hz).
-    lastSpectrum = bars;
-  }
-
   // ── Render loop ──────────────────────────────────────────────────────
   function renderLoop() {
     const { w, h } = fitCanvasToParent(stageCanvas);
-    stageCtx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
+    const dpr = window.devicePixelRatio || 1;
+    stageCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     stageCtx.clearRect(0, 0, w, h);
     drawStageBg(w, h);
 
-    const ps = sortedPerformers();
+    const ps = [...performers.values()];
+    const layout = computeLayout(ps, w, h);
     const now = performance.now();
-    if (ps.length > 0) {
-      const baseY = h * 0.94;        // ground line — sprites stand on this
-      const slotH = h * 0.62;        // tallest sprite occupies 62% of stage height
-      const slotW = w / ps.length;
-      ps.forEach((p, i) => drawPerformer(p, i * slotW, baseY, slotW, slotH, now));
+    for (const p of ps) {
+      const pos = layout.get(p.id);
+      if (!pos) continue;
+      drawPerformer(p, pos.x, pos.baseY, pos.slotW, pos.slotH, now);
     }
 
-    if (lastSpectrum) drawSpectrum(lastSpectrum);
+    tickSmoothSpectrum();
+    drawSpectrum();
     requestAnimationFrame(renderLoop);
   }
 
-  // ── Header label strip ───────────────────────────────────────────────
+  // ── Label strip ──────────────────────────────────────────────────────
   const labelStrip = document.getElementById('label-strip');
   function renderLabelStrip(labels) {
     if (!labels || labels.length === 0) {
       labelStrip.innerHTML = '<span class="empty">대기 중 …</span>';
       return;
     }
-    const html = labels.slice(0, 8).map(l => {
+    labelStrip.innerHTML = labels.slice(0, 8).map(l => {
       const active = l.score >= SCORE_ACTIVE ? ' active' : '';
       const pct = (l.score * 100).toFixed(0);
       return `<span class="chip${active}">${escapeHtml(l.name)} <span class="pct">${pct}%</span></span>`;
     }).join('');
-    labelStrip.innerHTML = html;
   }
 
   function escapeHtml(s) {
@@ -423,17 +480,15 @@
   async function onStop() {
     if (!ensureZero()) return;
     setStatus('stopping …');
-    try {
-      await window.zero.music.stop();
-    } catch (ex) {
-      console.warn('[agent-band] stop failed', ex);
-    }
+    try { await window.zero.music.stop(); }
+    catch (ex) { console.warn('[agent-band] stop failed', ex); }
     setStatus('idle');
     els.start.disabled = false;
     els.stop.disabled = true;
     performers.clear();
     renderLabelStrip([]);
     lastSpectrum = null;
+    if (smoothed) smoothed.fill(0);
   }
 
   function bindEvents() {
@@ -442,13 +497,21 @@
     els.stagePick.addEventListener('change', () => pickStage(els.stagePick.value));
 
     if (window.zero && window.zero.music) {
+      // Slow tick (1.5 s) — performer registry + label strip + diag.
       window.zero.music.onTick(tick => {
         upsertPerformersFromLabels(tick.labels || []);
-        setSpectrum(tick.spectrum || []);
         renderLabelStrip(tick.labels || []);
         els.diagTick.textContent = `tick ${tickCounter}`;
         els.diagInfer.textContent = `${tick.inferMs} ms`;
         els.diagMel.textContent = `${tick.frames} × ${tick.bins}`;
+        // Use the tick's own spectrum as a seed; subsequent 30 Hz events
+        // override it. Without this seed, very early in the session the
+        // bars sit flat until the first 30 Hz event arrives.
+        setSpectrum(tick.spectrum || []);
+      });
+      // Fast spectrum stream (30 Hz) — used for the bar visualizer.
+      window.zero.music.onSpectrum(evt => {
+        setSpectrum(evt.spectrum || []);
       });
     }
   }
@@ -458,8 +521,6 @@
   bindEvents();
   requestAnimationFrame(renderLoop);
 
-  // Stop capture cleanly if the page unloads (panel closed / detach
-  // window closed). The host idempotently handles repeat stop calls.
   window.addEventListener('beforeunload', () => {
     try { window.zero?.music?.stop(); } catch (_) { /* host gone */ }
   });
