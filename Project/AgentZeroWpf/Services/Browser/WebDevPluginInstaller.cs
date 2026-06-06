@@ -10,6 +10,29 @@ namespace AgentZeroWpf.Services.Browser;
 public sealed record InstallResult(bool Ok, string? PluginId, string? Name, string? Error);
 
 /// <summary>
+/// Snapshot of an install operation, surfaced through
+/// <see cref="System.IProgress{T}"/> so the shared
+/// <c>PluginInstallProgressDialog</c> WPF component can render real
+/// download progress for both Git URL and local ZIP paths. Plugins like
+/// agent-band ship ~73 MB of sprite assets — the previous silent loading
+/// overlay made the install feel hung. Detail fields drive a one-line
+/// status under the bar (file counter + bytes + current file name).
+/// </summary>
+public sealed record InstallProgress(
+    /// <summary>"manifest" | "listing" | "downloading" | "extracting" | "finalizing".</summary>
+    string Phase,
+    /// <summary>Headline above the progress bar — e.g. "Downloading Agent Band v0.2.1".</summary>
+    string Caption,
+    /// <summary>One-line detail under the bar — files / bytes / current filename.</summary>
+    string Detail,
+    /// <summary>0..100 when the source can compute a real percent; null = indeterminate (spinner).</summary>
+    int? PercentComplete,
+    int FilesDone,
+    int FilesTotal,
+    long BytesDone,
+    long BytesTotal);
+
+/// <summary>
 /// Installs a WebDev plugin from a .zip archive or a public Git URL into
 /// <c>%LOCALAPPDATA%/AgentZeroLite/Wasm/plugins/{id}/</c>.
 ///
@@ -76,7 +99,10 @@ public static class WebDevPluginInstaller
         }
     }
 
-    public static InstallResult InstallFromZip(string zipPath, bool allowOverwrite = true)
+    public static InstallResult InstallFromZip(
+        string zipPath,
+        bool allowOverwrite = true,
+        IProgress<InstallProgress>? progress = null)
     {
         if (!File.Exists(zipPath))
             return new InstallResult(false, null, null, $"file not found: {zipPath}");
@@ -85,10 +111,15 @@ public static class WebDevPluginInstaller
         Directory.CreateDirectory(pluginsRoot);
 
         var stagingDir = Path.Combine(pluginsRoot, ".staging-" + Guid.NewGuid().ToString("N"));
+        var zipName = Path.GetFileName(zipPath);
         try
         {
             Directory.CreateDirectory(stagingDir);
-            ExtractSafely(zipPath, stagingDir);
+            progress?.Report(new InstallProgress(
+                "extracting",
+                $"Extracting {zipName}",
+                "preparing…", null, 0, 0, 0, 0));
+            ExtractSafely(zipPath, stagingDir, progress);
 
             var (manifestPath, contentRoot) = LocateManifest(stagingDir)
                 ?? throw new InvalidDataException(
@@ -107,6 +138,9 @@ public static class WebDevPluginInstaller
                 Directory.Delete(targetDir, recursive: true);
             }
 
+            progress?.Report(new InstallProgress(
+                "finalizing", $"Installing {manifest.Name}",
+                "moving into place…", 100, 0, 0, 0, 0));
             // contentRoot may be the staging dir itself or one level deeper.
             // Move the *content* — not the staging dir — into the final location.
             Directory.Move(contentRoot, targetDir);
@@ -126,10 +160,22 @@ public static class WebDevPluginInstaller
         }
     }
 
-    private static void ExtractSafely(string zipPath, string destinationDir)
+    private static void ExtractSafely(string zipPath, string destinationDir, IProgress<InstallProgress>? progress = null)
     {
         var fullDest = Path.GetFullPath(destinationDir + Path.DirectorySeparatorChar);
         using var archive = ZipFile.OpenRead(zipPath);
+        // Two-pass: first count file entries + total uncompressed size so the
+        // bar can render a real percent instead of bouncing indeterminately.
+        var fileEntries = archive.Entries
+            .Where(e => !(string.IsNullOrEmpty(e.Name) && e.FullName.EndsWith("/")))
+            .ToList();
+        int totalFiles = fileEntries.Count;
+        long totalBytes = fileEntries.Sum(e => e.Length);
+
+        int filesDone = 0;
+        long bytesDone = 0;
+        var zipName = Path.GetFileName(zipPath);
+
         foreach (var entry in archive.Entries)
         {
             if (string.IsNullOrEmpty(entry.Name) && entry.FullName.EndsWith("/"))
@@ -142,8 +188,27 @@ public static class WebDevPluginInstaller
                 throw new InvalidDataException($"zip slip detected: '{entry.FullName}' resolves outside the staging dir");
             var targetDir = Path.GetDirectoryName(targetPath)!;
             Directory.CreateDirectory(targetDir);
+
+            progress?.Report(new InstallProgress(
+                Phase: "extracting",
+                Caption: $"Extracting {zipName}",
+                Detail: $"{filesDone + 1} / {totalFiles} · {FormatMb(bytesDone)} / {FormatMb(totalBytes)} · {entry.FullName}",
+                PercentComplete: totalBytes > 0 ? (int)(bytesDone * 100 / totalBytes) : null,
+                FilesDone: filesDone, FilesTotal: totalFiles,
+                BytesDone: bytesDone, BytesTotal: totalBytes));
+
             entry.ExtractToFile(targetPath, overwrite: true);
+            filesDone++;
+            bytesDone += entry.Length;
         }
+    }
+
+    private static string FormatMb(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        var mb = bytes / (1024.0 * 1024.0);
+        if (mb < 1) return $"{bytes / 1024.0:F1} KB";
+        return $"{mb:F1} MB";
     }
 
     private static (string ManifestPath, string ContentRoot)? LocateManifest(string stagingDir)
@@ -181,6 +246,7 @@ public static class WebDevPluginInstaller
     public static async Task<InstallResult> InstallFromGitUrlAsync(
         string url,
         bool allowOverwrite = true,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken ct = default)
     {
         var pluginsRoot = WebDevSampleCatalog.PluginsRoot;
@@ -189,6 +255,9 @@ public static class WebDevPluginInstaller
         var stagingDir = Path.Combine(pluginsRoot, ".staging-" + Guid.NewGuid().ToString("N"));
         try
         {
+            progress?.Report(new InstallProgress(
+                "manifest", "Fetching plugin manifest", url, null, 0, 0, 0, 0));
+
             var coords = ParseGitHubFolder(url)
                 ?? throw new InvalidOperationException(
                     "Only public GitHub folder URLs are supported: " +
@@ -205,6 +274,10 @@ public static class WebDevPluginInstaller
             var manifest = PluginManifest.Parse(manifestText);
 
             // Step 2 — enumerate every file in the folder via the Trees API.
+            progress?.Report(new InstallProgress(
+                "listing", $"Listing {manifest.Name} files",
+                "querying GitHub Trees API…", null, 0, 0, 0, 0));
+
             var files = await ListGitHubFolderAsync(coords, ct);
             if (files.Count > MaxFiles)
                 throw new InvalidDataException($"plugin folder has {files.Count} files; limit is {MaxFiles}");
@@ -212,10 +285,35 @@ public static class WebDevPluginInstaller
                 throw new InvalidDataException("manifest.json not present in the listed folder");
 
             // Step 3 — download every file into the staging dir, preserving relative layout.
-            foreach (var file in files)
+            long totalBytes = files.Sum(f => f.Size);
+            long bytesDone = 0;
+            int filesTotal = files.Count;
+            var headline = string.IsNullOrEmpty(manifest.Version)
+                ? $"Downloading {manifest.Name}"
+                : $"Downloading {manifest.Name} v{manifest.Version}";
+
+            for (int i = 0; i < files.Count; i++)
             {
+                ct.ThrowIfCancellationRequested();
+                var file = files[i];
                 if (file.Size > MaxFileBytes)
                     throw new InvalidDataException($"file '{file.Path}' is {file.Size} bytes; limit is {MaxFileBytes}");
+
+                // Report BEFORE the download so the user sees "downloading X"
+                // including the current file name. Percent is based on bytes
+                // (more accurate than file count when sizes vary widely —
+                // agent-band has 152 ~450KB sprites + 3 ~2.5MB stages).
+                int? pct = totalBytes > 0 ? (int)(bytesDone * 100 / totalBytes) : null;
+                progress?.Report(new InstallProgress(
+                    Phase: "downloading",
+                    Caption: headline,
+                    Detail: $"{i + 1} / {filesTotal} files · {FormatMb(bytesDone)} / {FormatMb(totalBytes)} · {file.Path}",
+                    PercentComplete: pct,
+                    FilesDone: i,
+                    FilesTotal: filesTotal,
+                    BytesDone: bytesDone,
+                    BytesTotal: totalBytes));
+
                 var rawUrl = RawUrl(coords, file.Path);
                 var bytes  = await FetchBytesAsync(rawUrl, ct)
                     ?? throw new InvalidDataException($"failed to download {rawUrl}");
@@ -224,6 +322,7 @@ public static class WebDevPluginInstaller
                     throw new InvalidDataException($"unsafe path '{file.Path}' resolves outside staging dir");
                 Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
                 await File.WriteAllBytesAsync(dst, bytes, ct);
+                bytesDone += bytes.LongLength;
             }
 
             // Step 4 — sanity check entry file actually landed.
@@ -232,6 +331,14 @@ public static class WebDevPluginInstaller
                 throw new InvalidDataException($"entry file '{manifest.Entry}' not present after download");
 
             // Step 5 — move into the final mount. Same overwrite policy as the ZIP path.
+            progress?.Report(new InstallProgress(
+                Phase: "finalizing",
+                Caption: $"Installing {manifest.Name}",
+                Detail: "moving into place…",
+                PercentComplete: 100,
+                FilesDone: filesTotal, FilesTotal: filesTotal,
+                BytesDone: totalBytes, BytesTotal: totalBytes));
+
             var targetDir = Path.Combine(pluginsRoot, manifest.Id);
             if (Directory.Exists(targetDir))
             {
@@ -242,7 +349,7 @@ public static class WebDevPluginInstaller
             Directory.Move(stagingDir, targetDir);
             stagingDir = targetDir; // prevent finally from deleting the live install
 
-            AppLogger.Log($"[WebDev] git plugin installed | id={manifest.Id} files={files.Count} from={url}");
+            AppLogger.Log($"[WebDev] git plugin installed | id={manifest.Id} files={files.Count} bytes={totalBytes} from={url}");
             return new InstallResult(true, manifest.Id, manifest.Name, null);
         }
         catch (Exception ex)

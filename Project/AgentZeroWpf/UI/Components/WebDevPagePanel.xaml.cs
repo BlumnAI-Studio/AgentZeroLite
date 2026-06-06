@@ -518,7 +518,7 @@ public partial class WebDevPagePanel : UserControl
         AppLogger.Log($"[WebDev:Page] dock-back ← '{sampleId}'");
     }
 
-    private async void OnInstallPluginClick(object sender, RoutedEventArgs e)
+    private void OnInstallPluginClick(object sender, RoutedEventArgs e)
     {
         var owner = Window.GetWindow(this);
         var picker = new InstallPluginPickerDialog { Owner = owner };
@@ -534,24 +534,26 @@ public partial class WebDevPagePanel : UserControl
                 CheckFileExists = true,
             };
             if (dlg.ShowDialog(owner) != true) return;
-            result = WebDevPluginInstaller.InstallFromZip(dlg.FileName);
+            // ZIP path is purely local but still scrolls past hundreds of
+            // entries on large plugins (agent-band → 159 files). Reuse the
+            // progress dialog so the user sees the same UX as Git URL.
+            // InstallFromZip is sync; await Task.Run to keep the dialog UI
+            // responsive while ZipArchive walks the entries.
+            var progressDlg = new PluginInstallProgressDialog((progress, ct) =>
+                Task.Run(() => WebDevPluginInstaller.InstallFromZip(dlg.FileName, allowOverwrite: true, progress), ct))
+            { Owner = owner };
+            progressDlg.ShowDialog();
+            result = progressDlg.Result;
         }
         else if (picker.Mode == InstallPluginPickerDialog.InstallMode.Git)
         {
             var url = picker.GitUrl?.Trim();
             if (string.IsNullOrWhiteSpace(url)) return;
-            ShowLoading("Installing from " + url);
-            try
-            {
-                result = await WebDevPluginInstaller.InstallFromGitUrlAsync(url);
-            }
-            finally
-            {
-                if (_activeView is null || _viewsBySampleId.Values.All(s => !s.FirstLoadCompleted))
-                    HideLoading();
-                else if (_activeView is { } av && _viewsBySampleId.Values.FirstOrDefault(s => ReferenceEquals(s.View, av)) is { FirstLoadCompleted: true })
-                    HideLoading();
-            }
+            var progressDlg = new PluginInstallProgressDialog((progress, ct) =>
+                WebDevPluginInstaller.InstallFromGitUrlAsync(url, allowOverwrite: true, progress, ct))
+            { Owner = owner };
+            progressDlg.ShowDialog();
+            result = progressDlg.Result;
         }
         if (result is null) return;
 
