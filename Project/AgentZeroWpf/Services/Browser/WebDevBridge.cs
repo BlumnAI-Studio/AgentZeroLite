@@ -219,11 +219,20 @@ public sealed class WebDevBridge
                 EnsureNoteHost();
                 int? sens = args?.TryGetProperty("sensitivity", out var sv) == true && sv.TryGetInt32(out var si)
                     ? si : (int?)null;
-                // Returns { ok, capturing, sensitivity, threshold } so JS
-                // can sync its slider to the effective value (especially
-                // important when sens=null and host falls back to
-                // Settings/Voice's stored VadThreshold).
-                return await _noteHost!.StartNoteCaptureAsync(sens);
+                // M0024 Phase 3.5 — accept source / loopbackDeviceId / chunkSec.
+                // Missing fields fall through to defaults (Microphone source,
+                // 30 s chunk, Windows default render endpoint when loopback).
+                string? source = args?.TryGetProperty("source", out var srcEl) == true
+                    ? srcEl.GetString() : null;
+                string? loopbackDeviceId = args?.TryGetProperty("loopbackDeviceId", out var ldEl) == true
+                    ? ldEl.GetString() : null;
+                int? chunkSec = args?.TryGetProperty("loopbackChunkSec", out var csEl) == true && csEl.TryGetInt32(out var csi)
+                    ? csi : (int?)null;
+                // Returns { ok, capturing, sensitivity, threshold, source }
+                // so JS can sync its slider + source dropdown to the
+                // effective values.
+                return await _noteHost!.StartNoteCaptureAsync(
+                    new NoteStartOptions(sens, source, loopbackDeviceId, chunkSec));
             }
             case "note.stop":
             {

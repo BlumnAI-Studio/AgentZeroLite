@@ -115,6 +115,14 @@
     // Cleared whenever a final utterance lands or capture stops. Shape:
     // { text: string, speakerId: number|null, speakerLabel: string|null }
     partial: null,
+    // M0024 Phase 3.5 — capture source. Persisted to localStorage so the
+    // choice survives page reloads. "Microphone" = NAudio WaveIn (existing
+    // VAD pipeline). "SystemLoopback" = WASAPI loopback (continuous capture
+    // of whatever's playing through the speakers, sliced into 30s chunks).
+    source: (function () {
+      try { return localStorage.getItem('vn.source') || 'Microphone'; }
+      catch { return 'Microphone'; }
+    })(),
   };
 
   // Currently-subscribed bridge handlers (returned by zero.on(...)).
@@ -143,6 +151,8 @@
     btnPause: $('vn-pause'),
     sense: $('vn-sense-range'),
     senseVal: $('vn-sense-val'),
+    source: $('vn-source'),           // M0024 Phase 3.5
+    bar: document.querySelector('.vn-bar'),
     btnSummarize: $('vn-summarize'),
     btnDelete: $('vn-delete'),
 
@@ -320,12 +330,22 @@
     }
   }
 
+  // M0024 Phase 3.5 — reflect source choice in the bar's CSS state and
+  // gate the picker while capture is active (source swap mid-capture would
+  // require a stop+restart anyway).
+  function applySourceUiState() {
+    if (refs.bar) refs.bar.classList.toggle('loopback', state.source === 'SystemLoopback');
+    if (refs.source) refs.source.disabled = !!state.capturing;
+  }
+
   function renderRecButton() {
     const recording = state.capturing && !!activeNote();
     refs.btnRec.classList.toggle('recording', recording);
     refs.btnRecLabel.textContent = recording ? (state.paused ? 'Resume' : 'Stop') : 'Start';
     refs.btnPause.disabled = !recording;
     refs.btnPause.textContent = state.paused ? 'Resume' : 'Pause';
+    // Keep source picker disabled while capturing (lock the choice for the session).
+    applySourceUiState();
   }
 
   function setStatus(text, isError) {
@@ -492,12 +512,18 @@
     showVu(true); setVuState('starting'); refs.vuFill.style.width = '0%';
     setStatus('starting capture…');
     try {
-      // Pass null on the very first start so host can fall back to
-      // Settings/Voice's stored VadThreshold — that's the value the user
-      // already tuned for their mic. Subsequent starts pass the current
-      // slider position.
+      // M0024 Phase 3.5 — start with rich options. Pass null on sensitivity
+      // for the very first start so host can fall back to Settings/Voice's
+      // stored VadThreshold; subsequent starts pass the current slider
+      // position. Source defaults to Microphone — persisted choice survives
+      // page reloads via localStorage.
       const sendSens = state.sensitivity === 75 ? null : state.sensitivity;
-      const r = await window.zero.note.start(sendSens);
+      const source = state.source || 'Microphone';
+      const r = await window.zero.note.start({
+        sensitivity: sendSens,
+        source,
+        // loopbackDeviceId omitted → host uses Windows default render endpoint
+      });
       if (!r || !r.ok) {
         setVuState('error');
         const msg = r?.error === 'stt-off' ? 'STT provider is Off — open Settings → Voice'
@@ -610,6 +636,21 @@
     refs.btnDelete.onclick = () => deleteActive();
     refs.btnRec.onclick = () => state.capturing ? stopCapture() : startCapture();
     refs.btnPause.onclick = () => togglePause();
+
+    // M0024 Phase 3.5 — Source picker wiring. Persist to localStorage,
+    // toggle .vn-bar.loopback class so the CSS can hide the sensitivity
+    // slider (irrelevant for system audio — there's no VAD on loopback).
+    // While capture is active the picker is disabled to avoid mid-flight
+    // source swap which would need a full stop+restart anyway.
+    if (refs.source) {
+      refs.source.value = state.source || 'Microphone';
+      applySourceUiState();
+      refs.source.onchange = () => {
+        state.source = refs.source.value || 'Microphone';
+        try { localStorage.setItem('vn.source', state.source); } catch {}
+        applySourceUiState();
+      };
+    }
     refs.btnSummarize.onclick = () => summarize();
 
     refs.title.oninput = () => {

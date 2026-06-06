@@ -24,6 +24,29 @@ public sealed record NoteTranscriptInfo(
     bool IsPartial);
 
 /// <summary>
+/// Capture source for the voice-note pipeline (M0024 Phase 3.5).
+/// Mirrors the Voice tab's <c>VoiceInputSourceNames</c> so plugins can
+/// pass the same constant the user picked in Settings/Voice.
+/// </summary>
+public static class NoteSourceNames
+{
+    public const string Microphone = "Microphone";
+    public const string SystemLoopback = "SystemLoopback";
+}
+
+/// <summary>
+/// Options bag for <c>note.start</c> — extended in Phase 3.5 from the
+/// original sensitivity-only call. JS callers pass any subset; null
+/// fields fall back to safe defaults (mic source + Settings/Voice
+/// sensitivity + 30 s loopback chunk).
+/// </summary>
+public sealed record NoteStartOptions(
+    int? Sensitivity = null,
+    string? Source = null,
+    string? LoopbackDeviceId = null,
+    int? LoopbackChunkSec = null);
+
+/// <summary>
 /// Default <see cref="IZeroBrowser"/> implementation. Reuses the existing
 /// VoiceRuntimeFactory + VoicePlaybackService so the WebDev sandbox shares
 /// the same TTS/STT pipeline the Settings/Voice tab already drives.
@@ -42,6 +65,14 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
     // alive so the level meter on the plugin side keeps reading).
     private readonly SemaphoreSlim _noteLock = new(1, 1);
     private VoiceCaptureService? _noteCapture;
+    // M0024 Phase 3.5 — voice-note gains a second capture path (WASAPI
+    // loopback) for analysing system playback (Zoom recording, YouTube,
+    // music) in addition to the existing mic. Only one of the two is
+    // populated at any time per StartNoteCaptureAsync call.
+    private AgentZeroWpf.Services.Music.LoopbackCaptureService? _noteLoopback;
+    private string _noteSource = NoteSourceNames.Microphone;
+    private int _noteLoopbackChunkSec = 30;
+    private System.Threading.Timer? _noteChunkTimer; // fires every _noteLoopbackChunkSec for loopback path
     private ISpeechToText?       _noteStt;
     private string               _noteLanguage = "auto";
     private CancellationTokenSource? _noteCts;
@@ -220,30 +251,44 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Begin VAD-gated capture. Each utterance (~2s of trailing silence
-    /// closes a segment) is auto-transcribed and pushed via
-    /// <see cref="NoteTranscript"/>. Idempotent — a second call while
-    /// already running returns the same payload without restarting capture.
+    /// Begin capture. Two paths share this entry point (M0024 Phase 3.5):
     ///
-    /// Returns the effective sensitivity / threshold so JS can sync its
-    /// slider — important when sensitivityPercent is null and we fall
-    /// back to the user's Settings/Voice VadThreshold.
+    ///   • <b>Microphone</b> — VAD-gated; each ~2 s of trailing silence
+    ///     closes an utterance → auto-transcribe → push via NoteTranscript.
+    ///   • <b>SystemLoopback</b> — continuous WASAPI loopback against the
+    ///     current render endpoint (or one the user picked). No VAD; a
+    ///     30 s chunk timer drains the buffer and fires NoteTranscript as
+    ///     if it were one utterance.
+    ///
+    /// Both paths share the same partial-transcript timer (10 s rolling
+    /// preview) and the same Sherpa diarizer.
+    ///
+    /// Idempotent — a second call while already running returns the same
+    /// payload without restarting capture.
+    ///
+    /// Returns the effective sensitivity / threshold / source so JS can
+    /// sync its UI.
     /// </summary>
-    public async Task<object> StartNoteCaptureAsync(int? sensitivityPercent = null)
+    public async Task<object> StartNoteCaptureAsync(NoteStartOptions? opts = null)
     {
+        opts ??= new NoteStartOptions();
         await _noteLock.WaitAsync();
         try
         {
             var v = VoiceSettingsStore.Load();
 
-            // Effective sensitivity:
+            var source = string.IsNullOrEmpty(opts.Source) ? NoteSourceNames.Microphone : opts.Source!;
+            if (source != NoteSourceNames.Microphone && source != NoteSourceNames.SystemLoopback)
+                source = NoteSourceNames.Microphone;
+
+            // Effective sensitivity (mic only — loopback has no VAD):
             //   • caller passed one → respect it (slider)
             //   • else use Settings/Voice's stored VadThreshold (origin
             //     proven default 25 → sensitivity 75) so the plugin
             //     inherits the value the user has already tuned for
             //     their mic.
-            int effectiveSens = sensitivityPercent.HasValue
-                ? Math.Clamp(sensitivityPercent.Value, 0, 100)
+            int effectiveSens = opts.Sensitivity.HasValue
+                ? Math.Clamp(opts.Sensitivity.Value, 0, 100)
                 : Math.Clamp(100 - v.VadThreshold, 0, 100);
             // M0015 후속 진행 #1: voice-note plugin captures lecture-style
             // audio (distant speaker, ambient noise) — that's exactly the
@@ -253,10 +298,10 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
             float threshold = VoiceRuntimeFactory.SensitivityToThreshold(
                 effectiveSens, v, isAgentMode: true);
 
-            if (_noteCapture is not null)
+            if (_noteCapture is not null || _noteLoopback is not null)
             {
                 // Already running — let the caller know the live values.
-                return new { ok = true, capturing = true, sensitivity = effectiveSens, threshold };
+                return new { ok = true, capturing = true, sensitivity = effectiveSens, threshold, source = _noteSource };
             }
 
             _noteStt = VoiceRuntimeFactory.BuildStt(v);
@@ -285,6 +330,39 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
                 return new { ok = false, error = ex.Message };
             }
 
+            _noteSource = source;
+            _noteCts = new CancellationTokenSource();
+            _noteLanguage = string.IsNullOrWhiteSpace(v.SttLanguage) ? "auto" : v.SttLanguage;
+
+            if (source == NoteSourceNames.SystemLoopback)
+            {
+                // ── M0024 Phase 3.5 — WASAPI loopback path ───────────
+                // No VAD; user records continuous system audio and we slice
+                // it into N-second chunks via a Timer. Each chunk drains the
+                // buffer and routes through the same STT+diarize+emit path
+                // OnLoopbackChunkTick orchestrates.
+                _noteLoopbackChunkSec = (opts.LoopbackChunkSec is int s && s > 0) ? Math.Clamp(s, 5, 120) : 30;
+                try
+                {
+                    var lb = new AgentZeroWpf.Services.Music.LoopbackCaptureService { BufferPcm = true };
+                    lb.AmplitudeChanged += OnNoteAmplitude;
+                    lb.Start(opts.LoopbackDeviceId ?? "");
+                    _noteLoopback = lb;
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Log($"[WebDev:Note] loopback capture failed: {ex.GetType().Name}: {ex.Message}");
+                    NoteError?.Invoke("Loopback capture failed: " + ex.Message);
+                    return new { ok = false, error = ex.Message };
+                }
+
+                AppLogger.Log($"[WebDev:Note] capture started | source=SystemLoopback chunkSec={_noteLoopbackChunkSec} lang={_noteLanguage} loopbackDevice='{opts.LoopbackDeviceId ?? ""}'");
+                StartNotePartialTimer();
+                StartNoteChunkTimer();
+                return new { ok = true, capturing = true, sensitivity = effectiveSens, threshold, source };
+            }
+
+            // ── Existing microphone path ─────────────────────────────
             // M0015 / 후속 진행 #2 — drive PreRoll / Hangover / cap from
             // the active sensitivity profile so Loose lecture-tuning takes
             // effect end-to-end on the voice-note path too. Voice-note is
@@ -318,7 +396,6 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
                 return new { ok = false, error = ex.Message };
             }
 
-            _noteCts = new CancellationTokenSource();
             _noteCapture = cap;
             // Cache the user's chosen STT language so every utterance
             // transcribes the same way Settings/Voice does. Whisper's
@@ -326,14 +403,12 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
             // omitting it was why transcripts came back empty even
             // though Settings/Voice (which always passes v.SttLanguage)
             // was working on the same mic.
-            _noteLanguage = string.IsNullOrWhiteSpace(v.SttLanguage) ? "auto" : v.SttLanguage;
-            AppLogger.Log($"[WebDev:Note] capture started | sens={effectiveSens} threshold={threshold:F4} lang={_noteLanguage} muted={cap.Muted} device={v.InputDeviceId}");
+            AppLogger.Log($"[WebDev:Note] capture started | source=Microphone sens={effectiveSens} threshold={threshold:F4} lang={_noteLanguage} muted={cap.Muted} device={v.InputDeviceId}");
 
-            // M0024 Phase 3 — 10s partial timer (公통화 of the Settings/Voice
-            // Phase 2.5 pattern). Reuses the same _noteStt instance so we don't
-            // re-warm Whisper every tick.
+            // M0024 Phase 3 — 10s partial timer (Phase 2.5 패턴 공통화).
+            // Reuses the same _noteStt instance so we don't re-warm Whisper.
             StartNotePartialTimer();
-            return new { ok = true, capturing = true, sensitivity = effectiveSens, threshold };
+            return new { ok = true, capturing = true, sensitivity = effectiveSens, threshold, source };
         }
         finally { _noteLock.Release(); }
     }
@@ -365,7 +440,9 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
         c.VadThreshold = VoiceRuntimeFactory.SensitivityToThreshold(percent, v, isAgentMode: true);
     }
 
-    public bool IsNoteCapturing => _noteCapture is { IsCapturing: true };
+    public bool IsNoteCapturing =>
+        _noteCapture is { IsCapturing: true }
+        || _noteLoopback is { IsCapturing: true };
 
     private void OnNoteUtteranceStarted()
     {
@@ -386,9 +463,8 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
     private void OnNoteUtteranceEnded()
     {
         NoteUtteranceEnded?.Invoke();
-        var cap = _noteCapture; var stt = _noteStt; var ctsToken = _noteCts?.Token ?? CancellationToken.None;
-        var lang = _noteLanguage;
-        if (cap is null || stt is null) return;
+        var cap = _noteCapture;
+        if (cap is null) return;
         var pcm = cap.ConsumePcmBuffer();
         // Filter sub-half-second utterances — 16 kHz mono 16-bit = 32 KB/s,
         // so < 8000 bytes ≈ < 250 ms. Whisper just returns junk on those
@@ -398,70 +474,8 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
             AppLogger.Log($"[WebDev:Note] utterance dropped — too short ({pcm.Length} bytes)");
             return;
         }
-        AppLogger.Log($"[WebDev:Note] utterance → STT | bytes={pcm.Length} lang={lang}");
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var text = await stt.TranscribeAsync(pcm, lang, ctsToken);
-                if (ctsToken.IsCancellationRequested) return;
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    AppLogger.Log($"[WebDev:Note] STT returned empty | bytes={pcm.Length} lang={lang}");
-                    return;
-                }
-                // M0015 / 후속 진행 #2 — voice-note was missing the
-                // hallucination filter that AgentBot already applies. The
-                // 2026-05-09 recording log showed five+ "chars=11" outputs
-                // that were Whisper Korean YouTube outros emitted on
-                // near-silence. Drop them at the source so the timeline
-                // and the summary don't accumulate "구독해주세요" noise.
-                var trimmed = text.Trim();
-                if (WhisperHallucinationFilter.IsLikelyHallucination(trimmed))
-                {
-                    AppLogger.Log($"[WebDev:Note] hallucination dropped | chars={trimmed.Length}");
-                    return;
-                }
-
-                // M0024 Phase 3 — run Sherpa diarization on the same PCM
-                // when a diarization provider is configured. Majority speaker
-                // gets attached to the transcript; plugins render it as a
-                // chip. If diarization is Off, model file missing, or the
-                // run fails, fall through with null speaker — same as
-                // Settings/Voice/Test (Phase 2 best-effort merge).
-                int? speakerId = null;
-                string? speakerLabel = null;
-                try
-                {
-                    var diar = await GetReadyNoteDiarizerAsync(ctsToken).ConfigureAwait(false);
-                    if (diar is not null)
-                    {
-                        var dSettings = DiarizationSettingsStore.Load();
-                        var dResult = await diar.DiarizeAsync(pcm, dSettings.ExpectedSpeakerCount, ctsToken).ConfigureAwait(false);
-                        if (dResult.Segments.Count > 0)
-                        {
-                            var label = MajoritySpeaker(dResult.Segments, out var id);
-                            speakerId = id;
-                            speakerLabel = label;
-                            AppLogger.Log($"[WebDev:Note-Diar] segments={dResult.Segments.Count} speakers={dResult.SpeakerCount} pick={label} inferMs={dResult.InferenceTime.TotalMilliseconds:F0}");
-                        }
-                    }
-                }
-                catch (OperationCanceledException) { /* expected */ }
-                catch (Exception dx)
-                {
-                    AppLogger.Log($"[WebDev:Note-Diar] inference failed (continuing without speaker label): {dx.GetType().Name}: {dx.Message}");
-                }
-
-                AppLogger.Log($"[WebDev:Note] STT ok | chars={trimmed.Length} speaker={(speakerLabel ?? "—")}");
-                NoteTranscript?.Invoke(new NoteTranscriptInfo(trimmed, speakerId, speakerLabel, IsPartial: false));
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Log($"[WebDev:Note] STT transcribe failed: {ex.GetType().Name}: {ex.Message}");
-                NoteError?.Invoke("Transcribe failed: " + ex.Message);
-            }
-        });
+        AppLogger.Log($"[WebDev:Note] utterance → STT | bytes={pcm.Length} lang={_noteLanguage}");
+        _ = Task.Run(() => ProcessFinalChunkAsync(pcm, "utterance"));
     }
 
     /// <summary>
@@ -525,16 +539,27 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
         if (System.Threading.Interlocked.CompareExchange(ref _notePartialBusy, 1, 0) != 0) return;
         try
         {
-            var cap = _noteCapture; var stt = _noteStt;
+            var stt = _noteStt;
             var ctsToken = _noteCts?.Token ?? CancellationToken.None;
             var lang = _noteLanguage;
-            if (cap is null || stt is null || ctsToken.IsCancellationRequested)
+            if (stt is null || ctsToken.IsCancellationRequested)
             {
                 System.Threading.Interlocked.Exchange(ref _notePartialBusy, 0);
                 return;
             }
 
-            var pcm = cap.PeekPcmBuffer();
+            // M0024 Phase 3.5 — peek whichever capture source is active.
+            byte[] pcm;
+            if (_noteLoopback is { IsCapturing: true })
+                pcm = _noteLoopback.PeekPcmBuffer();
+            else if (_noteCapture is not null)
+                pcm = _noteCapture.PeekPcmBuffer();
+            else
+            {
+                System.Threading.Interlocked.Exchange(ref _notePartialBusy, 0);
+                return;
+            }
+
             if (pcm.Length < NotePartialMinBytes || pcm.Length == _notePartialLastBytes)
             {
                 System.Threading.Interlocked.Exchange(ref _notePartialBusy, 0);
@@ -550,7 +575,7 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
                     if (string.IsNullOrWhiteSpace(text)) return;
                     var trimmed = text.Trim();
                     if (WhisperHallucinationFilter.IsLikelyHallucination(trimmed)) return;
-                    AppLogger.Log($"[WebDev:Note-Partial] ok | bytes={pcm.Length} chars={trimmed.Length}");
+                    AppLogger.Log($"[WebDev:Note-Partial] ok | bytes={pcm.Length} chars={trimmed.Length} source={_noteSource}");
                     NoteTranscript?.Invoke(new NoteTranscriptInfo(trimmed, SpeakerId: null, SpeakerLabel: null, IsPartial: true));
                 }
                 catch (OperationCanceledException) { /* expected on STOP */ }
@@ -570,6 +595,111 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
         }
     }
 
+    // ── M0024 Phase 3.5 — loopback chunk timer ───────────────────────────
+
+    private void StartNoteChunkTimer()
+    {
+        StopNoteChunkTimer();
+        var ms = _noteLoopbackChunkSec * 1000;
+        _noteChunkTimer = new System.Threading.Timer(OnNoteChunkTick, null, ms, ms);
+        AppLogger.Log($"[WebDev:Note-Chunk] timer started, interval={_noteLoopbackChunkSec}s");
+    }
+
+    private void StopNoteChunkTimer()
+    {
+        try { _noteChunkTimer?.Dispose(); } catch { }
+        _noteChunkTimer = null;
+    }
+
+    /// <summary>
+    /// Loopback path's "synthetic utterance end" — fires every
+    /// <see cref="_noteLoopbackChunkSec"/> seconds, drains the loopback
+    /// buffer, and routes through the same STT + diarize + emit pipeline
+    /// the mic utterance flow uses. NoteUtteranceStarted/Ended events also
+    /// fire so plugin UI state mirrors a real utterance cycle.
+    /// </summary>
+    private void OnNoteChunkTick(object? _)
+    {
+        var lb = _noteLoopback;
+        var stt = _noteStt;
+        if (lb is null || stt is null) return;
+        if ((_noteCts?.Token ?? CancellationToken.None).IsCancellationRequested) return;
+
+        var pcm = lb.ConsumePcmBuffer();
+        if (pcm.Length < 8000)
+        {
+            AppLogger.Log($"[WebDev:Note-Chunk] empty chunk skipped (bytes={pcm.Length})");
+            return;
+        }
+        // Reset partial baseline because the buffer was just drained; next
+        // partial tick should compare against the freshly-empty buffer.
+        _notePartialLastBytes = 0;
+
+        AppLogger.Log($"[WebDev:Note-Chunk] tick → STT | bytes={pcm.Length} ({pcm.Length / 32_000.0:F1}s)");
+        try { NoteUtteranceEnded?.Invoke(); } catch { }
+        _ = Task.Run(() => ProcessFinalChunkAsync(pcm, "loopback-chunk"));
+    }
+
+    /// <summary>
+    /// Shared STT + diarize + emit pipeline used by both the mic
+    /// UtteranceEnded handler and the loopback chunk timer. The
+    /// label is logged so it's clear which path produced the line.
+    /// </summary>
+    private async Task ProcessFinalChunkAsync(byte[] pcm, string label)
+    {
+        var stt = _noteStt;
+        var ctsToken = _noteCts?.Token ?? CancellationToken.None;
+        var lang = _noteLanguage;
+        if (stt is null) return;
+        try
+        {
+            var text = await stt.TranscribeAsync(pcm, lang, ctsToken);
+            if (ctsToken.IsCancellationRequested) return;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                AppLogger.Log($"[WebDev:Note-{label}] STT returned empty | bytes={pcm.Length} lang={lang}");
+                return;
+            }
+            var trimmed = text.Trim();
+            if (WhisperHallucinationFilter.IsLikelyHallucination(trimmed))
+            {
+                AppLogger.Log($"[WebDev:Note-{label}] hallucination dropped | chars={trimmed.Length}");
+                return;
+            }
+
+            int? speakerId = null;
+            string? speakerLabel = null;
+            try
+            {
+                var diar = await GetReadyNoteDiarizerAsync(ctsToken).ConfigureAwait(false);
+                if (diar is not null)
+                {
+                    var dSettings = DiarizationSettingsStore.Load();
+                    var dResult = await diar.DiarizeAsync(pcm, dSettings.ExpectedSpeakerCount, ctsToken).ConfigureAwait(false);
+                    if (dResult.Segments.Count > 0)
+                    {
+                        var lbl = MajoritySpeaker(dResult.Segments, out var id);
+                        speakerId = id; speakerLabel = lbl;
+                        AppLogger.Log($"[WebDev:Note-Diar:{label}] segments={dResult.Segments.Count} speakers={dResult.SpeakerCount} pick={lbl} inferMs={dResult.InferenceTime.TotalMilliseconds:F0}");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception dx)
+            {
+                AppLogger.Log($"[WebDev:Note-Diar:{label}] failed (continuing without speaker): {dx.GetType().Name}: {dx.Message}");
+            }
+
+            AppLogger.Log($"[WebDev:Note-{label}] STT ok | chars={trimmed.Length} speaker={(speakerLabel ?? "—")}");
+            NoteTranscript?.Invoke(new NoteTranscriptInfo(trimmed, speakerId, speakerLabel, IsPartial: false));
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log($"[WebDev:Note-{label}] STT transcribe failed: {ex.GetType().Name}: {ex.Message}");
+            NoteError?.Invoke("Transcribe failed: " + ex.Message);
+        }
+    }
+
     // Throttled amplitude relay — VoiceCaptureService fires ~20 Hz which
     // is more than the JS UI needs. Coalesce to ~10 Hz to keep WebView2
     // event traffic light without sacrificing meter responsiveness.
@@ -585,6 +715,7 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
     private void TearDownNoteCaptureLocked()
     {
         StopNotePartialTimer();
+        StopNoteChunkTimer();
         var cap = _noteCapture; _noteCapture = null;
         if (cap is not null)
         {
@@ -595,6 +726,14 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
             try { cap.Stop(); } catch { }
             try { cap.Dispose(); } catch { }
         }
+        // M0024 Phase 3.5 — loopback teardown mirrors mic.
+        var lb = _noteLoopback; _noteLoopback = null;
+        if (lb is not null)
+        {
+            lb.AmplitudeChanged -= OnNoteAmplitude;
+            try { lb.Stop(); } catch { }
+            try { lb.Dispose(); } catch { }
+        }
         try { _noteCts?.Cancel(); } catch { }
         _noteCts?.Dispose();
         _noteCts = null;
@@ -603,7 +742,7 @@ public sealed class WebDevHost : IZeroBrowser, IDisposable
         // Keep the instance across capture sessions so a second Start
         // doesn't re-load the ~50 MB model files — same caching pattern
         // _noteStt uses.
-        AppLogger.Log("[WebDev:Note] capture stopped");
+        AppLogger.Log($"[WebDev:Note] capture stopped (was source={_noteSource})");
     }
 
     /// <summary>

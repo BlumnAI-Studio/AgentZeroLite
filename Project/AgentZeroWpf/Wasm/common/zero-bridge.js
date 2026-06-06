@@ -98,12 +98,24 @@
       reset: () => invoke('chat.reset'),
     },
 
-    // Voice-note plugin surface (M0007). VAD-gated mic capture; each
-    // utterance auto-transcribes via the active STT provider and pushes
-    // a `note.transcript` event. Plugins subscribe with `zero.on(...)`.
+    // Voice-note plugin surface (M0007). VAD-gated mic capture OR (M0024
+    // Phase 3.5) continuous WASAPI loopback capture. Each utterance / chunk
+    // auto-transcribes via the active STT provider and pushes a
+    // `note.transcript` event. Plugins subscribe with `zero.on(...)`.
     note: {
-      // sensitivity: 0..100 percent (0 = least sensitive, 100 = most).
-      start: (sensitivity) => invoke('note.start', sensitivity == null ? {} : { sensitivity }),
+      // M0024 Phase 3.5 — start accepts either:
+      //   • a number (legacy, just sensitivity)
+      //   • or an options object: { sensitivity, source, loopbackDeviceId, loopbackChunkSec }
+      //     - sensitivity:        0..100 (mic only — 0=least, 100=most)
+      //     - source:             "Microphone" | "SystemLoopback"
+      //     - loopbackDeviceId:   MMDevice ID for SystemLoopback (omit = Windows default)
+      //     - loopbackChunkSec:   5..120 chunk duration for SystemLoopback (default 30)
+      // Returns { ok, capturing, sensitivity, threshold, source }.
+      start: (arg) => {
+        if (arg == null) return invoke('note.start', {});
+        if (typeof arg === 'number') return invoke('note.start', { sensitivity: arg });
+        return invoke('note.start', arg);
+      },
       stop:  () => invoke('note.stop'),
       pause: () => invoke('note.pause'),
       resume: () => invoke('note.resume'),

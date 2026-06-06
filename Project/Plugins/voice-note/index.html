@@ -33,26 +33,32 @@
       </section>
 
       <section id="vn-note" class="vn-note" hidden>
-        <header class="vn-note-head">
-          <input id="vn-title" class="vn-title" type="text" placeholder="Untitled note" maxlength="120" />
-          <span id="vn-meta" class="vn-meta"></span>
-        </header>
-
-        <div class="vn-controls">
+        <!-- M0024 Phase 3.5 + layout cleanup — title bar and controls row
+             are merged into a single compact header (vn-bar). Saves ~50 px
+             vertical so the timeline (the actual work surface) gets more
+             real estate. Source picker (Microphone / System Output) is
+             new in v0.3.0; remembers selection via localStorage. -->
+        <header class="vn-bar">
           <button id="vn-rec" class="vn-btn vn-btn-rec" type="button">
             <span class="vn-rec-dot"></span>
             <span id="vn-rec-label">Start</span>
           </button>
           <button id="vn-pause" class="vn-btn" type="button" disabled>Pause</button>
-          <div class="vn-sense">
-            <label for="vn-sense-range">Sensitivity</label>
+          <input id="vn-title" class="vn-title" type="text" placeholder="Untitled note" maxlength="120" />
+          <select id="vn-source" class="vn-source" title="Microphone = NAudio WaveIn. System Output = WASAPI loopback of the speaker output (Zoom recording / YouTube / music).">
+            <option value="Microphone">🎙 Mic</option>
+            <option value="SystemLoopback">🔊 System</option>
+          </select>
+          <div class="vn-sense" id="vn-sense-wrap">
+            <label for="vn-sense-range">Sens</label>
             <input id="vn-sense-range" type="range" min="0" max="100" value="75" />
             <span id="vn-sense-val" class="vn-sense-val">75</span>
           </div>
+          <span id="vn-meta" class="vn-meta"></span>
           <div class="vn-spacer"></div>
           <button id="vn-summarize" class="vn-btn" type="button" disabled>Summarize</button>
           <button id="vn-delete" class="vn-btn vn-btn-danger" type="button">Delete</button>
-        </div>
+        </header>
 
         <!-- Live level meter — RMS bar + 4 pulsing bars while utterance
              is in progress. Mirrors the AgentBot voice indicator so the

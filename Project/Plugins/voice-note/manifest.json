@@ -2,7 +2,7 @@
   "id": "voice-note",
   "name": "Voice Note",
   "entry": "index.html",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "icon": "🎙",
-  "description": "STT-driven voice journal — VAD-gated capture, sensitivity slider, pause/resume, LLM summary. M0024 v0.2.0: speaker diarization chips per line + 10-second rolling partial previews while you talk."
+  "description": "STT voice journal — speaker diarization chips, 10s rolling partial preview, dual capture source (mic / WASAPI loopback for system audio), compact single-row header. v0.3.0 (M0024 Phase 3.5)."
 }

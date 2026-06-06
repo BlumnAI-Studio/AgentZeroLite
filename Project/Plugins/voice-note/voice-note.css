@@ -106,30 +106,42 @@ body { font-size: 13px; }
 
 .vn-note { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
-.vn-note-head {
-  padding: 16px 20px 10px;
+/* M0024 Phase 3.5 + layout cleanup — single header row merges what used
+   to be vn-note-head + vn-controls (~100 px total → ~46 px), reclaiming
+   vertical space for the actual transcript body below. */
+.vn-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px;
+  background: #0F0F22;
+  flex-wrap: wrap;
 }
 .vn-title {
-  flex: 1;
+  flex: 1; min-width: 160px;
   background: transparent; border: 0; outline: 0;
-  color: var(--text); font-size: 18px; font-weight: 700;
+  color: var(--text); font-size: 15px; font-weight: 600;
   font-family: inherit;
-  padding: 0;
+  padding: 0 4px;
 }
+.vn-title::placeholder { color: var(--text-muted); font-weight: 400; }
 .vn-title:focus { color: var(--accent-hi); }
 .vn-meta {
   font-size: 10px; color: var(--text-muted);
   font-family: Consolas, monospace;
+  white-space: nowrap;
 }
-
-.vn-controls {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--border);
-  background: #0F0F22;
+.vn-source {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 5px 6px; font-size: 11px; font-family: inherit;
+  cursor: pointer;
 }
+.vn-source:hover { border-color: var(--accent); }
+.vn-source:focus { outline: 1px solid var(--accent); outline-offset: 0; }
+.vn-source[disabled] { opacity: .4; cursor: not-allowed; }
+/* Sensitivity hides itself when source = SystemLoopback (no VAD there).
+   The JS sets .vn-bar.loopback on the bar; child rule below collapses it. */
+.vn-bar.loopback .vn-sense { display: none; }
 .vn-btn {
   background: var(--surface);
   border: 1px solid var(--border);
