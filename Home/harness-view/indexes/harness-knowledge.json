@@ -137,6 +137,33 @@
       "modified": "2026-05-28"
     },
     {
+      "id": "harness/knowledge/music-curator/ast-audioset-model-serving.md",
+      "file": "harness/knowledge/music-curator/ast-audioset-model-serving.md",
+      "name": "ast-audioset-model-serving.md",
+      "title": "ast-audioset-model-serving",
+      "heading": "AST AudioSet — model card + serving contract",
+      "size": 6671,
+      "modified": "2026-06-06"
+    },
+    {
+      "id": "harness/knowledge/music-curator/audio-capture-pipeline.md",
+      "file": "harness/knowledge/music-curator/audio-capture-pipeline.md",
+      "name": "audio-capture-pipeline.md",
+      "title": "audio-capture-pipeline",
+      "heading": "Audio capture pipeline — mic + WASAPI loopback",
+      "size": 8300,
+      "modified": "2026-06-06"
+    },
+    {
+      "id": "harness/knowledge/music-curator/spectrum-sensitivity-conventions.md",
+      "file": "harness/knowledge/music-curator/spectrum-sensitivity-conventions.md",
+      "name": "spectrum-sensitivity-conventions.md",
+      "title": "spectrum-sensitivity-conventions",
+      "heading": "Spectrum sensitivity conventions",
+      "size": 6480,
+      "modified": "2026-06-06"
+    },
+    {
       "id": "harness/knowledge/README.md",
       "file": "harness/knowledge/README.md",
       "name": "README.md",
@@ -284,6 +311,34 @@
           "path": "code-coach/wpf-xaml-resource-and-window-pitfalls.md",
           "size": 18952,
           "modified": "2026-05-28"
+        }
+      ]
+    },
+    {
+      "type": "dir",
+      "name": "music-curator",
+      "path": "music-curator",
+      "children": [
+        {
+          "type": "file",
+          "name": "ast-audioset-model-serving.md",
+          "path": "music-curator/ast-audioset-model-serving.md",
+          "size": 6671,
+          "modified": "2026-06-06"
+        },
+        {
+          "type": "file",
+          "name": "audio-capture-pipeline.md",
+          "path": "music-curator/audio-capture-pipeline.md",
+          "size": 8300,
+          "modified": "2026-06-06"
+        },
+        {
+          "type": "file",
+          "name": "spectrum-sensitivity-conventions.md",
+          "path": "music-curator/spectrum-sensitivity-conventions.md",
+          "size": 6480,
+          "modified": "2026-06-06"
         }
       ]
     },

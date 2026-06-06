@@ -1,71 +1,79 @@
 {
   "_description": "Recent Updates surface — bilingual EN/KO. Default audience: English. `headline`, `narrative`, `highlights[].label/text`, `prompts[].tag/text` use `{ en, ko }` shape. Scalars (updatedAt, tone) stay language-neutral.",
-  "updatedAt": "2026-05-16",
+  "updatedAt": "2026-06-06",
   "headline": {
-    "en": "v0.9 cycle — Scrap (window spy + text capture) joins Lite, AgentBot becomes AgentCLI, Actor World gets a Korean tutorial",
-    "ko": "v0.9 사이클 — Scrap (윈도우 스파이 + 텍스트 캡처) 가 Lite 에 합류, AgentBot 이 AgentCLI 로, Actor World 에 한국어 듀토리얼"
+    "en": "v0.10 cycle — Music LLM lands: AST AudioSet instrument classifier with mic + WASAPI loopback dual source, sliding-window inference, and a live log-frequency dBFS spectrum",
+    "ko": "v0.10 사이클 — Music LLM 합류: AST AudioSet 악기 분류기 + 마이크/WASAPI 루프백 듀얼 소스 + 슬라이딩 윈도우 추론 + 라이브 로그 주파수 dBFS 스펙트럼"
   },
   "narrative": {
-    "en": "Lite was repositioned as the standalone full-spec edition (multi-device / cluster moves to AgentZero PRO), which immediately changed what belongs in this codebase. The 2026-04-27 origin snapshot's REJECT-3 verdict on ScrapPanel was superseded by REVISED-3 and shipped in the same mission. M0019 imported the full Origin capture pipeline — 6 leaf files totalling ~1745 lines (TextCaptureService, ChromiumTextCapture, ScrapWriter, WindowInfo, WpfWindowPicker, TargetHighlightOverlay) — and wrapped it in a new ScrapPagePanel overlay alongside WebDev. The first smoke test against IntelliJ (a Swing/AWT app) exposed that UIA exposes no ScrollPattern there, so a Strategy 2.5 clipboard-scroll fallback (Ctrl+Home → loop Ctrl+A/C + PageDown, with live ChunkWritten emit and original-clipboard restore on finish) was added in the follow-up round and now covers IntelliJ, browsers, and other UIA-blind editors. The chat icon next to it renamed user-visible 'Agent Bot' → 'AgentCLI' with a CommandPrompt glyph, while internal types and the Akka actor path `/user/stage/bot` were intentionally left alone. In parallel, M0018 added a Korean Akka.NET tutorial behind `#actor-world/tutorial`, with 10 ComfyUI Z-Image-Turbo hero cards generated in the background while the body was being written.",
-    "ko": "Lite 가 단독 풀스펙 에디션으로 재정의되면서 (멀티-디바이스 / 클러스터는 AgentZero PRO 로 분리), 본 코드베이스의 스코프가 즉시 바뀌었다. 2026-04-27 오리진 스냅샷의 REJECT-3 (ScrapPanel) 판단은 REVISED-3 으로 보정되어 같은 미션에서 출시. M0019 가 Origin 의 캡처 파이프라인 전체 — 6 파일 약 1745 줄 (TextCaptureService, ChromiumTextCapture, ScrapWriter, WindowInfo, WpfWindowPicker, TargetHighlightOverlay) — 을 import 해 WebDev 옆의 새 ScrapPagePanel 오버레이로 감쌌다. IntelliJ (Swing/AWT) 대상 첫 smoke test 가 UIA 의 ScrollPattern 부재를 노출 → Strategy 2.5 클립보드 스크롤 폴백 (Ctrl+Home → Ctrl+A/C + PageDown 루프, 라이브 ChunkWritten emit + 원본 클립보드 복원) 이 후속 라운드로 추가되어 이제 IntelliJ, 브라우저, 그 외 UIA-blind 에디터까지 커버한다. 옆자리 챗 아이콘은 user-visible 'Agent Bot' → 'AgentCLI' + CommandPrompt 글리프로 리브랜드, 내부 타입과 Akka 액터 경로 `/user/stage/bot` 은 의도적으로 그대로. 병렬로 M0018 이 `#actor-world/tutorial` 뒤에 한국어 Akka.NET 듀토리얼을 추가 — 본문 작성 중 ComfyUI Z-Image-Turbo 로 히어로 카드 10장을 백그라운드 생성."
+    "en": "Voice taught AgentZero to listen and speak; this cycle adds the third leg — listen and understand. Settings → 🎵 Music runs MIT's `ast-finetuned-audioset-10-10-0.4593` (Audio Spectrogram Transformer, 86.6M params, 527 AudioSet classes) via ONNX Runtime on a sliding 10-second window. Two input sources funnel into the same classifier: microphone (NAudio WaveIn — the Voice pipeline reused) or system output (WASAPI loopback via `WasapiLoopbackCapture` — analyse whatever Spotify / YouTube / a game is currently playing through the speakers, no virtual cable needed). The capture path runs any render-endpoint mixer format through `BufferedWaveProvider → StereoToMono → WdlResamplingSampleProvider(16 kHz) → SampleToWaveProvider16` so AST always sees its canonical 16 kHz mono PCM16. Single-flight interlocked gate re-infers every 1.5 s; the top-K labels list updates in place and a separate 2048-pt FFT spectrum bar canvas (64 log-spaced bands across 30 Hz–8 kHz, dBFS-normalized -60/-3) repaints at ~30 Hz above the labels. The model + AudioSet labels CSV pull from the `onnx-community` HuggingFace mirror (no Python `optimum-cli` detour) through the same `ModelDownloadDialog` Supertonic uses — ~347 MB, one-time, resumable cleanup via 'Start fresh'. Harness v1.8.0 adds the matching specialist agent `music-curator` with three convention documents (model serving contract, audio capture pipeline, spectrum sensitivity).",
+    "ko": "Voice 가 AgentZero 에게 듣고 말하기를 가르쳤다면, 이번 사이클은 세 번째 축 — 듣고 이해하기 — 를 추가한다. Settings → 🎵 Music 에서 MIT 의 `ast-finetuned-audioset-10-10-0.4593` (Audio Spectrogram Transformer, 86.6M params, AudioSet 527 클래스) 를 ONNX Runtime 으로 슬라이딩 10초 윈도우에 대해 구동. 두 입력 소스가 같은 분류기로 흐른다: 마이크 (NAudio WaveIn — Voice 파이프라인 재사용) 또는 시스템 출력 (`WasapiLoopbackCapture` 기반 WASAPI 루프백 — 스피커로 재생 중인 Spotify / YouTube / 게임 분석, 가상 케이블 불필요). 캡처 경로는 임의 렌더 엔드포인트 믹서 포맷을 `BufferedWaveProvider → StereoToMono → WdlResamplingSampleProvider(16 kHz) → SampleToWaveProvider16` 체인으로 통과시켜 AST 가 항상 정규 16 kHz 모노 PCM16 을 받게 함. interlocked 단일-flight 게이트로 1.5초마다 재추론, Top-K 라벨이 in-place 갱신되고 별도 2048-pt FFT 스펙트럼 바 캔버스 (30 Hz–8 kHz 64 로그 밴드, dBFS -60/-3 정규화) 가 라벨 위에서 약 30 Hz 로 다시 그려진다. 모델 + AudioSet 라벨 CSV 는 `onnx-community` 허깅페이스 미러에서 Supertonic 이 쓰는 동일한 `ModelDownloadDialog` 로 받아옴 (Python `optimum-cli` 우회 불필요) — 약 347 MB, 1회, 'Start fresh' 로 클린 재시작. 하네스 v1.8.0 이 대응 specialist 에이전트 `music-curator` 와 컨벤션 문서 3종 (model serving / audio capture / spectrum sensitivity) 을 동시 신설."
   },
   "highlights": [
     {
-      "label": { "en": "Scrap is back",      "ko": "Scrap 합류" },
+      "label": { "en": "AST AudioSet ONNX",  "ko": "AST AudioSet ONNX" },
       "text":  {
-        "en": "ActivityBar overlay with crosshair picker / HWND input / WINDOW_INFO + ELEMENT_TREE / scroll options / live captured-text preview",
-        "ko": "ActivityBar 오버레이에 크로스헤어 픽커 / HWND 입력 / WINDOW_INFO + ELEMENT_TREE / 스크롤 옵션 / 라이브 캡처 미리보기"
-      },
-      "tone": "blue"
-    },
-    {
-      "label": { "en": "Strategy 2.5",       "ko": "Strategy 2.5" },
-      "text":  {
-        "en": "Clipboard-scroll fallback — Ctrl+Home → loop Ctrl+A/C + PageDown, diffs new text per round, restores original clipboard on exit",
-        "ko": "클립보드 스크롤 폴백 — Ctrl+Home → Ctrl+A/C + PageDown 루프, 라운드별 신규 텍스트 diff, 종료 시 원본 클립보드 복원"
+        "en": "MIT/ast-finetuned-audioset-10-10-0.4593, 86.6M params, 527 classes, served via Microsoft.ML.OnnxRuntime 1.20 on CPU (~200–400 ms/pass on modern x64)",
+        "ko": "MIT/ast-finetuned-audioset-10-10-0.4593, 86.6M params, 527 클래스, Microsoft.ML.OnnxRuntime 1.20 CPU 추론 (모던 x64 기준 ~200–400 ms/pass)"
       },
       "tone": "purple"
     },
     {
-      "label": { "en": "AgentCLI rebrand",   "ko": "AgentCLI 리브랜드" },
+      "label": { "en": "Dual capture source", "ko": "듀얼 캡처 소스" },
       "text":  {
-        "en": "User-visible label only — actor path `/user/stage/bot` and AgentBotActor class names stay (stable contracts)",
-        "ko": "사용자에게 보이는 라벨만 변경 — 액터 경로 `/user/stage/bot` 과 AgentBotActor 클래스명은 그대로 (안정 contract)"
+        "en": "Microphone (NAudio WaveIn — Voice pipeline reused) OR System Output (WASAPI loopback against any render endpoint — analyse what's playing without a virtual cable)",
+        "ko": "마이크 (NAudio WaveIn — Voice 파이프라인 재사용) 또는 시스템 출력 (임의 렌더 엔드포인트 대상 WASAPI 루프백 — 가상 케이블 없이 재생 중인 음악 분석)"
+      },
+      "tone": "blue"
+    },
+    {
+      "label": { "en": "Sliding-window live inference", "ko": "슬라이딩 윈도우 라이브 추론" },
+      "text":  {
+        "en": "Rolling 10 s PCM buffer + interlocked single-flight gate re-infers every 1.5 s; top-K labels update in place without backlogged ticks during ONNX warm-up",
+        "ko": "롤링 10초 PCM 버퍼 + interlocked 단일-flight 게이트로 1.5초마다 재추론; ONNX 워밍업 중에도 백로그 없이 Top-K 라벨이 in-place 갱신"
       },
       "tone": "green"
     },
     {
-      "label": { "en": "Actor tutorial (KO)", "ko": "액터 듀토리얼 (KO)" },
+      "label": { "en": "Live dBFS spectrum bars", "ko": "라이브 dBFS 스펙트럼 바" },
       "text":  {
-        "en": "#actor-world/tutorial — 5 mermaid diagrams, 10 ComfyUI hero cards, 6-step 'build your own actor' appendix",
-        "ko": "#actor-world/tutorial — mermaid 5 블록, ComfyUI 히어로 카드 10장, '액터 직접 만들기' 6단계 부록"
+        "en": "Independent 2048-pt Hann FFT → 64 log-spaced bands (30 Hz–8 kHz) → dBFS-normalized -60/-3 → WPF Canvas at ~30 Hz repaint, cyan→magenta gradient",
+        "ko": "독립 2048-pt Hann FFT → 64 로그 밴드 (30 Hz–8 kHz) → dBFS -60/-3 정규화 → WPF Canvas 약 30 Hz repaint, 시안→마젠타 그라데이션"
       },
-      "tone": "blue"
+      "tone": "amber"
+    },
+    {
+      "label": { "en": "music-curator agent",  "ko": "music-curator 에이전트" },
+      "text":  {
+        "en": "Harness v1.8.0 — 7th specialist owns AST serving contract, mel preprocessing conventions, WASAPI loopback pitfalls; mandatory consult before any new music model (MERT / CLAP / Qwen-Audio)",
+        "ko": "하네스 v1.8.0 — 7번째 specialist 가 AST serving contract / mel 전처리 컨벤션 / WASAPI 루프백 함정 소유; 새 음악 모델 (MERT / CLAP / Qwen-Audio) 추가 전 mandatory consult"
+      },
+      "tone": "purple"
     }
   ],
   "prompts": [
     {
-      "tag":  { "en": "Scrap drive",        "ko": "Scrap 드라이브" },
-      "tone": "blue",
-      "text": {
-        "en": "Open Scrap from the ActivityBar, drag the crosshair onto a long Chrome / IntelliJ / VSCode window, press CAPTURE — watch the preview fill live as Strategy 2.5 scrolls",
-        "ko": "ActivityBar 의 Scrap 열기 → 크로스헤어를 긴 Chrome / IntelliJ / VSCode 창에 드래그 → CAPTURE — Strategy 2.5 가 스크롤하며 프리뷰가 라이브로 채워지는 것 관찰"
-      }
-    },
-    {
-      "tag":  { "en": "Korean Akka tutor",  "ko": "한국어 Akka 듀토" },
+      "tag":  { "en": "Music tab drive",     "ko": "Music 탭 시연" },
       "tone": "purple",
       "text": {
-        "en": "Open Actor World → click '액터모델 듀토리얼 (KO)' top-right, or jump straight to #actor-world/tutorial",
-        "ko": "Actor World → 우상단 '액터모델 듀토리얼 (KO)' 클릭, 또는 #actor-world/tutorial 로 직행"
+        "en": "Settings → 🎵 Music → Download (one-time ~347 MB) → Source = 'System Output' → play any track in Spotify / YouTube → START TEST — watch tick #N labels refresh every 1.5 s with the spectrum bars dancing above",
+        "ko": "Settings → 🎵 Music → Download (1회 ~347 MB) → Source = 'System Output' → Spotify / YouTube 에서 곡 재생 → START TEST — tick #N 라벨이 1.5초마다 갱신되고 위쪽 스펙트럼 바가 움직이는 것 관찰"
       }
     },
     {
-      "tag":  { "en": "AgentCLI check",     "ko": "AgentCLI 확인" },
+      "tag":  { "en": "Mic-source playing",  "ko": "마이크 소스 연주" },
+      "tone": "blue",
+      "text": {
+        "en": "Same Music tab, switch Source = 'Microphone', play a real guitar / piano / kazoo near the mic; AST should top-K with the instrument label within the first tick",
+        "ko": "동일 Music 탭에서 Source = 'Microphone' 으로 전환, 마이크 근처에서 실제 기타 / 피아노 / 카주 연주; AST 가 첫 tick 내에 해당 악기 라벨을 Top-K 로 잡아야 함"
+      }
+    },
+    {
+      "tag":  { "en": "Knowledge consult",   "ko": "지식 조회" },
       "tone": "green",
       "text": {
-        "en": "ActivityBar's chat icon should now show a `>` CommandPrompt glyph with tooltip 'AgentCLI'; the bottom tab reads AGENT CLI",
-        "ko": "ActivityBar 의 챗 아이콘이 `>` CommandPrompt 글리프 + 툴팁 'AgentCLI', 하단 탭은 AGENT CLI 로 보여야 함"
+        "en": "Open Knowledge → music-curator branch — three convention docs explain AST input contract, capture pipeline, and why the spectrum bars normalize to dBFS instead of raw FFT power",
+        "ko": "Knowledge → music-curator 브랜치 — AST 입력 contract, 캡처 파이프라인, 스펙트럼 바가 raw FFT 가 아닌 dBFS 로 정규화하는 이유를 컨벤션 문서 3종이 설명"
       }
     }
   ]

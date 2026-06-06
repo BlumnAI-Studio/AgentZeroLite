@@ -1,8 +1,16 @@
 {
   "_description": "PDSA Learning surface — bilingual EN/KO. Default audience: English. `sources[].title`, `tried[]`, `solved[]`, `remaining[]`, `learned.lead`, `learned.body` use `{ en, ko }` shape. Scalars (date/time/category/file/analyzedAt/windowDays) stay language-neutral. PDSA UPDATE mode in the harness-view-build skill must emit both languages.",
-  "analyzedAt": "2026-05-25",
-  "windowDays": 14,
+  "analyzedAt": "2026-06-06",
+  "windowDays": 28,
   "sources": [
+    {
+      "date": "2026-06-06", "time": "22:10", "category": "tamer",
+      "file": "harness/logs/tamer/2026-06-06-2210-music-llm-rollout.md",
+      "title": {
+        "en": "Harness v1.8.0 — Music LLM rollout: README + README-KR sections, new music-curator specialist (7th agent) with three convention docs (AST serving contract, audio capture pipeline, spectrum sensitivity), config bump + dedicated v1.8.0 doc",
+        "ko": "하네스 v1.8.0 — Music LLM 출시: README + README-KR 섹션, 신규 music-curator 전문가 (7번째 에이전트) 와 컨벤션 3종 (AST serving contract, audio capture pipeline, spectrum sensitivity), config bump + 전용 v1.8.0 문서"
+      }
+    },
     {
       "date": "2026-05-25", "time": "21:55", "category": "code-coach",
       "file": "harness/logs/code-coach/2026-05-25-21-55-agentbot-gemma-toolcall-rca.md",
@@ -20,96 +28,96 @@
       }
     },
     {
-      "date": "2026-05-22", "time": "06:00", "category": "mission-records",
-      "file": "harness/logs/mission-records/M0022-수행결과.md",
+      "date": "2026-05-10", "time": "15:30", "category": "tamer",
+      "file": "harness/logs/tamer/2026-05-10-15-30-webnori-a1-a2-model-survey.md",
       "title": {
-        "en": "Mission M0022 — UI refresh pass: true full-screen, AgentCLI→AgentBot rebrand + bot icon, WORKSPACES collapse-to-rail, agentzero.ico replacement, Scrap detach/dockback floating window, harness-view as 4th ActivityBar entry, voice Note promoted to overlay page",
-        "ko": "Mission M0022 — UI 리프레시: 진짜 전체화면, AgentCLI→AgentBot 리브랜드 + 봇 아이콘, WORKSPACES 레일 접기, agentzero.ico 교체, Scrap detach/dockback 플로팅 창, 하네스뷰 ActivityBar 4번째 진입, Voice Note 오버레이 페이지 승격"
+        "en": "Live probe of Webnori a1/a2 free gateways via OpenAI-compatible /v1/models — found roster reshuffle (a1 = production workhorse, a2 = experimental), and that the committed WebnoriDefaults.KnownModels referenced a model no longer served",
+        "ko": "Webnori a1/a2 무료 게이트웨이를 OpenAI 호환 /v1/models 로 라이브 조회 — 카탈로그 재정렬 발견 (a1 = 프로덕션 워크호스, a2 = 실험), 코드에 박힌 WebnoriDefaults.KnownModels 가 더 이상 서빙되지 않는 모델을 참조 중이었다"
       }
     },
     {
-      "date": "2026-05-18", "time": "23:54", "category": "mission-records",
-      "file": "harness/logs/mission-records/M0021-수행결과.md",
+      "date": "2026-05-10", "time": "10:31", "category": "kakashi-copy",
+      "file": "harness/logs/kakashi-copy/2026-05-10-10-31-pencil-design-from-pencil-creator.md",
       "title": {
-        "en": "Mission M0021 — per-CLI Remote Shell (SSH) for CMD/PW5/PW7; DPAPI-encrypted password stored in SQLite, single-shot clipboard auto-fill walking around OpenSSH's no-argv-password rule; 24 unit tests pin the shell-specific argument splicing",
-        "ko": "Mission M0021 — CMD/PW5/PW7 CLI 정의별 Remote Shell (SSH); DPAPI 암호화 비번을 SQLite 보관, OpenSSH 의 argv 비번 미허용 제약을 클립보드 1회 자동입력으로 우회; 셸별 args 합성을 24개 단위테스트로 고정"
-      }
-    },
-    {
-      "date": "2026-05-17", "time": "11:30", "category": "mission-records",
-      "file": "harness/logs/mission-records/M0020-수행결과.md",
-      "title": {
-        "en": "Mission M0020 — SuperTonic TTS as the first pip-installed Python subprocess provider; IProcessRunner abstraction lets ZeroCommon stay headless-testable while AgentZeroWpf wires the real Python invocation",
-        "ko": "Mission M0020 — SuperTonic TTS 영입 (pip 기반 Python 서브프로세스 첫 사례); IProcessRunner 추상화로 ZeroCommon 은 헤드리스 테스트 가능 상태 유지, AgentZeroWpf 가 실제 Python 호출 배선"
+        "en": "Mode C Kakashi Copy — pencil-design skill ingested from the sibling pencil-creator project (5 files / 1191 lines) with security grep + .secret/ confirmed in .gitignore, plus harness provenance knowledge file",
+        "ko": "Mode C 카카시 카피 — 형제 프로젝트 pencil-creator 에서 pencil-design 스킬 이식 (5 파일 / 1191 줄) + 보안 grep + .secret/ .gitignore 등재 확인, 하네스 provenance 지식 파일 동시 신설"
       }
     }
   ],
   "tried": [
     {
-      "en": "Port origin-fork capabilities into Lite as scoped missions (M0019 Scrap window-spy, M0020 SuperTonic pip-TTS, M0021 Remote SSH) — three transports under a single CliDefinition row + factory.",
-      "ko": "오리진 포크 기능을 좁힌 미션 단위로 Lite 에 이식 (M0019 Scrap 윈도우 스파이, M0020 SuperTonic pip-TTS, M0021 Remote SSH) — 단일 CliDefinition + 팩토리로 3개 전송 묶음."
+      "en": "Open a new audio axis — bring AST AudioSet (MIT/ast-finetuned-audioset-10-10-0.4593) into AgentZero via ONNX Runtime 1.20 on a sliding 10s window, dual-source capture (mic + WASAPI loopback against any render endpoint), and a 64-band log-frequency dBFS spectrum repainting at ~30 Hz.",
+      "ko": "새 오디오 축 개통 — AST AudioSet (MIT/ast-finetuned-audioset-10-10-0.4593) 을 ONNX Runtime 1.20 으로 슬라이딩 10초 윈도우에 도입, 듀얼 소스 캡처 (마이크 + 임의 렌더 엔드포인트 대상 WASAPI 루프백), 64밴드 로그 주파수 dBFS 스펙트럼 ~30 Hz 리페인트."
     },
     {
-      "en": "Pencil-first UI workflow: M0022 designed 7 BEFORE/AFTER frames in a single .pen, got operator sign-off, then implemented — visual seal before code.",
-      "ko": "펜슬 우선 UI 워크플로우: M0022 가 7개 BEFORE/AFTER 프레임을 단일 .pen 으로 설계, operator 승인 후 구현 — 코드 전에 시각적 봉인."
+      "en": "Pair every major code surface with its harness specialist before it can drift — Music tab landed simultaneously with music-curator agent (7th) and three binding convention docs (AST serving / capture pipeline / spectrum sensitivity) in harness v1.8.0.",
+      "ko": "주요 코드 표면이 drift 하기 전 하네스 전문가와 항상 페어링 — Music 탭이 music-curator 에이전트 (7번째) + 컨벤션 3종 (AST serving / capture pipeline / spectrum sensitivity) 과 동시에 하네스 v1.8.0 으로 합류."
     },
     {
-      "en": "Tighten test-policy CPU cost: ban most automated runs, then re-introduce a narrow Author-verify exception that only runs newly-written tests and asks first if they touch the LLM smoke surface.",
-      "ko": "테스트 정책 CPU 비용 압축: 자동 수행을 대부분 금지한 뒤, 새로 작성한 테스트만 좁게 자동 수행하는 Author-verify 예외 재도입 + LLM 스모크 닿으면 사용자에게 먼저 확인."
+      "en": "Live-probe external dependencies instead of trusting committed catalogs — direct /v1/models call against Webnori a1/a2 revealed a roster reshuffle the codebase's WebnoriDefaults.KnownModels missed.",
+      "ko": "커밋된 카탈로그를 믿지 말고 외부 의존성을 라이브 probe — Webnori a1/a2 의 /v1/models 직접 호출로 코드의 WebnoriDefaults.KnownModels 가 놓친 카탈로그 재정렬을 발견."
     },
     {
-      "en": "End-to-end RCA on Gemma envelope drop: capture raw=={\"message\":...} from real Webnori, prove it byte-equals the system-prompt example, ship prompt rewrite + once-per-session self-heal, lock with a RED→GREEN online smoke and five offline unit tests.",
-      "ko": "Gemma envelope 드롭 정밀 RCA: 실 Webnori 응답에서 raw=={\"message\":...} 캡쳐, 시스템 프롬프트 예시와 바이트 일치 증명, 프롬프트 재작성 + once-per-session 자가복구 출시, RED→GREEN 온라인 스모크 + 5개 오프라인 단위테스트로 고정."
+      "en": "Tighten test-policy CPU cost while opening a narrow Author-verify exception in v1.7.1 — newly written tests auto-run filtered, but LLM-smoke paths (Whisper / Gemma / Webnori) ask first.",
+      "ko": "v1.7.1 에서 테스트 정책 CPU 비용 압축 + 좁은 Author-verify 예외 신설 — 신규 작성 테스트만 필터로 자동 수행, LLM 스모크 (Whisper / Gemma / Webnori) 닿으면 사용자에게 먼저 확인."
     },
     {
-      "en": "Spot a parallel UI staleness vector (saved-vs-loaded LLM ModelId, AIMODE bubble label on External path) the moment the operator reported \"Gemma 고정 작동\" — narrow it to a label-only bug before touching routing.",
-      "ko": "operator 의 \"젬마 고정 작동\" 보고 직후 평행 UI staleness 추적 (saved vs loaded ModelId, External 분기 AIMODE 버블 라벨) — 라우팅 건드리기 전 라벨 한정 버그로 좁힘."
+      "en": "Catch the few-shot regression where Gemma copied the system-prompt example verbatim — capture raw=={\"message\":...}, prove it byte-equals the prompt example, ship envelope-form example rewrite + once-per-session self-heal in ExternalAgentLoop locked by RED→GREEN online smoke.",
+      "ko": "Gemma 가 시스템 프롬프트 예시를 그대로 복사한 few-shot 회귀 적발 — raw=={\"message\":...} 캡쳐, 프롬프트 예시와 바이트 일치 증명, ExternalAgentLoop 에 envelope 형태 예시 재작성 + once-per-session 자가복구 출시 후 RED→GREEN 온라인 스모크로 고정."
     }
   ],
   "solved": [
     {
-      "en": "AgentBot UI gateway hit its 1.0 surface in one mission — rebrand + icon + workspace collapse + scrap detach + harness-view 4th icon + note overlay all in M0022.",
-      "ko": "AgentBot UI 게이트웨이가 한 미션에서 1.0 표면 도달 — M0022 한 번에 리브랜드 + 아이콘 + 워크스페이스 접기 + 스크랩 detach + 하네스뷰 4번째 아이콘 + 노트 오버레이."
+      "en": "Music tab live end-to-end: 347 MB AST ONNX downloads from onnx-community mirror via the shared ModelDownloadDialog (no Python optimum-cli detour), capture pipeline normalizes arbitrary mixer formats to 16 kHz mono PCM16, interlocked single-flight gate keeps backlog at zero during ONNX warm-up.",
+      "ko": "Music 탭 라이브 end-to-end: 347 MB AST ONNX 가 공용 ModelDownloadDialog 로 onnx-community 미러에서 다운로드 (Python optimum-cli 우회 불필요), 캡처 파이프라인이 임의 믹서 포맷을 16 kHz 모노 PCM16 으로 정규화, interlocked 단일-flight 게이트로 ONNX 워밍업 중 백로그 0."
     },
     {
-      "en": "Multi-CLI substrate now spans local PTY / pip subprocess / SSH remote with one schema and one factory — generalises beyond Windows-only shells without breaking the headless ZeroCommon split.",
-      "ko": "Multi-CLI substrate 가 로컬 PTY / pip 서브프로세스 / SSH 원격을 하나의 스키마와 팩토리로 묶음 — 헤드리스 ZeroCommon 분리를 깨지 않고 Windows-only 셸 너머로 일반화."
+      "en": "Harness v1.7.2 → v1.8.0 minor bump landed with the 7th specialist (music-curator), pure-addition migration — no existing agent / engine / knowledge file modified, rollback procedure documented in v1.8.0.md.",
+      "ko": "하네스 v1.7.2 → v1.8.0 minor bump 가 7번째 전문가 (music-curator) 와 함께 합류, 순수 추가 마이그레이션 — 기존 에이전트 / 엔진 / 지식 파일 0개 수정, 롤백 절차는 v1.8.0.md 에 문서화."
     },
     {
-      "en": "REST agent loop survives Gemma's literal-example mimic. Prompt examples now ship as full envelopes; ExternalAgentLoop wraps inner-only done bodies once per session before hard-failing. Online smoke pinned the fix.",
-      "ko": "REST agent loop 가 Gemma 의 리터럴 모방을 견딤. 프롬프트 예시는 풀 envelope 형식. ExternalAgentLoop 는 inner-only done body 를 세션당 1회 wrap 후 hard-fail. 온라인 스모크가 패치를 고정."
+      "en": "Webnori catalog survey produced a sharp role split — a1 = production workhorse (Gemma 4 E4B + GPT-OSS 20B + nomic embedding), a2 = experimental comparison group (Qwen3.6-27B + Nemotron-3-Nano-4B). models.json now reflects the live roster.",
+      "ko": "Webnori 카탈로그 조사로 역할 분리 명확화 — a1 = 프로덕션 워크호스 (Gemma 4 E4B + GPT-OSS 20B + nomic embedding), a2 = 실험 비교군 (Qwen3.6-27B + Nemotron-3-Nano-4B). models.json 이 라이브 카탈로그를 반영."
     },
     {
-      "en": "Test-policy automation footprint narrowed to author-written deltas; LLM-touching smoke paths kept behind explicit ask. Headless ZeroCommon.Tests still freely runs (16/16 on this change set).",
-      "ko": "테스트 자동화 면적을 저자가 작성한 델타로 축소; LLM 닿는 스모크는 명시 승인 뒤로. 헤드리스 ZeroCommon.Tests 는 자유롭게 수행 (이번 변경에서 16/16 통과)."
+      "en": "REST agent loop now survives Gemma's literal-example mimic — prompt examples ship as full envelopes; ExternalAgentLoop wraps inner-only done bodies once per session before hard-failing, with the online smoke pinning the fix.",
+      "ko": "REST agent loop 가 Gemma 의 리터럴 모방을 견딤 — 프롬프트 예시는 풀 envelope 형식, ExternalAgentLoop 가 inner-only done body 를 세션당 1회 wrap 후 hard-fail, 온라인 스모크가 패치를 고정."
+    },
+    {
+      "en": "Cross-project skill ingestion via Kakashi Copy proven safe — pencil-design copied from sibling pencil-creator with a security grep pass (no hardcoded keys, .secret/ already gitignored) and a provenance knowledge file co-created.",
+      "ko": "카카시 카피로 프로젝트 간 스킬 이식이 안전하게 입증 — pencil-design 을 형제 프로젝트 pencil-creator 에서 복사, 보안 grep 통과 (하드코딩 키 0, .secret/ 이미 gitignore) + provenance 지식 파일 동시 생성."
     }
   ],
   "remaining": [
     {
-      "en": "Save Options ≠ Load: today the user sees a warning system message when saved ModelId differs from the loaded one, but no automated reload. Auto-reload on save was deliberately deferred — weights load is expensive and can fail.",
-      "ko": "Save Options ≠ Load: 현재는 저장 ModelId 와 로드된 ModelId 가 다르면 시스템 메시지로 경고만 표시. 자동 재로드는 의도적 보류 — weights 로드가 비싸고 실패 가능."
+      "en": "AST mel preprocessing in this build uses Hann + HTK as a pure-.NET approximation of training-time Kaldi compliance.kaldi.fbank — clear instruments come back accurately, environmental edge cases drift a few percent. Kaldi parity refinement plan tracked in harness/knowledge/music-curator/ast-audioset-model-serving.md.",
+      "ko": "이번 빌드의 AST mel 전처리는 학습 시 Kaldi compliance.kaldi.fbank 의 .NET 근사 (Hann + HTK) — 명확한 악기는 정확, 환경음 엣지 케이스는 몇 퍼센트 드리프트. Kaldi 정확 호환 refinement plan 은 harness/knowledge/music-curator/ast-audioset-model-serving.md 추적."
     },
     {
-      "en": "TestBot label inside Settings → LLM tab shares the same staleness pattern (`SettingsPanel.Llm.cs:583-588` reads LlmService.CurrentSettings.ModelId) — not patched today, scope held tight to AskBot.",
-      "ko": "Settings → LLM 탭의 TestBot 라벨이 같은 staleness 패턴 (`SettingsPanel.Llm.cs:583-588` 가 LlmService.CurrentSettings.ModelId 사용) — 오늘 패치 안 함, 범위를 AskBot 에 한정."
+      "en": "MERT (m-a-p) and CLAP (LAION) are listed as next-up music models in models.json but not yet integrated as IMusicClassifier implementations — needed when pitch-aware tasks (chord / key detection) or zero-shot text-conditioned classification become user-visible needs.",
+      "ko": "MERT (m-a-p) 와 CLAP (LAION) 이 models.json 에 next-up 음악 모델로 등재되어 있으나 아직 IMusicClassifier 구현체로 통합되지 않음 — 음정 인식 (코드 / 키) 이나 zero-shot 텍스트 조건부 분류가 사용자 니즈가 될 때 필요."
     },
     {
-      "en": "PDSA refresh is still operator-pulled — relies on milestone judgment. No automation watches for \"enough new logs accumulated\".",
-      "ko": "PDSA 갱신은 여전히 operator pull 기반 — milestone 판단에 의존. \"새 로그 충분히 쌓임\" 을 자동 감시하는 장치 없음."
+      "en": "agent-origin docs still reference Webnori a2 as the default backend (2026-04-27 snapshot) — needs a refresh after the a1/a2 role flip that surfaced in the 2026-05-10 survey.",
+      "ko": "agent-origin 문서가 여전히 Webnori a2 를 기본 백엔드로 참조 (2026-04-27 스냅샷) — 2026-05-10 조사에서 드러난 a1/a2 역할 뒤바뀜 이후 갱신 필요."
     },
     {
-      "en": "doc-v* publish gate means harness/logs additions don't reach Pages until next tag bump — accepted trade-off vs. CI churn, but the lag shows up when the operator visits Pages immediately after a routine commit.",
-      "ko": "doc-v* 게시 게이트로 인해 harness/logs 추가가 다음 태그 bump 까지 Pages 에 반영 안 됨 — CI 부하 회피의 트레이드오프지만, routine commit 직후 Pages 방문 시 시차가 드러남."
+      "en": "PDSA refresh is still operator-pulled — no automation watches log accumulation. Same shape applies to live-probe checks (Webnori catalog, model versions on HF mirrors); periodic CI cron diffing live state against committed catalogs would surface drift instead of waiting for a coincidence question.",
+      "ko": "PDSA 갱신이 여전히 operator pull 기반 — 로그 누적을 자동 감시하는 장치 없음. 같은 모양이 라이브 probe 체크 (Webnori 카탈로그, HF 미러 모델 버전) 에도 적용 — 라이브 상태 vs 커밋된 카탈로그를 diff 하는 주기 CI cron 이 우연한 질문을 기다리는 대신 drift 를 표면화할 것."
+    },
+    {
+      "en": "doc-v* publish gate means Music v0.10 + harness v1.8.0 reach Pages only on the next tag bump — accepted trade-off vs. CI churn from harness/logs frequency, but the lag is visible when the operator visits Pages immediately after this rollout.",
+      "ko": "doc-v* 게시 게이트로 인해 Music v0.10 + 하네스 v1.8.0 이 다음 태그 bump 까지 Pages 에 반영 안 됨 — harness/logs 잦음으로 인한 CI 부하 회피의 트레이드오프지만, 이번 출시 직후 Pages 방문 시 시차가 드러남."
     }
   ],
   "learned": {
     "lead": {
-      "en": "Few-shot prompt examples are object code — the model token-copies them, not their abstract pattern. Write every example in the EXACT shape you want emitted, and pair the change with a runtime guard that surfaces the next drift instead of hiding it.",
-      "ko": "Few-shot 프롬프트 예시는 object code — 모델은 추상 패턴이 아니라 토큰을 그대로 복사한다. 예시는 출력으로 그대로 내야 할 모양 그대로 작성하고, 다음 drift 가 숨지 않고 표면화되도록 런타임 가드를 함께 짝지을 것."
+      "en": "Live probe beats committed catalog — external gateways, model rosters, and few-shot prompt examples all drift, and the harness should treat its own knowledge files as snapshots, not fact. Pair each major surface with a specialist agent + a probe procedure so the snapshot can be re-validated cheaply.",
+      "ko": "커밋된 카탈로그보다 라이브 probe — 외부 게이트웨이, 모델 카탈로그, few-shot 프롬프트 예시 모두 drift 한다. 하네스는 자신의 지식 파일을 사실이 아닌 스냅샷으로 다뤄야 한다. 주요 표면마다 전문가 에이전트 + probe 절차를 페어링해 스냅샷을 저렴하게 재검증할 수 있게 할 것."
     },
     "body": {
-      "en": "The AgentBot regression payload `{\"message\":\"안녕하세요! 무엇을 도와드릴까요?\"}` was byte-identical to a `done({\"message\":\"안녕하세요! ...\"})` example baked into the system prompt — Gemma copied the inner object verbatim and dropped the envelope. The smallest correct fix was the example rewrite (envelopes become valid output on their own); the safety net is the once-per-session self-heal that wraps any future inner-only done body, then hard-fails on the second occurrence so persistent drift doesn't hide. The same staleness lens caught a parallel UI bug (AIMODE External branch label always said \"Gemma\") — capture-at-start beats derive-at-render whenever the source state can change between calls. Same lens still applies to the TestBot label and to Save-Options-without-Load semantics: next time, refactor the shared mismatch detector instead of pasting another warning.",
-      "ko": "AgentBot 회귀 페이로드 `{\"message\":\"안녕하세요! 무엇을 도와드릴까요?\"}` 가 시스템 프롬프트에 박혀 있던 `done({\"message\":\"안녕하세요! ...\"})` 예시와 바이트 일치 — Gemma 가 안쪽 객체만 그대로 복사하고 envelope 을 떨궜다. 가장 작은 옳은 수정은 예시 자체를 envelope 형태로 다시 쓰는 것 (예시가 곧 유효한 출력); 안전망은 세션당 1회 inner-only done body 를 wrap 하고 두 번째부터는 hard-fail 하는 자가복구 — 지속적 drift 가 숨지 않게 한다. 같은 staleness 렌즈로 평행 UI 버그도 잡았다 (AIMODE External 분기에서 라벨이 늘 \"Gemma\") — 호출 사이에 소스가 바뀔 수 있으면 \"렌더 시점 derive\" 가 아니라 \"시작 시점 capture\" 가 정답. 같은 렌즈가 TestBot 라벨과 Save-without-Load 경고에도 적용된다: 다음 회차에는 또 한 줄 붙이지 말고 공유 mismatch detector 로 리팩터."
+      "en": "The Webnori a1/a2 survey caught a roster flip that none of our committed docs reflected — `WebnoriDefaults.KnownModels` listed a model that no longer exists on the live gateway. The same lens applied to the Gemma RCA: a system-prompt example that became object code the moment Gemma copied it byte-for-byte, dropping the envelope. The same lens now applied to the Music tab rollout: instead of hard-coding 'AST is the only music model', `IMusicClassifier` keeps the next swap (MERT, CLAP) a same-shape extension; specialist agents are the durable artifact — when the third audio model ships, `music-curator` (v1.8.0) is already in place to own its serving contract, and the rollback procedure in `v1.8.0.md` recognises that the knowledge files survive whichever agent owns them. Next concrete action: a periodic probe job (CI cron, not operator-pulled) that diffs live `/v1/models` against `WebnoriDefaults.KnownModels` and live HuggingFace mirror state against `harness/knowledge/music-curator/ast-audioset-model-serving.md` — drift then surfaces in a check-run instead of being discovered by a coincidence question.",
+      "ko": "Webnori a1/a2 조사가 커밋된 어떤 문서도 반영하지 못한 카탈로그 재정렬을 잡아냈다 — `WebnoriDefaults.KnownModels` 는 라이브 게이트웨이에 더 이상 존재하지 않는 모델을 참조하고 있었다. 같은 렌즈가 Gemma RCA 에도 적용됐다: 시스템 프롬프트 안의 예시가 Gemma 가 바이트 단위로 그대로 복사하는 순간 object code 가 되어 envelope 을 떨궜다. 같은 렌즈가 이번 Music 탭 출시에도 적용된다: 'AST 가 유일한 음악 모델' 이라고 박지 않고 `IMusicClassifier` 시암으로 다음 교체 (MERT, CLAP) 를 같은 모양의 확장으로 유지; 전문가 에이전트가 영구 자산이다 — 세 번째 오디오 모델이 들어올 때 `music-curator` (v1.8.0) 가 이미 그 serving contract 를 소유하고 있고, `v1.8.0.md` 의 롤백 절차는 지식 파일이 어느 에이전트가 소유하든 살아남는다는 것을 인정한다. 다음 구체 액션: 라이브 `/v1/models` 와 `WebnoriDefaults.KnownModels` 를 diff, 라이브 허깅페이스 미러 상태와 `harness/knowledge/music-curator/ast-audioset-model-serving.md` 를 diff 하는 주기 probe (CI cron, operator pull 아님) — drift 가 우연한 질문이 아니라 check-run 으로 표면화된다."
     }
   }
 }

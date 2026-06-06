@@ -3,6 +3,16 @@
   "sort": "semver-desc",
   "items": [
     {
+      "file": "v1.8.0.md",
+      "title": "v1.8.0",
+      "heading": "music-curator expert + Music LLM knowledge layer",
+      "path": "v1.8.0.md",
+      "size": 6934,
+      "modified": "2026-06-06",
+      "author": null,
+      "committed": null
+    },
+    {
       "file": "v1.7.2.md",
       "title": "v1.7.2",
       "heading": "codescan integration + M0023 architecture visualization",
@@ -167,49 +177,64 @@
     {
       "name": "psmon",
       "commits": 123,
-      "percent": 100
+      "percent": 99.2
+    },
+    {
+      "name": "smpark-luna",
+      "commits": 1,
+      "percent": 0.8
     }
   ],
   "contributorsAll": [
     {
       "name": "psmon",
       "commits": 123,
-      "percent": 100
+      "percent": 99.2
+    },
+    {
+      "name": "smpark-luna",
+      "commits": 1,
+      "percent": 0.8
     }
   ],
   "contributorsRecent": [
     {
       "name": "psmon",
-      "commits": 6,
-      "percent": 100
+      "commits": 3,
+      "percent": 75
+    },
+    {
+      "name": "smpark-luna",
+      "commits": 1,
+      "percent": 25
     }
   ],
   "contributorsWindowDays": 14,
   "commitStats": {
-    "totalAllTime": 123,
-    "last7d": 0,
-    "last30d": 33
+    "totalAllTime": 124,
+    "last7d": 1,
+    "last30d": 25
   },
   "topChangedFiles": [
     {
       "path": "Home/harness-view/data/pdsa-insight.json",
-      "commits": 6
+      "commits": 5
     },
     {
       "path": "Home/harness-view/css/components.css",
-      "commits": 6
+      "commits": 4
     },
     {
       "path": "harness/harness.config.json",
       "commits": 3
     },
     {
-      "path": "Home/harness-view/data/models.json",
+      "path": "Home/harness-view/js/views/actor-world.js",
       "commits": 3
     },
     {
-      "path": "Home/harness-view/js/views/actor-world.js",
-      "commits": 3
+      "path": "Home/harness-view/data/models.json",
+      "commits": 2
     }
   ]
 }

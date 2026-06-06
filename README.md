@@ -85,6 +85,21 @@ macros to whichever terminal is in focus — nothing more, nothing less.
   installed Pythons (`py -0p` + filesystem fallback), exposes a Download
   Model dialog with live progress + cancel + Start fresh, and a Check
   Install probe that diagnoses multi-Python machines.
+- **🎵 Music — instrument classification + live spectrum from mic *or*
+  speaker output** — Settings → Music runs MIT's `ast-finetuned-audioset-10-10-0.4593`
+  (Audio Spectrogram Transformer, 86.6M params, 527 AudioSet classes)
+  via ONNX Runtime on a sliding 10 s window. Two input sources:
+  **microphone** (NAudio WaveIn — capture a live instrument) or
+  **system output** (WASAPI loopback — analyse whatever Spotify / YouTube
+  / a game is currently playing through your speakers, no virtual cable
+  needed). Re-infers every 1.5 s; the top-K labels list updates in place
+  and a 64-bar log-frequency dBFS spectrum repaints at ~30 Hz above the
+  labels. Model + class CSV pull from the `onnx-community` HuggingFace
+  mirror through the same `ModelDownloadDialog` Supertonic uses
+  (~347 MB, one-time, resumable cleanup via "Start fresh"). The next
+  step from Voice's *listen & speak* axis into a *listen & understand*
+  axis — first AgentZero feature whose output is a structured semantic
+  judgement about audio rather than a transcription.
 - **AgentBot `[+]` menu — 3 ways to arm a terminal AI** —
   - **`AgentZeroCLI Helper`** — drops a ready-made briefing into the chat input that
     teaches any terminal AI (Claude, Codex, shell-hosted model) how to call
@@ -571,6 +586,103 @@ extends here into tiki-taka between **your own two input modalities**.
 
 ---
 
+## 🎵 Music — instrument classification + live spectrum
+
+Voice taught AgentZero to **listen and speak**. Music adds **listen and
+understand** — point the app at any audio source on this machine and it
+identifies what's playing (instrument family, genre cue, environmental
+sound) every 1.5 s, with a real-time spectrum bar above the labels list
+so you can correlate model output against the actual frequency content.
+
+```
+┌─ Tab 0 — Music tab (Settings → Music) ──────────────────────────────┐
+│ Source  [▼ System Output  — WASAPI loopback, no virtual cable ]    │
+│ Device  [▼ ★ Default — current Windows playback device          ]   │
+│ Window  10 s    Top-K  5                                            │
+│                                                                     │
+│ ▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  (mic / loopback level)  [STOP]│
+│ SPECTRUM  (30 Hz – 8 kHz, log-frequency)                            │
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │  ▆█▆▃▃ ▆▆ ▃ ▆█▆▃ ▃▃▆ ▆ ▃▃ █▆ ▆▆▆▆▆ ▃▃ ▃                       │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+│ TOP LABELS  (live · sliding 10 s window)                            │
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ tick #14 · window 10.0s · mel 1024×128 · pre 12 ms · inf 244 ms │ │
+│ │ ───────────────────────────────────────────────────────────────  │ │
+│ │ 71.2% ██████████████████████  Electric guitar                  │ │
+│ │ 18.4% █████                   Guitar                           │ │
+│ │ 12.1% ████                    Music                            │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Stack
+
+- **MIT/ast-finetuned-audioset-10-10-0.4593** — Audio Spectrogram
+  Transformer, 86.6M params, trained on Google's AudioSet (527 classes
+  covering musical instruments, genre, voice, environment, etc.).
+  Input is a 10 s / 16 kHz mono / 128-bin log-mel spectrogram; output
+  is per-class logits → sigmoid for multi-label scoring.
+- **ONNX Runtime 1.20** — CPU inference (~200–400 ms per pass on a
+  modern x64), no GPU dependency. Ships through the
+  `onnx-community/ast-finetuned-audioset-10-10-0.4593-ONNX` HuggingFace
+  mirror — no `optimum-cli` Python detour required. The same
+  `ModelDownloadDialog` Supertonic uses streams the 347 MB file with
+  resume / cancel / "Start fresh".
+- **Dual capture sources** —
+  - **Microphone** — NAudio `WaveInEvent` at 16 kHz mono (the same
+    pipeline Voice uses; a working voice mic is automatically a
+    working music mic).
+  - **System Output (WASAPI loopback)** —
+    `WasapiLoopbackCapture` against any active render endpoint
+    (default playback device, secondary speakers, virtual cable),
+    fed through NAudio `BufferedWaveProvider → StereoToMono →
+    WdlResamplingSampleProvider(16 kHz) → SampleToWaveProvider16`
+    to match the AST input format regardless of the device's mixer
+    format. Capture *what's coming out of your speakers* — Spotify,
+    YouTube, a game, a Zoom call — without unplugging headphones or
+    installing a virtual audio cable.
+- **Realtime sliding-window inference** — capture frames stream into
+  a rolling 10 s PCM buffer; a background loop snapshots that buffer
+  every 1.5 s and runs AST through ONNX Runtime, with an interlocked
+  single-flight gate so slow CPU never queues backlogged ticks.
+- **Live log-frequency spectrum** — a separate cheap 2048-point Hann-
+  windowed FFT (independent of the AST mel) computes 64 log-spaced
+  bands every ~33 ms (30 Hz repaint) into a WPF Canvas of Rectangles.
+  dBFS-normalized so the bars sit naturally between -60 dBFS and -3
+  dBFS instead of saturating on the first note.
+
+### Architecture seam
+
+- **Backend-agnostic contract** — `IMusicClassifier` (in
+  `Project/ZeroCommon/Music/`) mirrors `ISpeechToText` in shape:
+  `EnsureReadyAsync` warms native resources, `ClassifyAsync` runs one
+  pass. Adding MERT (music-specific embeddings) or CLAP (zero-shot
+  text-conditioned) is a same-shape new implementation, not a UI
+  redesign.
+- **Settings tab** — Settings → 🎵 Music. Provider is locked to AST
+  AudioSet for the first iteration but kept as a ComboBox so a future
+  MERT/CLAP option lands without churn.
+- **Knowledge** — `harness/knowledge/music-curator/` owns the model
+  card, the mel-spectrogram normalization conventions, and the WASAPI
+  loopback pitfalls. The `music-curator` agent is consulted when adding
+  a new music model, tuning the spectrum visualizer, or debugging
+  loopback capture format mismatches.
+
+### What it's good at, what it isn't
+
+The AST mel preprocessing in this build uses a Hann window + HTK mel
+scale, which is close to (but not identical to) AST's training-time
+Kaldi `compliance.kaldi.fbank` (Povey window + pre-emphasis). Expect
+the published AudioSet mAP slightly degraded — top-K labels for clear
+instruments (piano, drums, guitar, violin, voice) come back correctly;
+edge cases (subtle environmental sounds, multi-instrument fusion)
+may show a couple of percent variance vs the reference pipeline.
+Refining to byte-for-byte Kaldi parity is tracked as a follow-up in
+the music-curator knowledge.
+
+---
+
 ## 🌐 WebDev — in-app sandbox + plugin system
 
 **Top-level menu** (globe icon next to AgentBot). Promoted from a
@@ -824,6 +936,13 @@ treatment as WebDev so ConPTY native windows can't bleed through):
 - **Voice** — STT provider (WhisperLocal CPU/Vulkan, OpenAI Whisper, etc.) +
   language + GPU device picker + VAD sensitivity. The same values voice-note
   inherits.
+- **🎵 Music** — AST AudioSet ONNX classifier with **two input sources**
+  (microphone or WASAPI loopback against the speaker output). Includes
+  one-click [Download] for the 347 MB model from the onnx-community
+  HuggingFace mirror, a live test panel with realtime sliding-window
+  inference (re-infers every 1.5 s), and a 64-bar log-frequency dBFS
+  spectrum that repaints at ~30 Hz. See the
+  [Music section](#-music--instrument-classification--live-spectrum).
 - **WebDev** — tutorial / plugin-author guide. The actual sandbox lives at
   the top-level globe icon (see [WebDev section](#-webdev--in-app-sandbox--plugin-system)).
 - **AgentZero CLI** — one-click button to register the app directory in the user
@@ -880,6 +999,7 @@ whole product.
 | --- | --- |
 | **AgentZeroAIMODE** | On-device model, built-in AI chat mode — e.g. *Gemma 4* ↔ *Claude Code* dialogues, delegating task execution to an on-device LLM controller |
 | **AgentZeroVoice** | Voice input / output — STT input is **shipping** (Whisper.net + Vulkan, see [Voice section](#-voice--dual-multitasking-hands--voice-in-parallel)); TTS output (Windows 11 Natural Voices) is staged |
+| **AgentZeroMusic** | Audio *understanding* — instrument classification + live spectrum from mic or WASAPI loopback (see [Music section](#-music--instrument-classification--live-spectrum)). MIT AST AudioSet ONNX shipping; MERT (music embeddings) + CLAP (text-conditioned) tracked as drop-in `IMusicClassifier` implementations |
 | **AgentZeroOS** | Native OS automation — AI control via an **OS metadata (UI Automation) screen parser** instead of screenshot capture, delivering macro-level responsiveness |
 
 ---

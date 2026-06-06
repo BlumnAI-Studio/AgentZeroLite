@@ -6,8 +6,8 @@
     "ko": "AgentZero Lite 에 채택된 모델 — 온디바이스, 호스티드, 보이스"
   },
   "intro": {
-    "en": "AgentZero Lite is a multi-CLI shell that talks to several LLM, STT, and TTS backends. The architecture leans on-device-first (LLamaSharp + Whisper.net) so the assistant runs without an internet connection, with hosted vendors as opt-in upgrades. The cards below describe each model that ships with the app — variant, size, on-device vs hosted, and what role it plays. Beyond a static catalogue, this surface doubles as a scouting board: as AgentZero develops, when a stronger on-device candidate appears we introduce it here and use the app as a compatibility harness for it. Even if you never touch the CLI, the bundled models are worth exploring as an STT / TTS playground for learning. Continuously discovering good open models → adopting them into AgentZero → exposing them as an open-model playground is itself a learning loop the project commits to.",
-    "ko": "AgentZero Lite 는 여러 LLM / STT / TTS 백엔드와 대화하는 멀티-CLI 셸이다. 아키텍처는 온디바이스 우선(LLamaSharp + Whisper.net)이라 인터넷 없이도 어시스턴트가 동작하며, 호스티드 벤더는 opt-in 업그레이드로 제공된다. 아래 카드들은 앱에 함께 들어있는 모델들을 변형(variant), 용량, 온디바이스 vs 호스티드, 그리고 역할 관점에서 설명한다. 단순한 카탈로그가 아니라 발굴판(scouting board) 역할도 한다 — AgentZero 디벨롭 과정에서 더 좋은 온디바이스 모델이 발견되면 여기서 소개하고, 앱 자체를 호환성 테스트 하네스로 활용한다. CLI 툴을 직접 쓰지 않더라도 함께 동봉된 모델들을 STT / TTS PlayGround 로 둘러보며 학습용으로 살펴봐도 가치가 있다. 괜찮은 오픈 모델의 지속 발굴 → AgentZero 적용 → 오픈모델 PlayGround 로 노출, 이 자체가 프로젝트가 약속하는 학습 루프다."
+    "en": "AgentZero Lite is a multi-CLI shell that talks to several LLM, STT, TTS, and (new in v0.10) audio-understanding backends. The architecture leans on-device-first (LLamaSharp + Whisper.net + ONNX Runtime) so the assistant runs without an internet connection, with hosted vendors as opt-in upgrades. The cards below describe each model that ships with the app — variant, size, on-device vs hosted, and what role it plays. Beyond a static catalogue, this surface doubles as a scouting board: as AgentZero develops, when a stronger on-device candidate appears we introduce it here and use the app as a compatibility harness for it. Even if you never touch the CLI, the bundled models are worth exploring as an STT / TTS / Music playground for learning. Continuously discovering good open models → adopting them into AgentZero → exposing them as an open-model playground is itself a learning loop the project commits to.",
+    "ko": "AgentZero Lite 는 여러 LLM / STT / TTS, 그리고 (v0.10 신규) 오디오 이해 백엔드와 대화하는 멀티-CLI 셸이다. 아키텍처는 온디바이스 우선(LLamaSharp + Whisper.net + ONNX Runtime)이라 인터넷 없이도 어시스턴트가 동작하며, 호스티드 벤더는 opt-in 업그레이드로 제공된다. 아래 카드들은 앱에 함께 들어있는 모델들을 변형(variant), 용량, 온디바이스 vs 호스티드, 그리고 역할 관점에서 설명한다. 단순한 카탈로그가 아니라 발굴판(scouting board) 역할도 한다 — AgentZero 디벨롭 과정에서 더 좋은 온디바이스 모델이 발견되면 여기서 소개하고, 앱 자체를 호환성 테스트 하네스로 활용한다. CLI 툴을 직접 쓰지 않더라도 함께 동봉된 모델들을 STT / TTS / Music PlayGround 로 둘러보며 학습용으로 살펴봐도 가치가 있다. 괜찮은 오픈 모델의 지속 발굴 → AgentZero 적용 → 오픈모델 PlayGround 로 노출, 이 자체가 프로젝트가 약속하는 학습 루프다."
   },
 
   "categories": [
@@ -265,6 +265,61 @@
           "summary": {
             "en": "Lightning-fast on-device TTS (RTF ~0.012 on M4 Pro CPU, well under real time). First AgentZero provider that shells out to a pip-installed Python package — `pip install supertonic` in the chosen interpreter, then the app drives the library via a `python -c <script>` subprocess seam. Two-phase install probe (`python -V` + `pip show supertonic`) tells multi-Python machines exactly which interpreter the package landed in. Settings → Voice → Supertonic exposes a Python picker (auto-discovered via `py -0p` + filesystem fallback), an explicit Download Model dialog with live tqdm progress + cancel + Start fresh, and a Check Install probe with actionable error hints (cache lock, HF rate limit, network, disk). Model + code license OpenRAIL-M / MIT.",
             "ko": "초고속 온디바이스 TTS (M4 Pro CPU 에서 RTF ~0.012, 실시간 대비 한참 빠름). AgentZero 첫 'pip 설치 패키지를 서브프로세스로 구동' 사례 — 선택한 인터프리터에 `pip install supertonic` 후 앱이 `python -c <script>` 시암으로 라이브러리를 구동. 2-phase 설치 probe (`python -V` + `pip show supertonic`) 가 멀티-Python 환경에서 패키지가 깔린 인터프리터를 정확히 짚어 준다. Settings → Voice → Supertonic 에서 Python 피커 (`py -0p` + filesystem 폴백 자동 탐지), 라이브 tqdm 진행률 + Cancel + Start fresh 가 있는 명시적 Download Model 다이얼로그, 실행 가능한 에러 힌트(캐시 잠금 / HF rate limit / 네트워크 / 디스크)가 붙은 Check Install probe 를 노출. 모델/코드 라이선스는 OpenRAIL-M / MIT."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "music",
+      "tone": "purple",
+      "label": { "en": "Music & Audio Understanding", "ko": "음악 & 오디오 이해" },
+      "lead": {
+        "en": "v0.10 — AgentZero's first audio-understanding lane. Where STT turns speech into text and TTS turns text into speech, this category turns audio into structured semantic judgement: which instrument is playing, what environmental sound, what genre cue. Two capture sources feed the same classifier: microphone (live instrument) or WASAPI loopback (whatever Spotify / YouTube / a game is currently playing through the speakers — no virtual cable). Re-infers every 1.5 s on a sliding 10-second window while a 64-band log-frequency dBFS spectrum repaints at ~30 Hz. Surfaced as Settings → 🎵 Music.",
+        "ko": "v0.10 — AgentZero 의 첫 오디오 이해 라인. STT 가 음성을 텍스트로, TTS 가 텍스트를 음성으로 바꾸는 것과 달리 이 카테고리는 오디오를 구조화된 의미 판단으로 바꾼다: 어떤 악기가 연주되는지, 어떤 환경음/장르 큐인지. 두 가지 캡처 소스가 같은 분류기로 흐른다: 마이크 (라이브 악기) 또는 WASAPI 루프백 (스피커로 재생 중인 Spotify / YouTube / 게임 — 가상 케이블 없이). 슬라이딩 10초 윈도우에 대해 1.5초마다 재추론하고, 64밴드 로그 주파수 dBFS 스펙트럼이 약 30 Hz 로 다시 그려진다. Settings → 🎵 Music 에 노출."
+      },
+      "models": [
+        {
+          "name": "AST AudioSet (10-10-0.4593)",
+          "variant": "ONNX fp32 · sliding 10 s · 16 kHz mono",
+          "vendor": "MIT (Gong et al.)",
+          "size": "~347 MB cached locally",
+          "params": "86.6M",
+          "badges": ["on-device", "default", "new"],
+          "tone": "purple",
+          "summary": {
+            "en": "Audio Spectrogram Transformer — ViT-architecture model trained on Google's AudioSet (527 classes covering musical instruments, voice, genre cues, environmental sounds). Input is a 1024×128 log-mel spectrogram of 10 s mono audio; output is per-class sigmoid scores for multi-label classification. AgentZero ships the `onnx-community` pre-converted ONNX bundle (no Python `optimum-cli` detour) through the same `ModelDownloadDialog` Supertonic uses — one-time ~347 MB pull, resumable cleanup via 'Start fresh'.",
+            "ko": "Audio Spectrogram Transformer — Google AudioSet (악기 / 음성 / 장르 큐 / 환경음 527 클래스) 로 파인튜닝된 ViT 구조 모델. 입력은 10초 모노 오디오의 1024×128 log-mel 스펙트로그램, 출력은 멀티라벨 분류용 클래스별 sigmoid 점수. AgentZero 는 `onnx-community` 사전 변환 ONNX 번들을 Supertonic 과 동일한 `ModelDownloadDialog` 로 배포 (Python `optimum-cli` 우회 불필요) — 1회 약 347 MB 다운로드, 'Start fresh' 로 클린 재시작 가능."
+          },
+          "details": {
+            "en": "CPU inference via Microsoft.ML.OnnxRuntime 1.20 (~200–400 ms per pass on a modern x64), no GPU dependency. Mel preprocessing in this build uses Hann window + HTK mel scale as a self-contained .NET approximation of AST's training-time Kaldi `compliance.kaldi.fbank` — clear instruments (piano, drums, guitar, violin, voice) come back accurately; environmental edge cases show small drift (refinement to Kaldi parity tracked in `harness/knowledge/music-curator/ast-audioset-model-serving.md`). The `IMusicClassifier` seam keeps the next model (MERT / CLAP) a same-shape extension, not a UI redesign.",
+            "ko": "Microsoft.ML.OnnxRuntime 1.20 으로 CPU 추론 (모던 x64 기준 ~200–400 ms/pass), GPU 의존성 없음. 이 빌드의 mel 전처리는 Hann + HTK mel 로 AST 학습 시 Kaldi `compliance.kaldi.fbank` 의 자체 .NET 근사 — 명확한 악기 (피아노, 드럼, 기타, 바이올린, 사람 목소리) 는 정확, 환경음 엣지 케이스는 약간의 드리프트 (Kaldi 정확 호환은 `harness/knowledge/music-curator/ast-audioset-model-serving.md` 에 follow-up 추적). `IMusicClassifier` 시암 덕분에 다음 모델 (MERT / CLAP) 도 UI 재설계 없이 같은 모양의 확장."
+          }
+        },
+        {
+          "name": "MERT v1 (95M / 330M)",
+          "variant": "m-a-p/MERT-v1-95M · m-a-p/MERT-v1-330M",
+          "vendor": "m-a-p",
+          "size": "(scouting — not bundled)",
+          "params": "95M / 330M",
+          "badges": ["scouting", "next-up"],
+          "tone": "amber",
+          "summary": {
+            "en": "Music-specific self-supervised model with a CQT (Constant-Q Transform) teacher, trained on 160k hours of audio at 24 kHz. Strong on pitch / timbre tasks because CQT mirrors how musical intervals are perceived geometrically. Listed here as the next on-device music model to evaluate against AST — when pitch-aware tasks (chord recognition, key detection) become user-visible needs, the `IMusicClassifier` adapter is the integration seam.",
+            "ko": "음악 전용 자기지도학습 모델로 CQT (Constant-Q Transform) 교사를 사용, 24 kHz 오디오 160k 시간으로 학습. 음정 / 음색 작업에 강하다 — CQT 가 음악 음정을 기하학적으로 보는 방식이라서. AST 대비 다음으로 평가할 온디바이스 음악 모델로 여기 등록 — 음정 인식 (코드, 키) 같은 사용자 니즈가 표면화되면 `IMusicClassifier` 어댑터가 통합 시암."
+          }
+        },
+        {
+          "name": "CLAP (Contrastive Language-Audio Pretraining)",
+          "variant": "laion/larger_clap_music",
+          "vendor": "LAION",
+          "size": "(scouting — not bundled)",
+          "params": "—",
+          "badges": ["scouting", "next-up"],
+          "tone": "amber",
+          "summary": {
+            "en": "Text-conditioned audio embedding — given a text prompt like 'solo violin' or 'distorted electric guitar', returns a similarity score against an audio clip. Zero-shot, no fine-tuning needed for new instrument vocabularies. Listed for future integration when 'tell me if this clip contains X' becomes a use case alongside AST's fixed AudioSet taxonomy.",
+            "ko": "텍스트 조건부 오디오 임베딩 — 'solo violin' / 'distorted electric guitar' 같은 텍스트 프롬프트와 오디오 클립의 유사도 점수 반환. Zero-shot, 새 악기 어휘에 fine-tuning 불필요. AST 의 고정된 AudioSet 분류 체계와 별개로 '이 클립에 X 가 있는지 물어보기' 가 use case 가 될 때 통합 후보로 등록."
           }
         }
       ]
