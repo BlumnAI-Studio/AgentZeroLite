@@ -1,18 +1,30 @@
-// agent-band.js — M0025 Agent Band plugin (v0.2.0).
+// agent-band.js — M0025 Agent Band plugin.
 //
-// v0.2 changelog (operator feedback):
-//   • host now emits a 30 Hz `music.spectrum` event independent of the slow
+// v0.3 changelog:
+//   • gender-aware vocal pools — Male singing → vocal-2/vocal-4, Female
+//     singing → vocal-1/vocal-3, ambiguous labels (Singing / Choir /
+//     Vocal music) default to the female pool
+//   • Tier 1 gains explicit regex for viola / oboe / contrabass /
+//     double-bass / tuba so the bundled sprites for those instruments
+//     light up the moment any upstream model emits a matching label
+//   • drum regex picks up gong (AudioSet's "Gong" label)
+//
+// v0.2 (chroma-key + realtime spectrum + hysteresis):
+//   • runtime chroma-key on sprite load (assets/sprites/*.png have a
+//     uniform bright-green background; keyed onto an off-screen canvas
+//     once, drawImage'd zero-cost thereafter)
+//   • host emits 30 Hz `music.spectrum` events independent of the slow
 //     1.5 s AST tick — bars feel real-time
-//   • lower SCORE_PRESENT + hysteresis (SCORE_KEEP) so AudioSet's typically
-//     low sigmoid scores still spawn performers, and once a performer is on
-//     stage it stays unless silence dominates
-//   • parent-category fallbacks ("Plucked string instrument" / "Brass" / …)
-//     because the AST top-K often emits parent classes higher than the
-//     specific sub-class
-//   • new stage layout: vocals reserved in canvas center, instruments split
-//     into L/R wings sorted by ORDER_RANK, sprite width capped so a single
-//     performer doesn't fill the screen
-//   • asymmetric attack/release lerp on the bars (fast snap up, smooth decay)
+//   • SCORE_PRESENT + SCORE_KEEP hysteresis so AudioSet's low sigmoid
+//     scores still spawn performers, and once a performer is on stage
+//     it stays unless silence dominates
+//   • parent-category fallbacks ("Plucked string instrument" / "Brass"
+//     / …) when AST emits the parent above the specific sub-class
+//   • stage layout: vocals reserved in canvas center, instruments split
+//     into L/R wings sorted by ORDER_RANK, sprite width capped so a
+//     single performer doesn't fill the screen
+//   • asymmetric attack/release lerp on the bars (fast snap up, smooth
+//     decay) so even between 1.5 s ticks the visualizer stays alive
 
 (function () {
   'use strict';
@@ -57,31 +69,62 @@
   // Tier 2: parent-category labels — these dominate the top-K when the
   //   model can't decide between specific sub-classes. Map to a sensible
   //   default sprite for the family.
-  // Vocals fan out across vocal-1..4 by per-tick round-robin so a "Singing"
-  //   + "Choir" co-occurrence shows two distinct singers instead of one.
-  const VOCAL_ROTATION = ['vocal-1', 'vocal-2', 'vocal-3', 'vocal-4'];
-  let vocalCursor = 0;
+  // Vocals are gender-aware: AST emits "Male singing" / "Female singing"
+  //   distinctly, so we route to gender-matched sprite pools and fall
+  //   back to the female pool when the label is gender-neutral ("Singing"
+  //   / "Choir" / "Vocal music" / etc.). Within each pool a per-tick
+  //   round-robin cursor fans co-occurring vocal labels across the two
+  //   sprites so a "Singing + Choir" tick reads as an ensemble, not a
+  //   single confused soloist.
+  //
+  // Sprite gender (visually verified from the assets):
+  //   vocal-1 = female (blonde, blue dress)   vocal-2 = male (dark hair, red coat)
+  //   vocal-3 = female (pink hair, red dress) vocal-4 = male (silver hair, purple coat)
+  const VOCAL_FEMALE = ['vocal-1', 'vocal-3'];
+  const VOCAL_MALE   = ['vocal-2', 'vocal-4'];
+  let femaleCursor = 0;
+  let maleCursor = 0;
 
   function labelToPerformer(label) {
     const s = label.toLowerCase();
 
     // ── Tier 1: specific instruments ──
-    if (/\bcello\b/.test(s))                                  return 'cello';
-    if (/\bviolin\b|\bfiddle\b/.test(s))                      return 'violin';
-    if (/\bharp\b/.test(s) && !/harpsichord/.test(s))         return 'harp';
-    if (/\bguitar\b/.test(s))                                 return 'guitar';
-    if (/\bflute\b/.test(s))                                  return 'flute';
-    if (/\bclarinet\b/.test(s))                               return 'clarinet';
-    if (/french horn|\bhorn\b/.test(s))                       return 'horn';
-    if (/\btrumpet\b/.test(s))                                return 'trumpet';
-    if (/\btrombone\b/.test(s))                               return 'trombone';
-    if (/\bpiano\b/.test(s))                                  return 'piano';
-    if (/\bdrum\b|cymbal|tom-tom|hi-hat|tabla/.test(s))       return 'drum';
+    if (/\bcello\b/.test(s))                                       return 'cello';
+    if (/\bviola\b/.test(s))                                       return 'viola';
+    if (/\bviolin\b|\bfiddle\b/.test(s))                           return 'violin';
+    if (/\bcontrabass\b|\bdouble bass\b/.test(s))                  return 'contrabass';
+    if (/\bharp\b/.test(s) && !/harpsichord/.test(s))              return 'harp';
+    if (/\bguitar\b/.test(s))                                      return 'guitar';
+    if (/\bflute\b/.test(s))                                       return 'flute';
+    if (/\bclarinet\b/.test(s))                                    return 'clarinet';
+    if (/\boboe\b/.test(s))                                        return 'oboe';
+    if (/french horn|\bhorn\b/.test(s))                            return 'horn';
+    if (/\btrumpet\b/.test(s))                                     return 'trumpet';
+    if (/\btrombone\b/.test(s))                                    return 'trombone';
+    if (/\btuba\b/.test(s))                                        return 'tuba';
+    if (/\bpiano\b/.test(s))                                       return 'piano';
+    if (/\bdrum\b|cymbal|tom-tom|hi-hat|tabla|\bgong\b/.test(s))   return 'drum';
 
-    // ── Vocals (fan out) ──
+    // ── Vocals — gender-aware fan-out ──
+    // Male-specific labels: only AudioSet's "Male singing" today, but the
+    // regex is tolerant of "man singing" / "man speaking" too.
+    if (/male sing|\bman sing\b/.test(s) && !/female/.test(s)) {
+      const id = VOCAL_MALE[maleCursor % VOCAL_MALE.length];
+      maleCursor++;
+      return id;
+    }
+    // Female-specific labels.
+    if (/female sing|\bwoman sing\b/.test(s)) {
+      const id = VOCAL_FEMALE[femaleCursor % VOCAL_FEMALE.length];
+      femaleCursor++;
+      return id;
+    }
+    // Gender-neutral vocal labels — default to the female pool per
+    // operator decision (matches the more common pop / OST voice register
+    // in mixed audio).
     if (/sing(ing)?|choir|vocal|chant|yodel|rapping|hum/.test(s)) {
-      const id = VOCAL_ROTATION[vocalCursor % VOCAL_ROTATION.length];
-      vocalCursor++;
+      const id = VOCAL_FEMALE[femaleCursor % VOCAL_FEMALE.length];
+      femaleCursor++;
       return id;
     }
 
@@ -189,7 +232,10 @@
   function upsertPerformersFromLabels(labels) {
     tickCounter++;
     const now = performance.now();
-    vocalCursor = 0; // reset rotation so same labels yield same vocal sprites
+    // Reset both vocal cursors so a stable label order across ticks yields
+    // a stable sprite assignment (no flicker between vocal-1 and vocal-3).
+    femaleCursor = 0;
+    maleCursor = 0;
 
     // Collapse multi-label hits onto a single sprite id with the strongest score
     // ("Guitar" + "Acoustic guitar" → one guitar slot with max score).

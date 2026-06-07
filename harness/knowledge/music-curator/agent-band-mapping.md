@@ -2,7 +2,7 @@
 
 **Owner**: music-curator
 **Lifecycle**: convention — binding for any change to `Project/Plugins/agent-band/agent-band.js` `labelToPerformer()` or to the classifier model that produces the labels
-**Last updated**: 2026-06-07
+**Last updated**: 2026-06-07 (v0.3.0 — gender-aware vocals + viola/oboe/contrabass/tuba Tier 1 + drum gong)
 **Related**: [ast-audioset-model-serving.md](ast-audioset-model-serving.md) (the upstream model whose top-K we consume)
 
 ## Why this doc exists
@@ -57,19 +57,30 @@ where labels can co-occur (e.g. `\bcello\b` is tested before
 `\bviolin\b` would otherwise be — they're orthogonal here but the
 principle generalizes).
 
-| Sprite | regex | Matching AudioSet labels |
-|---|---|---|
-| `cello` | `\bcello\b` | "Cello" |
-| `violin` | `\bviolin\b\|\bfiddle\b` | "Violin, fiddle" |
-| `harp` | `\bharp\b` AND NOT `harpsichord` | "Harp" (Harpsichord guarded out) |
-| `guitar` | `\bguitar\b` | "Guitar" / "Electric guitar" / "Acoustic guitar" / "Bass guitar" / "Steel guitar, slide guitar" / "Tapping (guitar technique)" |
-| `flute` | `\bflute\b` | "Flute" |
-| `clarinet` | `\bclarinet\b` | "Clarinet" |
-| `horn` | `french horn\|\bhorn\b` | "French horn" |
-| `trumpet` | `\btrumpet\b` | "Trumpet" |
-| `trombone` | `\btrombone\b` | "Trombone" |
-| `piano` | `\bpiano\b` | "Piano" / "Electric piano" |
-| `drum` | `\bdrum\b\|cymbal\|tom-tom\|hi-hat\|tabla` | "Drum" / "Drum kit" / "Drum machine" / "Snare drum" / "Bass drum" / "Drum roll" / "Drum and bass" |
+Bundled-but-currently-unmatched sprites (viola / oboe / contrabass /
+tuba) have Tier 1 entries too. AudioSet at AST's `0.4593` build does
+not emit those labels, but the moment any upstream model (MERT,
+CLAP-music, AudioSet-v2) starts producing them the bundled sprite
+takes over automatically — without those entries the Tier 2 fallback
+would keep stealing the spawn.
+
+| Sprite | regex | Matching AudioSet labels today | Activates with future model? |
+|---|---|---|---|
+| `cello` | `\bcello\b` | "Cello" | — |
+| `viola` | `\bviola\b` | (none — AudioSet has no Viola label) | yes — any model emitting "Viola" |
+| `violin` | `\bviolin\b\|\bfiddle\b` | "Violin, fiddle" | — |
+| `contrabass` | `\bcontrabass\b\|\bdouble bass\b` | (none — AudioSet has no Contrabass / Double bass label) | yes — any model emitting "Contrabass" or "Double bass" |
+| `harp` | `\bharp\b` AND NOT `harpsichord` | "Harp" (Harpsichord guarded out) | — |
+| `guitar` | `\bguitar\b` | "Guitar" / "Electric guitar" / "Acoustic guitar" / "Bass guitar" / "Steel guitar, slide guitar" / "Tapping (guitar technique)" | — |
+| `flute` | `\bflute\b` | "Flute" | — |
+| `clarinet` | `\bclarinet\b` | "Clarinet" | — |
+| `oboe` | `\boboe\b` | (none — AudioSet has no Oboe label) | yes — any model emitting "Oboe" |
+| `horn` | `french horn\|\bhorn\b` | "French horn" | — |
+| `trumpet` | `\btrumpet\b` | "Trumpet" | — |
+| `trombone` | `\btrombone\b` | "Trombone" | — |
+| `tuba` | `\btuba\b` | (none — AudioSet has no Tuba label) | yes — any model emitting "Tuba" |
+| `piano` | `\bpiano\b` | "Piano" / "Electric piano" | — |
+| `drum` | `\bdrum\b\|cymbal\|tom-tom\|hi-hat\|tabla\|\bgong\b` | "Drum" / "Drum kit" / "Drum machine" / "Snare drum" / "Bass drum" / "Drum roll" / "Drum and bass" / "Gong" | — |
 
 ### Collapse rule
 
@@ -78,26 +89,53 @@ When multiple labels in one tick map to the same sprite id, the
 and the play/idle state. Example: `"Guitar" 0.40` + `"Acoustic guitar"
 0.30` co-occurring in top-K → one `guitar` performer at score 0.40.
 
-## Vocals — round-robin fan-out
+## Vocals — gender-aware round-robin
 
-```regex
-/sing(ing)?|choir|vocal|chant|yodel|rapping|hum/
-```
+The four vocal sprites are visually distinguishable as two male / two
+female characters. v0.3.0 splits the pool accordingly so AST's
+"Male singing" / "Female singing" labels show up as the matching
+silhouette, and gender-neutral labels default to the female pool (the
+operator-picked default; matches the more common pop / OST register).
 
-Matching AudioSet labels: "Singing" / "Choir" / "Male singing" /
-"Female singing" / "Child singing" / "Synthetic singing" / "Vocal
-music" / "Chant" / "Yodeling" / "Rapping" / "Humming".
+### Sprite gender (visually verified)
 
-Vocals are mapped through a per-tick **round-robin cursor** across
-`vocal-1 → vocal-2 → vocal-3 → vocal-4` instead of collapsing onto a
-single id. Within a tick, each successive matching label gets the next
-vocal slot.
-
-| Behaviour | Why |
+| Sprite | Identity |
 |---|---|
-| Fan-out across 4 sprites instead of one sticky vocal | "Singing" + "Choir" + "Vocal music" co-occurring is the model saying "I'm seeing multiple vocal characters" — fan-out makes the stage read as an ensemble rather than one confused performer |
-| Cursor resets at the start of every tick | Stable label order across ticks → stable vocal-N assignment → no slot churn → no flicker |
-| Vocals always rendered in stage center (separate from instrument L/R wings) | Mirrors how a real band stands; instruments don't push vocals around |
+| `vocal-1` | **Female** — blonde hair, blue dress, white headpiece |
+| `vocal-2` | **Male** — dark hair, red coat, suit |
+| `vocal-3` | **Female** — pink hair, red dress with rose accessory |
+| `vocal-4` | **Male** — silver hair, purple coat |
+
+### Pools + cursors
+
+| Pool | Sprites | Cursor variable | Resets when |
+|---|---|---|---|
+| Female | `vocal-1`, `vocal-3` | `femaleCursor` | Every tick (start of `upsertPerformersFromLabels`) |
+| Male | `vocal-2`, `vocal-4` | `maleCursor` | Every tick |
+
+Both cursors advance only within their own pool. A "Male singing +
+Singing" co-occurrence in one tick produces vocal-2 (male, from male
+label) and vocal-1 (female, from neutral default) — not both pulling
+from the same cursor.
+
+### Routing rules (in match order)
+
+| AudioSet labels | Pool | Notes |
+|---|---|---|
+| Anything matching `/male sing\|\bman sing\b/` AND NOT containing `female` | **Male** (vocal-2 → vocal-4 round-robin) | The `!female` guard prevents "Female singing" from sliding into the male pool because "female" contains "male" |
+| Anything matching `/female sing\|\bwoman sing\b/` | **Female** (vocal-1 → vocal-3 round-robin) | — |
+| Anything matching `/sing(ing)?\|choir\|vocal\|chant\|yodel\|rapping\|hum/` (gender-neutral) | **Female** (vocal-1 → vocal-3 round-robin) | Operator-picked default. Switch the default by flipping the fallback pool here. |
+
+### Why fan-out instead of single sticky vocal
+
+"Singing" + "Choir" + "Vocal music" co-occurring in one top-K tick is
+the model saying "I'm seeing multiple vocal characters" — fan-out
+makes the stage read as an ensemble rather than one confused performer.
+Stable label order across ticks → stable cursor advancement → stable
+sprite assignment → no flicker between vocal-1 and vocal-3.
+
+Vocals are always rendered in **stage center** (separate from
+instrument L/R wings); instruments don't push vocals around.
 
 ## Tier 2 — parent-category fallbacks
 
@@ -120,20 +158,25 @@ string instrument" at 0.18 while "Cello" sits at 0.07).
 > upgraded to one with proper viola/oboe/contrabass/tuba sub-classes,
 > the fallback gracefully steps aside in favour of the Tier 1 match.
 
-## Currently unreachable sprites
+## Currently unreachable sprites (forward-compat already wired)
 
-Bundled but never spawned by the current model:
+Bundled, **Tier 1 regex entries present** as of v0.3.0, but never
+spawned by AST AudioSet today because the model doesn't emit a
+matching label. The regex is there so the moment a richer upstream
+model arrives the sprite lights up — no code change required, just
+re-test in case the new label string differs.
 
-| Sprite | Why unreachable | What needs to change |
-|---|---|---|
-| `viola` | AudioSet has no "Viola" label — "Violin, fiddle" is the only bowed-string-with-fingerboard category at sub-class granularity | Upstream model that distinguishes viola from violin (MERT-large, CLAP-music) |
-| `oboe` | AudioSet has no "Oboe" label — "Woodwind instrument" is the only woodwind parent below "Flute" / "Clarinet" | Same — finer-grained woodwind taxonomy |
-| `contrabass` | AudioSet has no "Contrabass" / "Double bass" label at this granularity ("Bass guitar" exists but that's a different instrument that goes to `guitar` already) | Finer-grained bowed-string taxonomy |
-| `tuba` | AudioSet has no "Tuba" label — "Brass instrument" is the only brass parent below "French horn" / "Trumpet" / "Trombone" | Finer-grained brass taxonomy |
+| Sprite | Tier 1 regex (live) | Why unreachable today | What activates it |
+|---|---|---|---|
+| `viola` | `\bviola\b` | AudioSet has no "Viola" label — "Violin, fiddle" is the only bowed-string-with-fingerboard category at sub-class granularity → currently `violin` sprite covers it via the Tier 1 "Violin, fiddle" match | Upstream model that distinguishes viola (MERT-large, CLAP-music, Marsyas) |
+| `oboe` | `\boboe\b` | AudioSet has no "Oboe" label — "Woodwind instrument" is the only woodwind parent below "Flute" / "Clarinet" → currently `flute` sprite covers via the Tier 2 woodwind fallback | Same — any finer-grained woodwind taxonomy |
+| `contrabass` | `\bcontrabass\b\|\bdouble bass\b` | AudioSet has no "Contrabass" / "Double bass" label ("Bass guitar" exists but that's a different instrument that already routes to `guitar`) → currently `violin` sprite covers via the Tier 2 bowed-string fallback | Finer-grained bowed-string taxonomy |
+| `tuba` | `\btuba\b` | AudioSet has no "Tuba" label — "Brass instrument" is the only brass parent below "French horn" / "Trumpet" / "Trombone" → currently `trumpet` sprite covers via the Tier 2 brass fallback | Finer-grained brass taxonomy |
 
-When the AST model gets replaced, add the regex line to Tier 1 (with
-the new specific label) — the sprite then takes over from the Tier 2
-fallback automatically.
+> **Tier interaction**: Tier 1 matches always win, so when the future
+> label arrives the bundled sprite takes over from whatever Tier 2 was
+> filling in. No "graveyard" cleanup needed — flipping a model literally
+> activates four sprites at once.
 
 ## Stage layout (informs *where* the mapped sprite renders)
 
@@ -176,3 +219,7 @@ Re-read this doc when you are about to:
 - Tune `SCORE_PRESENT` / `SCORE_KEEP` / `SCORE_ACTIVE` / `PERSIST_TICKS`
 - Add a regex line to `labelToPerformer()`
 - Change which sprite represents a parent-category fallback
+- Change vocal gender defaults (currently: gender-neutral → female pool)
+- Add new vocal sprites — they need to be slotted into
+  `VOCAL_FEMALE` or `VOCAL_MALE` arrays explicitly, with the visual
+  gender verified against the actual sprite art
