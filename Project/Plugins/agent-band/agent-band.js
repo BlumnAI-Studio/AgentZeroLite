@@ -1,5 +1,18 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.5 changelog:
+//   • new band sprite system — TexturePacker-style sheet+JSON per
+//     performer (assets/sprites/{id}/{idle|play}.{png,json}). One ~50KB
+//     sheet per state replaces the old 4 loose PNGs. Sheets ship with a
+//     proper alpha channel, so the runtime chroma-key step is skipped
+//     for band sprites (still used for dance sprites until they're
+//     migrated too).
+//   • dance: each spawned dancer now picks a single static frame at
+//     spawn and stays on it for its lifetime — the current dance
+//     assets are 6 distinct characters per style, not animation
+//     frames, so cycling made the character appear to morph. Once
+//     proper dance animation sheets arrive, restore the cycle.
+//
 // v0.4 changelog:
 //   • dance troupe (back row) — AudioSet genre + mood labels drive a
 //     second row of dancers behind the band. Six styles bundled
@@ -51,7 +64,9 @@
   const DANCER_BASE     = 'assets/dancers/';
   const PLAY_FPS        = 9;
   const IDLE_FPS        = 4;
-  const PERFORMER_FRAMES = 4;
+  // Band sprites: actual frame count is read from each sheet's JSON so
+  // the loader doesn't care if a future performer ships 4, 6, or 8
+  // frames. Dance sprites still use a fixed-count loose-PNG layout.
   const DANCE_FRAMES    = 6;
   const DANCE_FPS       = 8;
 
@@ -169,21 +184,27 @@
     return null;
   }
 
-  // ── Sprite frame cache + chroma-key ──────────────────────────────────
+  // ── Band sprite cache — TexturePacker-style sheet + JSON ─────────────
   //
-  // Source PNGs ship with a solid bright-green background (classic chroma
-  // key, ~rgb(40, 220, 50)). We key it out at load time onto an off-screen
-  // canvas — that canvas replaces the HTMLImageElement in the cache, so
-  // the render loop just `drawImage`'s the keyed result with zero per-frame
-  // cost. Two-tier threshold:
-  //   • hard key — pure background → alpha = 0
-  //   • soft key — anti-aliased edge → alpha attenuated + green despill
-  //     (subtract the excess green so the kept silhouette doesn't have a
-  //     green halo)
-  // The character's dark-green clothing is preserved because the test
-  // requires both G dominance AND high overall green value — dark greens
-  // sit well below the threshold.
-  const spriteCache = new Map(); // key="id|state" -> { frames: [HTMLCanvasElement|null] }
+  // Each performer's idle and play states ship as one sheet PNG (with
+  // proper alpha — no chroma-key needed) plus a JSON describing the
+  // per-frame rectangles. The cache entry holds the loaded sheet image
+  // plus the parsed frame rects; the render loop indexes `frames` by the
+  // tick-derived frame counter and uses the 9-arg form of drawImage to
+  // blit the sub-rect.
+  //
+  // Frame keys in the JSON are like "violin_idle_0.png" → "violin_idle_3.png";
+  // we sort lexically to get them in the right order (the sheet has them
+  // laid out horizontally, padded by ~8 px).
+  //
+  // Both the PNG and the JSON load asynchronously; rendering tolerates
+  // partial state — until both are ready, the slot is skipped.
+  //
+  // The legacy chroma-key path is still defined below because the dance
+  // sprites (separate ~PNG-per-frame files with bright-green background)
+  // continue to use it until those assets get migrated to the sheet
+  // layout.
+  const spriteCache = new Map(); // "id|state" -> { sheet: HTMLImageElement|null, frames: [{x,y,w,h}, ...]|null }
 
   function chromaKey(img) {
     const canvas = document.createElement('canvas');
@@ -224,22 +245,32 @@
     const key = id + '|' + state;
     let entry = spriteCache.get(key);
     if (entry) return entry;
-    entry = { frames: new Array(PERFORMER_FRAMES).fill(null) };
-    for (let i = 0; i < PERFORMER_FRAMES; i++) {
-      const img = new Image();
-      const frameIdx = i;
-      img.onload = () => {
-        try { entry.frames[frameIdx] = chromaKey(img); }
-        catch (ex) {
-          console.warn('[agent-band] chroma key failed for', img.src, ex);
-          // Fall back to the raw image so something at least renders
-          entry.frames[frameIdx] = img;
-        }
-      };
-      img.onerror = () => console.warn('[agent-band] sprite missing:', img.src);
-      img.src = `${SPRITE_BASE}${id}-${state}-f${i}.png`;
-    }
+    entry = { sheet: null, frames: null };
     spriteCache.set(key, entry);
+
+    const sheetUrl = `${SPRITE_BASE}${id}/${state}.png`;
+    const jsonUrl  = `${SPRITE_BASE}${id}/${state}.json`;
+
+    // Fetch the atlas JSON first so the render loop sees a complete entry
+    // (sheet AND frames) before it tries to draw. The two requests
+    // proceed in parallel — order between them doesn't matter, only that
+    // both fields are non-null before draw.
+    fetch(jsonUrl)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(data => {
+        // Frame order is encoded in the key names ("..._0.png" .. "..._3.png")
+        // rather than insertion order; sort lexically so we never depend on
+        // JSON-object iteration semantics.
+        const sortedNames = Object.keys(data.frames || {}).sort();
+        entry.frames = sortedNames.map(n => data.frames[n].frame);
+      })
+      .catch(err => console.warn(`[agent-band] atlas json failed: ${jsonUrl}`, err.message));
+
+    const img = new Image();
+    img.onload  = () => { entry.sheet = img; };
+    img.onerror = () => console.warn('[agent-band] sprite sheet missing:', sheetUrl);
+    img.src = sheetUrl;
+
     return entry;
   }
 
@@ -609,16 +640,14 @@
 
   function drawPerformer(p, x, baseY, slotW, slotH, now) {
     const set = ensureSpriteSet(p.id, p.state);
-    const frameIdx = Math.floor(now / 1000 * (p.state === 'play' ? PLAY_FPS : IDLE_FPS)) % PERFORMER_FRAMES;
-    const tex = set.frames[frameIdx];
-    if (!tex) return; // still loading / keying
-    // Canvas exposes width/height; Image exposes naturalWidth/naturalHeight.
-    // Both work as drawImage sources, just probe the right size property.
-    const srcW = tex.naturalWidth || tex.width;
-    const srcH = tex.naturalHeight || tex.height;
-    if (!srcW || !srcH) return;
+    if (!set.sheet || !set.frames || set.frames.length === 0) return;
 
-    const aspect = srcH / srcW;
+    const fps = p.state === 'play' ? PLAY_FPS : IDLE_FPS;
+    const frameIdx = Math.floor(now / 1000 * fps) % set.frames.length;
+    const fr = set.frames[frameIdx];
+    if (!fr) return;
+
+    const aspect = fr.h / fr.w;
     let drawW = slotW;
     let drawH = drawW * aspect;
     if (drawH > slotH) { drawH = slotH; drawW = drawH / aspect; }
@@ -642,13 +671,23 @@
       stageCtx.shadowColor = `rgba(0, 229, 255, ${0.32 * alpha})`;
       stageCtx.shadowBlur = 22;
     }
-    stageCtx.drawImage(tex, dx, dy + bob, drawW, drawH);
+    // 9-arg form: copy {fr.x, fr.y, fr.w, fr.h} from the sheet onto the
+    // destination rect. drawImage handles the sub-rect crop on the GPU
+    // path — no per-frame canvas extraction needed.
+    stageCtx.drawImage(set.sheet, fr.x, fr.y, fr.w, fr.h, dx, dy + bob, drawW, drawH);
     stageCtx.restore();
   }
 
   function drawDancer(d, x, baseY, slotW, slotH, now) {
     const set = ensureDancerSet(d.style);
-    const idx = (Math.floor(now / 1000 * DANCE_FPS) + d.framePhase) % DANCE_FRAMES;
+    // v0.5 — temporary: the current dance assets are 6 distinct
+    // characters per style, not animation frames. Cycling makes the
+    // sprite morph between characters each frame. Lock to the
+    // per-dancer framePhase chosen at spawn so each dancer is a stable
+    // character for its lifetime. When proper dance animation sheets
+    // arrive, swap back to the cycling expression below.
+    //   const idx = (Math.floor(now / 1000 * DANCE_FPS) + d.framePhase) % DANCE_FRAMES;
+    const idx = d.framePhase;
     const tex = set.frames[idx];
     if (!tex) return;
     const srcW = tex.naturalWidth || tex.width;

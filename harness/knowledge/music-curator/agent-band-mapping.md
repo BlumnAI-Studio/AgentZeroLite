@@ -2,7 +2,7 @@
 
 **Owner**: music-curator
 **Lifecycle**: convention — binding for any change to `Project/Plugins/agent-band/agent-band.js` `labelToPerformer()` / `labelToDance()` or to the classifier model that produces the labels
-**Last updated**: 2026-06-07 (v0.4.0 — dance troupe back row + genre→style mapping)
+**Last updated**: 2026-06-07 (v0.5.0 — band sprites moved to TexturePacker sheet+JSON; chroma-key skipped for band, dance held on static frame until new dance assets land)
 **Related**: [ast-audioset-model-serving.md](ast-audioset-model-serving.md) (the upstream model whose top-K we consume)
 
 ## Why this doc exists
@@ -286,6 +286,77 @@ dancer spawns** — the stage is band-only. Once a dancer is on stage,
 `DANCE_KEEP` hysteresis keeps them while the genre stays in top-K at
 any score. ~9 s of silence on the genre side triggers fade-out.
 
+## Sprite assets — two layouts coexist (v0.5.0)
+
+### Band (v0.5.0+) — TexturePacker sheet + JSON
+
+```
+Project/Plugins/agent-band/assets/sprites/
+├── violin/
+│   ├── idle.png    (sheet — 808×208, 4 × 192×192 frames horizontally)
+│   ├── idle.json   (TexturePacker frame rects)
+│   ├── play.png
+│   └── play.json
+├── viola/ … (same shape)
+└── … (19 performers total)
+```
+
+**Source format** (`idle.json`):
+```json
+{
+  "frames": {
+    "violin_idle_0.png": {
+      "frame": { "x": 8, "y": 8, "w": 192, "h": 192 },
+      "duration": 120
+    },
+    "violin_idle_1.png": { "frame": { "x": 208, "y": 8, "w": 192, "h": 192 }, "duration": 120 },
+    "violin_idle_2.png": { … },
+    "violin_idle_3.png": { … }
+  },
+  "meta": { "image": "idle.png", "size": { "w": 808, "h": 208 }, "scale": "1" }
+}
+```
+
+`ensureSpriteSet()` fetches the PNG and JSON in parallel, sorts frame
+keys lexically (so `_0.png` < `_1.png` < … is the playback order), and
+caches `{ sheet: HTMLImageElement, frames: [{x,y,w,h}, …] }`.
+`drawPerformer()` uses the 9-arg form of `drawImage` to blit the sub-rect
+without copying pixels:
+
+```js
+ctx.drawImage(set.sheet, fr.x, fr.y, fr.w, fr.h, dx, dy, drawW, drawH);
+```
+
+These sheets ship with proper alpha channels — **no chroma-key step**.
+Frame count is derived from the JSON, not hardcoded; future performers
+that ship 6 or 8 frames work without code changes.
+
+Total band assets: 19 performers × 2 states × (PNG + JSON) =
+**76 files / ≈1.5 MB** (vs the v0.4 layout's 152 PNGs / ≈65 MB —
+~40× shrink). Install-limit pressure (max 200 files) is now mostly
+from the dance assets.
+
+### Dance (legacy until new assets arrive) — loose PNGs + chroma-key
+
+```
+Project/Plugins/agent-band/assets/dancers/
+├── ballet/    ballet-1.png … ballet-6.png
+├── cheer/     cheer-1.png … cheer-6.png
+├── hiphop/    hiphop-1.png … hiphop-6.png
+├── jazz/      jazz-1.png … jazz-6.png
+├── kpop/      kpop-1.png … kpop-6.png
+└── waacking/  waacking-1.png … waacking-6.png
+```
+
+These are **6 distinct characters per style**, not animation frames.
+v0.5.0 holds each spawned dancer on a single `framePhase` chosen at
+spawn — character stays consistent, motion comes from the bob effect
+only. When proper dance animation sheets arrive (same TexturePacker
+shape as the band), drop the freeze and reuse the band loader.
+
+Bright-green chroma background (~rgb(40, 220, 50)) — runtime
+`chromaKey()` strips it to transparent.
+
 ## Change-trigger list
 
 Re-read this doc when you are about to:
@@ -302,6 +373,14 @@ Re-read this doc when you are about to:
 - Add a new dance style — needs a new folder under
   `assets/dancers/`, a `labelToDance()` regex line, and a row-2 layout
   consideration (3-style cap)
+- Migrate dance sprites from loose-PNG-with-chroma to the
+  TexturePacker sheet+JSON layout — drop the single-frame freeze in
+  `drawDancer` and reuse the band-side `ensureSpriteSet()` loader (it's
+  already generic — just point `DANCER_BASE` at `assets/dancers/{style}/`
+  and ship `idle.png` + `idle.json`)
+- Add a new band performer / state — drop a folder with `idle.png`,
+  `idle.json`, `play.png`, `play.json` under `assets/sprites/{id}/`;
+  no code change needed (loader reads frame count from JSON)
 - Change genre→style routing (e.g. send Funk to jazz instead of
   waacking) — update `labelToDance()` order and the table above
 - Tune `DANCE_PRESENT` / `DANCE_KEEP` / `MAX_DANCERS`
