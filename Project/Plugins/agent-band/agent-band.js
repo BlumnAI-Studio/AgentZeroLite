@@ -1,5 +1,14 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.7 changelog:
+//   • pitch-driven note particle effect — soft vertical streaks
+//     rise from the stage baseline and fade out as they ascend.
+//     X position maps to a spectrum bar (low pitch ← left, high ← right,
+//     piano-keyboard style), color picks up the same cyan→magenta
+//     gradient as the spectrum bars below. Tuned for "은은한" feel —
+//     per-bar cooldown + probabilistic emission so even loud passages
+//     stay sparse rather than turning into a particle storm.
+//
 // v0.6 changelog:
 //   • dance: migrated to a single 5.6 MB master sheet (assets/dancers/
 //     _master/dance-master.png) + index.json. The master is a 6×6 grid
@@ -136,6 +145,25 @@
   const SPEC_GRADIENT_TO   = [0xff, 0x2d, 0x95];
   const SPEC_ATTACK  = 0.40;   // bars going UP — fast snap
   const SPEC_RELEASE = 0.10;   // bars going DOWN — smooth decay
+
+  // ── Note particle effect (v0.7) ──────────────────────────────────────
+  // Soft streaks rise from the band baseline; X position maps to a
+  // spectrum bin so the visual reads like a piano-keyboard pitch chart
+  // (left = low pitch, right = high pitch). Tuned conservatively so
+  // even sustained loud passages stay sparse.
+  const NOTE_EMIT_THRESHOLD = 0.22;   // smoothed bar level required to consider emitting
+  const NOTE_EMIT_PROB_GAIN = 0.45;   // multiplier on bar value → per-eligible-tick spawn probability
+  const NOTE_RISE_SPEED     = 55;     // px / sec (negative direction = up)
+  const NOTE_LIFE_MS_MIN    = 2200;
+  const NOTE_LIFE_MS_MAX    = 3500;
+  const NOTE_STREAK_LEN_MIN = 22;
+  const NOTE_STREAK_LEN_MAX = 38;
+  const NOTE_COOLDOWN_MIN_MS = 110;
+  const NOTE_COOLDOWN_MAX_MS = 240;
+  const NOTE_MAX             = 70;
+  const NOTE_PEAK_ALPHA      = 0.62;
+  const NOTE_STAGE_MARGIN    = 0.06;  // fraction of canvas width left blank on each side
+  const NOTE_BASELINE_Y      = 0.93;  // fraction of canvas height — slightly above band's 0.94 floor
 
   // ── AudioSet label → performer mapping ───────────────────────────────
   //
@@ -792,6 +820,100 @@
     }
   }
 
+  // ── Note particle system ─────────────────────────────────────────────
+  //
+  // Each note carries everything we need to advance it without re-reading
+  // spectrum state, so the spectrum can update at its own cadence (30Hz)
+  // while particles glide on the RAF clock. Cooldown timestamps per bar
+  // prevent a single high-energy band from spamming the screen frame
+  // after frame. lifeMs is randomised per particle so a steady tone
+  // still spawns a varied stream instead of a rigid column.
+  /** @type {{x:number, y:number, vy:number, birthMs:number, lifeMs:number, intensity:number, streakLen:number, hueT:number}[]} */
+  const notes = [];
+  const lastEmitMs = new Map(); // bar idx → last emission timestamp
+
+  function emitNotesFromSpectrum(spec, w, h, nowMs) {
+    if (!spec || spec.length === 0) return;
+    const baselineY = h * NOTE_BASELINE_Y;
+    const usableW = w * (1 - NOTE_STAGE_MARGIN * 2);
+    const offsetX = w * NOTE_STAGE_MARGIN;
+    const n = spec.length;
+
+    for (let i = 0; i < n; i++) {
+      const v = spec[i];
+      if (v < NOTE_EMIT_THRESHOLD) continue;
+
+      const last = lastEmitMs.get(i) || 0;
+      const cooldown = NOTE_COOLDOWN_MIN_MS +
+                       Math.random() * (NOTE_COOLDOWN_MAX_MS - NOTE_COOLDOWN_MIN_MS);
+      if (nowMs - last < cooldown) continue;
+      lastEmitMs.set(i, nowMs);
+
+      // Probabilistic gate so even loud bars stay sparse.
+      if (Math.random() > v * NOTE_EMIT_PROB_GAIN) continue;
+
+      if (notes.length >= NOTE_MAX) notes.shift();
+
+      // Center of the bar's pixel column, plus a small jitter so two
+      // simultaneous notes on the same bar don't render as a single
+      // doubled-up streak.
+      const x = offsetX + ((i + 0.5) / n) * usableW + (Math.random() - 0.5) * 6;
+      const lifeMs = NOTE_LIFE_MS_MIN + Math.random() * (NOTE_LIFE_MS_MAX - NOTE_LIFE_MS_MIN);
+      const streakLen = NOTE_STREAK_LEN_MIN + Math.random() * (NOTE_STREAK_LEN_MAX - NOTE_STREAK_LEN_MIN);
+      const speedJitter = 0.85 + Math.random() * 0.4;   // 0.85..1.25
+      notes.push({
+        x,
+        y: baselineY,
+        vy: -NOTE_RISE_SPEED * speedJitter,
+        birthMs: nowMs,
+        lifeMs,
+        intensity: v,
+        streakLen,
+        hueT: i / Math.max(1, n - 1),  // cached 0..1 along the gradient
+      });
+    }
+  }
+
+  function updateAndDrawNotes(dt, nowMs) {
+    if (notes.length === 0) return;
+    for (let i = notes.length - 1; i >= 0; i--) {
+      const note = notes[i];
+      const age = nowMs - note.birthMs;
+      if (age > note.lifeMs) { notes.splice(i, 1); continue; }
+
+      note.y += note.vy * dt;
+
+      // Envelope: short fade-in then long, eased fade-out. Eased keeps
+      // the top of the trail "ghosting" rather than popping out.
+      const t = age / note.lifeMs;
+      const fadeIn = Math.min(1, age / 180);
+      const fadeOut = Math.min(1, Math.max(0, 1 - t * t));
+      const alpha = NOTE_PEAK_ALPHA * fadeIn * fadeOut * (0.55 + note.intensity * 0.45);
+      if (alpha <= 0.01) continue;
+
+      // Pitch-mapped color along the spectrum's cyan→magenta gradient.
+      const r = Math.round(SPEC_GRADIENT_FROM[0] + (SPEC_GRADIENT_TO[0] - SPEC_GRADIENT_FROM[0]) * note.hueT);
+      const g = Math.round(SPEC_GRADIENT_FROM[1] + (SPEC_GRADIENT_TO[1] - SPEC_GRADIENT_FROM[1]) * note.hueT);
+      const b = Math.round(SPEC_GRADIENT_FROM[2] + (SPEC_GRADIENT_TO[2] - SPEC_GRADIENT_FROM[2]) * note.hueT);
+      const rgb = `${r}, ${g}, ${b}`;
+
+      // The streak fades to transparent at both ends so the head feels
+      // like a comet trail rather than a hard rectangle.
+      const top = note.y - note.streakLen;
+      const grad = stageCtx.createLinearGradient(note.x, top, note.x, note.y);
+      grad.addColorStop(0,   `rgba(${rgb}, 0)`);
+      grad.addColorStop(0.4, `rgba(${rgb}, ${alpha})`);
+      grad.addColorStop(1,   `rgba(${rgb}, 0)`);
+
+      stageCtx.save();
+      stageCtx.shadowColor = `rgba(${rgb}, ${alpha * 0.9})`;
+      stageCtx.shadowBlur = 14;
+      stageCtx.fillStyle = grad;
+      stageCtx.fillRect(note.x - 1.4, top, 2.8, note.streakLen);
+      stageCtx.restore();
+    }
+  }
+
   function drawSpectrum() {
     if (!smoothed) return;
     const { w, h } = fitCanvasToParent(specCanvas);
@@ -816,9 +938,11 @@
   }
 
   // ── Render loop ──────────────────────────────────────────────────────
-  // Z-order: background → row 2 dancers → row 1 band → spectrum overlay.
+  // Z-order: background → row 2 dancers → row 1 band → note particles →
+  // (spectrum overlay sits on the separate footer canvas).
   // Dancers are painted first so the band (front row) sits on top —
   // matches the "back chorus line" mental model.
+  let lastFrameMs = performance.now();
   function renderLoop() {
     const { w, h } = fitCanvasToParent(stageCanvas);
     const dpr = window.devicePixelRatio || 1;
@@ -827,6 +951,10 @@
     drawStageBg(w, h);
 
     const now = performance.now();
+    // Cap dt at 100 ms so a paused tab / GC stall doesn't teleport
+    // every particle off-screen at once when the loop resumes.
+    const dt = Math.min(0.1, (now - lastFrameMs) / 1000);
+    lastFrameMs = now;
 
     // Row 2 — dancers (back row)
     const ds = [...dancers.values()];
@@ -849,6 +977,12 @@
     }
 
     tickSmoothSpectrum();
+    // Drive the note particles off the SMOOTHED spectrum (already eased
+    // by the 30Hz update) so emission isn't tied to the 30Hz host event
+    // — feels continuous across the 60Hz frame clock.
+    emitNotesFromSpectrum(smoothed, w, h, now);
+    updateAndDrawNotes(dt, now);
+
     drawSpectrum();
     requestAnimationFrame(renderLoop);
   }
@@ -938,6 +1072,8 @@
     els.stop.disabled = true;
     performers.clear();
     dancers.clear();
+    notes.length = 0;
+    lastEmitMs.clear();
     renderLabelStrip([]);
     lastSpectrum = null;
     if (smoothed) smoothed.fill(0);

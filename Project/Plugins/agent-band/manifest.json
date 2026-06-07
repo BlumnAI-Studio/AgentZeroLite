@@ -2,7 +2,7 @@
   "id": "agent-band",
   "name": "Agent Band",
   "entry": "index.html",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "icon": "🎻",
-  "description": "AST AudioSet 라이브 음악단 — 시스템 사운드를 듣고 가수/악기/댄서를 무대 위에 동적으로 소환합니다. v0.6.2: 악단 7장 시트(viola/flute/clarinet/horn/tuba) 깨짐 픽셀 수정 (atlas JSON 동일 — 자산만 갱신)."
+  "description": "AST AudioSet 라이브 음악단 — 시스템 사운드를 듣고 가수/악기/댄서를 무대 위에 동적으로 소환합니다. v0.7: 음의 향기 — 피아노 키 배열대로 (왼쪽 저음 → 오른쪽 고음) spectrum 에 맞춰 노트 입자가 바닥에서 위로 은은하게 떠올라 자연스럽게 사라지는 이펙트."
 }
