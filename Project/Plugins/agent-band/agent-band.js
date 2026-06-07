@@ -1,5 +1,21 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.4 changelog:
+//   • dance troupe (back row) — AudioSet genre + mood labels drive a
+//     second row of dancers behind the band. Six styles bundled
+//     (ballet / cheer / hiphop / jazz / kpop / waacking), each a
+//     6-frame animation loop. Genre→style mapping:
+//       hiphop   ← Hip hop music / Rapping / Trap
+//       waacking ← Disco / Funk / Salsa / Latin music
+//       jazz     ← Jazz / Blues / R&B / Soul / Swing / Gospel
+//       ballet   ← Classical / Opera / Symphony / Orchestra / New-age /
+//                  Wedding music / Tender music / Soundtrack music
+//       kpop     ← Pop / Electronic / EDM / Dance music / House /
+//                  Techno / Dubstep / Trance / Electronica
+//       cheer    ← Cheering / Exciting music / Happy music / Christmas
+//   • Up to 3 dancers on stage simultaneously, picked by aggregated
+//     score per style (multiple matching labels stack).
+//
 // v0.3 changelog:
 //   • gender-aware vocal pools — Male singing → vocal-2/vocal-4, Female
 //     singing → vocal-1/vocal-3, ambiguous labels (Singing / Choir /
@@ -32,9 +48,22 @@
   // ── Tunables ─────────────────────────────────────────────────────────
   const SPRITE_BASE     = 'assets/sprites/';
   const STAGE_BASE      = 'assets/stages/';
+  const DANCER_BASE     = 'assets/dancers/';
   const PLAY_FPS        = 9;
   const IDLE_FPS        = 4;
   const PERFORMER_FRAMES = 4;
+  const DANCE_FRAMES    = 6;
+  const DANCE_FPS       = 8;
+
+  // Dance gating — genre labels in AudioSet typically score 0.10–0.30
+  // even for confident hits (and labels in the same family stack via
+  // selectDanceStyles), so the entry threshold is a touch higher than
+  // the instrument gate. Hysteresis works the same way.
+  const DANCE_PRESENT   = 0.07;
+  const DANCE_KEEP      = 0.03;
+  const DANCE_PERSIST_TICKS = 6;   // ~9 s of unseen labels before fade out
+  const DANCE_FADE_MS   = 800;
+  const MAX_DANCERS     = 3;
 
   // Score gating — tuned against AST AudioSet sigmoid distributions which
   // typically hover 0.05–0.25 even for clean hits (multilabel + 527 classes).
@@ -300,6 +329,146 @@
     }
   }
 
+  // ── Dance troupe — AudioSet genre → style mapping ────────────────────
+  //
+  // Six styles bundled (assets/dancers/{style}/{style}-1..6.png). Each
+  // tick we sum scores per style across all matching labels — that way
+  // a "Hip hop music + Rapping + Trap music" co-hit reinforces hiphop
+  // instead of fighting for the spawn — then pick the top N (cap
+  // MAX_DANCERS) above DANCE_PRESENT.
+  //
+  // Speech rap is treated as a dance trigger per operator request:
+  // "Rapping" is technically a speech label in AudioSet's hierarchy but
+  // semantically it's a hip-hop performance, so it spawns the hiphop
+  // dancer regardless of whether the music label co-occurs.
+  function labelToDance(label) {
+    const s = label.toLowerCase();
+
+    // Hip-hop & rap (includes the speech "Rapping" label per operator
+    // request — rap performance always reads as hip-hop dance).
+    if (/hip hop|hiphop|\brap\b|rapping|trap music/.test(s))             return 'hiphop';
+
+    // Disco / funk / Latin → waacking (the style descended directly
+    // from 70s disco-funk; salsa/Latin share the percussive groove).
+    if (/\bdisco\b|\bfunk\b|salsa|latin america/.test(s))                return 'waacking';
+
+    // Jazz family — jazz / blues / swing / soul / R&B / gospel all
+    // share the loose-hip jazz dance vocabulary.
+    if (/\bjazz\b|swing music|\bblues\b|soul music|rhythm and blues|gospel/.test(s))
+                                                                          return 'jazz';
+
+    // Classical / orchestral / cinematic → ballet. "Orchestra" alone
+    // (the instrument category) also signals classical context. "New-age"
+    // and "Soundtrack music" tend to be orchestral too.
+    if (/classical|\bopera\b|symphony|\borchestra\b|chamber music|new-age|wedding music|tender music|soundtrack music/.test(s))
+                                                                          return 'ballet';
+
+    // Modern pop / electronic / EDM → k-pop dance (synced-step idiom).
+    if (/pop music|electronic|electronica|\bedm\b|electronic dance|dance music|house music|techno|dubstep|trance/.test(s))
+                                                                          return 'kpop';
+
+    // Cheering / festive / high-energy mood music → cheer routine.
+    if (/cheering|exciting music|happy music|christmas music/.test(s))   return 'cheer';
+
+    return null;
+  }
+
+  /** @typedef {{
+   *    style: string,
+   *    score: number,
+   *    addedAt: number,
+   *    lastSeenTick: number,
+   *    framePhase: number,    // randomised so 2+ dancers don't sync
+   *    fading: boolean,
+   *    fadeAt: number,
+   *  }} Dancer
+   */
+  /** @type {Map<string, Dancer>} */
+  const dancers = new Map();
+
+  function upsertDancersFromLabels(labels) {
+    const now = performance.now();
+
+    // Sum scores per dance style across all matching labels.
+    const styleScores = new Map();
+    for (const l of labels) {
+      const style = labelToDance(l.name);
+      if (!style) continue;
+      styleScores.set(style, (styleScores.get(style) || 0) + l.score);
+    }
+
+    const ranked = [...styleScores.entries()].sort((a, b) => b[1] - a[1]);
+
+    for (const [style, score] of ranked) {
+      const onStage = dancers.has(style);
+      const required = onStage ? DANCE_KEEP : DANCE_PRESENT;
+      if (score < required) continue;
+
+      if (!dancers.has(style) && dancers.size >= MAX_DANCERS) {
+        // Evict a fading style to make room; never bump an active one.
+        const fadingStyle = [...dancers.entries()].find(([, d]) => d.fading)?.[0];
+        if (fadingStyle) dancers.delete(fadingStyle);
+        else continue;
+      }
+
+      let d = dancers.get(style);
+      if (!d) {
+        d = {
+          style,
+          score,
+          addedAt: now,
+          lastSeenTick: tickCounter,
+          framePhase: Math.floor(Math.random() * DANCE_FRAMES),
+          fading: false,
+          fadeAt: 0,
+        };
+        dancers.set(style, d);
+      } else {
+        d.score = score;
+        d.lastSeenTick = tickCounter;
+        d.fading = false;
+        d.fadeAt = 0;
+      }
+      ensureDancerSet(style);
+    }
+
+    for (const [style, d] of dancers) {
+      if (d.lastSeenTick === tickCounter) continue;
+      if (!d.fading && tickCounter - d.lastSeenTick >= DANCE_PERSIST_TICKS) {
+        d.fading = true;
+        d.fadeAt = now;
+      }
+      if (d.fading && now - d.fadeAt > DANCE_FADE_MS) {
+        dancers.delete(style);
+      }
+    }
+  }
+
+  // ── Dancer sprite cache (shares chromaKey with performers) ───────────
+  const dancerCache = new Map();   // style → { frames: [HTMLCanvasElement|null] }
+
+  function ensureDancerSet(style) {
+    let entry = dancerCache.get(style);
+    if (entry) return entry;
+    entry = { frames: new Array(DANCE_FRAMES).fill(null) };
+    for (let i = 0; i < DANCE_FRAMES; i++) {
+      const img = new Image();
+      const frameIdx = i;
+      img.onload = () => {
+        try { entry.frames[frameIdx] = chromaKey(img); }
+        catch (ex) {
+          console.warn('[agent-band] dancer chroma key failed for', img.src, ex);
+          entry.frames[frameIdx] = img;
+        }
+      };
+      img.onerror = () => console.warn('[agent-band] dancer sprite missing:', img.src);
+      // raw_dance/{style}/{style}-{1..6}.png — 1-indexed per source
+      img.src = `${DANCER_BASE}${style}/${style}-${i + 1}.png`;
+    }
+    dancerCache.set(style, entry);
+    return entry;
+  }
+
   // ── Stage layout — vocals center, instruments wings ──────────────────
   //
   // ORDER_RANK ascending = stage position from L→R. Vocals stay center
@@ -349,6 +518,41 @@
 
     ordered.forEach((p, i) => {
       layout.set(p.id, {
+        x: startX + i * (spriteW + gap),
+        baseY,
+        slotW: spriteW,
+        slotH,
+      });
+    });
+    return layout;
+  }
+
+  // ── Dance row layout — row 2 sits above the band row, slightly smaller
+  // so the band stays the visual focus and the dancers feel like a back
+  // chorus line rather than blocking the lead performers.
+  const DANCE_MAX_W   = 120;
+  const DANCE_MIN_W   = 60;
+  const DANCE_GAP     = 16;
+  const DANCE_BASE_Y  = 0.58;   // ground line for the dance row (vs band's 0.94)
+  const DANCE_TARGET_H = 0.40;  // height as fraction of canvas (vs band's 0.55)
+
+  function computeDanceLayout(dancerList, w, h) {
+    const layout = new Map();
+    const n = dancerList.length;
+    if (n === 0) return layout;
+
+    const naturalW = n * DANCE_MAX_W + (n - 1) * DANCE_GAP;
+    const scale = naturalW <= w ? 1 : (w - (n - 1) * DANCE_GAP) / (n * DANCE_MAX_W);
+    const spriteW = Math.max(DANCE_MIN_W, DANCE_MAX_W * scale);
+    const gap = Math.max(8, DANCE_GAP * Math.max(scale, 0.5));
+    const totalW = n * spriteW + (n - 1) * gap;
+    const startX = (w - totalW) / 2;
+
+    const baseY = h * DANCE_BASE_Y;
+    const slotH = h * DANCE_TARGET_H;
+
+    dancerList.forEach((d, i) => {
+      layout.set(d.style, {
         x: startX + i * (spriteW + gap),
         baseY,
         slotW: spriteW,
@@ -442,6 +646,45 @@
     stageCtx.restore();
   }
 
+  function drawDancer(d, x, baseY, slotW, slotH, now) {
+    const set = ensureDancerSet(d.style);
+    const idx = (Math.floor(now / 1000 * DANCE_FPS) + d.framePhase) % DANCE_FRAMES;
+    const tex = set.frames[idx];
+    if (!tex) return;
+    const srcW = tex.naturalWidth || tex.width;
+    const srcH = tex.naturalHeight || tex.height;
+    if (!srcW || !srcH) return;
+
+    const aspect = srcH / srcW;
+    let drawW = slotW;
+    let drawH = drawW * aspect;
+    if (drawH > slotH) { drawH = slotH; drawW = drawH / aspect; }
+
+    const dx = x + (slotW - drawW) / 2;
+    const dy = baseY - drawH;
+
+    let alpha = 1;
+    if (d.fading) {
+      alpha = Math.max(0, 1 - (now - d.fadeAt) / DANCE_FADE_MS);
+    } else {
+      const since = now - d.addedAt;
+      if (since < 360) alpha = Math.max(0.1, since / 360);
+    }
+    // Dancers in row 2 also feel slightly behind by being a touch
+    // dimmer — keeps the band as the visual focus while making the
+    // troupe clearly present.
+    alpha *= 0.92;
+
+    const bob = Math.sin(now / 110 + x * 0.7) * 4;
+
+    stageCtx.save();
+    stageCtx.globalAlpha = alpha;
+    stageCtx.shadowColor = `rgba(255, 45, 149, ${0.28 * alpha})`;
+    stageCtx.shadowBlur = 18;
+    stageCtx.drawImage(tex, dx, dy + bob, drawW, drawH);
+    stageCtx.restore();
+  }
+
   // ── Spectrum with asymmetric attack/release lerp ─────────────────────
   let lastSpectrum = null;       // most recent host snapshot
   let smoothed = null;            // per-frame smoothed values
@@ -488,6 +731,9 @@
   }
 
   // ── Render loop ──────────────────────────────────────────────────────
+  // Z-order: background → row 2 dancers → row 1 band → spectrum overlay.
+  // Dancers are painted first so the band (front row) sits on top —
+  // matches the "back chorus line" mental model.
   function renderLoop() {
     const { w, h } = fitCanvasToParent(stageCanvas);
     const dpr = window.devicePixelRatio || 1;
@@ -495,9 +741,22 @@
     stageCtx.clearRect(0, 0, w, h);
     drawStageBg(w, h);
 
+    const now = performance.now();
+
+    // Row 2 — dancers (back row)
+    const ds = [...dancers.values()];
+    if (ds.length > 0) {
+      const danceLayout = computeDanceLayout(ds, w, h);
+      for (const d of ds) {
+        const pos = danceLayout.get(d.style);
+        if (!pos) continue;
+        drawDancer(d, pos.x, pos.baseY, pos.slotW, pos.slotH, now);
+      }
+    }
+
+    // Row 1 — band (front row)
     const ps = [...performers.values()];
     const layout = computeLayout(ps, w, h);
-    const now = performance.now();
     for (const p of ps) {
       const pos = layout.get(p.id);
       if (!pos) continue;
@@ -593,6 +852,7 @@
     els.start.disabled = false;
     els.stop.disabled = true;
     performers.clear();
+    dancers.clear();
     renderLabelStrip([]);
     lastSpectrum = null;
     if (smoothed) smoothed.fill(0);
@@ -604,10 +864,12 @@
     els.stagePick.addEventListener('change', () => pickStage(els.stagePick.value));
 
     if (window.zero && window.zero.music) {
-      // Slow tick (1.5 s) — performer registry + label strip + diag.
+      // Slow tick (1.5 s) — performer + dance registries + label strip.
       window.zero.music.onTick(tick => {
-        upsertPerformersFromLabels(tick.labels || []);
-        renderLabelStrip(tick.labels || []);
+        const labels = tick.labels || [];
+        upsertPerformersFromLabels(labels);
+        upsertDancersFromLabels(labels);
+        renderLabelStrip(labels);
         els.diagTick.textContent = `tick ${tickCounter}`;
         els.diagInfer.textContent = `${tick.inferMs} ms`;
         els.diagMel.textContent = `${tick.frames} × ${tick.bins}`;

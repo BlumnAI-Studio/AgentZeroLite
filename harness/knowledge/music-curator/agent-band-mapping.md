@@ -1,8 +1,8 @@
 # Agent Band — AudioSet label → performer sprite mapping
 
 **Owner**: music-curator
-**Lifecycle**: convention — binding for any change to `Project/Plugins/agent-band/agent-band.js` `labelToPerformer()` or to the classifier model that produces the labels
-**Last updated**: 2026-06-07 (v0.3.0 — gender-aware vocals + viola/oboe/contrabass/tuba Tier 1 + drum gong)
+**Lifecycle**: convention — binding for any change to `Project/Plugins/agent-band/agent-band.js` `labelToPerformer()` / `labelToDance()` or to the classifier model that produces the labels
+**Last updated**: 2026-06-07 (v0.4.0 — dance troupe back row + genre→style mapping)
 **Related**: [ast-audioset-model-serving.md](ast-audioset-model-serving.md) (the upstream model whose top-K we consume)
 
 ## Why this doc exists
@@ -210,6 +210,82 @@ stages never overlap.
   the "Tier 1" table and the "unreachable sprites" graveyard once it
   ships but before the model that activates it lands.
 
+## Dance troupe (v0.4.0) — row 2
+
+A second registry runs in parallel to the performer registry, gated on
+genre + mood labels rather than instrument labels. Up to **3 dancers**
+on stage (row 2) simultaneously; they're rendered **before** the band
+so the band sits in front (row 1 stays the visual focus).
+
+### Score gates
+
+| Constant | Value | Role |
+|---|---|---|
+| `DANCE_PRESENT` | **0.07** | Aggregated style score required to first spawn |
+| `DANCE_KEEP` | **0.03** | Hysteresis lower bar once on stage |
+| `DANCE_PERSIST_TICKS` | **6** (≈9 s) | Unseen-genre ticks before fade-out begins |
+| `DANCE_FADE_MS` | **800** | Fade-out duration |
+| `MAX_DANCERS` | **3** | Row 2 population cap |
+
+Multiple matching labels **stack** per style — `selectDanceStyles()`
+sums scores across all labels that route to the same style. This lets
+"Hip hop music 0.18" + "Rapping 0.15" + "Trap music 0.08" reinforce
+the hiphop dancer at 0.41 instead of competing for the slot.
+
+### Genre → style mapping
+
+| Style | regex | Matching AudioSet labels |
+|---|---|---|
+| `hiphop` | `hip hop\|hiphop\|\brap\b\|rapping\|trap music` | "Hip hop music" / "Rapping" / "Trap music" (Rapping is technically a speech label but operator decision: rap *is* hip-hop dance) |
+| `waacking` | `\bdisco\b\|\bfunk\b\|salsa\|latin america` | "Disco" / "Funk" / "Salsa music" / "Music of Latin America" (waacking descended from 70s disco-funk; salsa shares the percussive groove) |
+| `jazz` | `\bjazz\b\|swing music\|\bblues\b\|soul music\|rhythm and blues\|gospel` | "Jazz" / "Swing music" / "Blues" / "Soul music" / "Rhythm and blues" / "Gospel music" |
+| `ballet` | `classical\|\bopera\b\|symphony\|\borchestra\b\|chamber music\|new-age\|wedding music\|tender music\|soundtrack music` | "Classical music" / "Opera" / "Symphony" / "Orchestra" / "Chamber music" / "New-age music" / "Wedding music" / "Tender music" / "Soundtrack music" |
+| `kpop` | `pop music\|electronic\|electronica\|\bedm\b\|electronic dance\|dance music\|house music\|techno\|dubstep\|trance` | "Pop music" / "Electronic music" / "Electronica" / "EDM" / "Electronic dance music" / "Dance music" / "House music" / "Techno" / "Dubstep" / "Trance music" |
+| `cheer` | `cheering\|exciting music\|happy music\|christmas music` | "Cheering" / "Exciting music" / "Happy music" / "Christmas music" |
+
+### Row 2 layout
+
+| Constant | Value | Note |
+|---|---|---|
+| `DANCE_MAX_W` | **120 px** | Smaller than band's 140 to feel "behind" |
+| `DANCE_MIN_W` | **60 px** | |
+| `DANCE_GAP` | **16 px** | Slightly wider than band's 14 for breathing room |
+| `DANCE_BASE_Y` | **0.58 × h** | Baseline higher than band's 0.94 |
+| `DANCE_TARGET_H` | **0.40 × h** | Smaller than band's 0.55 |
+
+Z-order: **background → row 2 dancers → row 1 band → spectrum overlay**.
+Dancers drawn first; band drawn on top (the overlap region from y≈0.39
+to y≈0.58 will show the dancers' lower bodies hidden behind the band's
+heads — the "back chorus line" effect).
+
+Each dancer carries a random `framePhase` (0..5) so 2-3 simultaneous
+dancers don't sync to the same beat — they look like a troupe, not a
+hivemind. 6-frame animation at 8 FPS = 750 ms loop per cycle.
+
+### Sprite layout on disk
+
+```
+Project/Plugins/agent-band/assets/dancers/
+├── ballet/    ballet-1.png .. ballet-6.png
+├── cheer/     cheer-1.png .. cheer-6.png
+├── hiphop/    hiphop-1.png .. hiphop-6.png
+├── jazz/      jazz-1.png .. jazz-6.png
+├── kpop/      kpop-1.png .. kpop-6.png
+└── waacking/  waacking-1.png .. waacking-6.png
+```
+
+Same green chroma-key background as the band sprites — the existing
+`chromaKey()` routine handles them at load time. **6 styles × 6 frames
+= 36 PNGs, ~16 MB**. Plugin total: 195 files (under the 200 install
+limit), ~89 MB.
+
+### What if no dance label hits?
+
+If no genre/mood label scores above `DANCE_PRESENT` in a tick, **no
+dancer spawns** — the stage is band-only. Once a dancer is on stage,
+`DANCE_KEEP` hysteresis keeps them while the genre stays in top-K at
+any score. ~9 s of silence on the genre side triggers fade-out.
+
 ## Change-trigger list
 
 Re-read this doc when you are about to:
@@ -223,3 +299,9 @@ Re-read this doc when you are about to:
 - Add new vocal sprites — they need to be slotted into
   `VOCAL_FEMALE` or `VOCAL_MALE` arrays explicitly, with the visual
   gender verified against the actual sprite art
+- Add a new dance style — needs a new folder under
+  `assets/dancers/`, a `labelToDance()` regex line, and a row-2 layout
+  consideration (3-style cap)
+- Change genre→style routing (e.g. send Funk to jazz instead of
+  waacking) — update `labelToDance()` order and the table above
+- Tune `DANCE_PRESENT` / `DANCE_KEEP` / `MAX_DANCERS`
