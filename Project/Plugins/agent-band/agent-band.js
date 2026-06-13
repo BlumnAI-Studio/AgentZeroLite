@@ -1,5 +1,10 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.12.1 changelog:
+//   • new stage background "Stadium (FIFA 26)" (assets/stages/fifa26.png).
+//   • girl-group ('group') mode is female-only — male singers are dropped
+//     (instruments still appear). Solo mode keeps prior behavior.
+//
 // v0.12 changelog:
 //   • singer ASSIGNEE staging (replaces v0.11 loudness climax, which didn't
 //     distribute who-performs well). Singers now work like instruments —
@@ -574,6 +579,9 @@
     for (const l of labels) {
       const id = labelToPerformer(l.name);
       if (!id) continue;
+      // Girl-group mode is female-only: drop male singers (instruments are
+      // still fine). Solo mode keeps the existing behavior.
+      if (singerMode === 'group' && VOCAL_MALE.includes(id)) continue;
       const prev = collapsed.get(id);
       if (prev === undefined || l.score > prev) collapsed.set(id, l.score);
     }
