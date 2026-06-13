@@ -1,5 +1,14 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.10 changelog:
+//   • main vocal is `vocal-ex` — the idol group's lead is now a dedicated
+//     singer (idle+play sheets: she SINGS, doesn't dance). She holds slot 0
+//     of VOCAL_FEMALE so she's always dead-center; vox7-1..7 are the
+//     backup dancers fanning out around her. Group pool is now 8.
+//   • row-2 dance troupe DISABLED (DANCE_TROUPE_ENABLED=false) pending a
+//     quality pass. The troupe code and the dance-master assets are kept
+//     intact — flip the flag to bring it back once the sprites are re-tuned.
+//
 // v0.9 changelog:
 //   • idol group staging — the female pool is no longer a soloist that
 //     fans out only when multiple distinct vocal labels co-occur. It's now
@@ -126,6 +135,12 @@
   //   • single PNG, 6 rows × 6 cols of 808×208 cells
   //   • each cell = 4 frames horizontally, 192×192, 8 px padding
   //   • rows index: kpop 0 / hiphop 1 / jazz 2 / ballet 3 / cheer 4 / waacking 5
+  //
+  // v0.10: the row-2 dance troupe is DISABLED pending a quality pass. The
+  // code + the dance-master assets are kept intact (not deleted) so the
+  // troupe can be re-enabled by flipping this single flag once the sprites
+  // are re-tuned. While false: no dancers spawn and row 2 isn't rendered.
+  const DANCE_TROUPE_ENABLED = false;
   const DANCE_FRAMES         = 4;
   const DANCE_FPS            = 8;
   const DANCE_CHARS_PER_STYLE = 6;
@@ -159,7 +174,7 @@
   const SCORE_KEEP      = 0.025;
   const PERSIST_TICKS   = 8;   // ~12 s of unseen labels before fade out
   const FADE_MS         = 700;
-  const MAX_PERFORMERS  = 11;  // room for a full 7-idol group + a few instruments
+  const MAX_PERFORMERS  = 12;  // room for the full 8-member idol group + a few instruments
 
   // Layout — sprite width is capped so 1 performer doesn't blow up to fill
   // the whole canvas; the unused space stays as empty stage on the sides.
@@ -209,25 +224,29 @@
   //   sprites so a "Singing + Choir" tick reads as an ensemble, not a
   //   single confused soloist.
   //
-  // Sprite roster (v0.8):
-  //   Female pool — seven new idol singers (vox7-1 … vox7-7). Higher
-  //     quality than the retired vocal-1/vocal-3, and they DANCE: their
-  //     active sheet is `dance`, not `play` (see IDOL_VOCALS / stateSheet).
+  // Sprite roster (v0.10):
+  //   Female pool — the idol group. Slot 0 is the MAIN VOCAL `vocal-ex`
+  //     (the lead — sings via its `idle`+`play` sheets, stays dead-center).
+  //     Slots 1..7 are the seven backup idols vox7-1 … vox7-7, who DANCE:
+  //     their active sheet is `dance`, not `play` (see IDOL_VOCALS /
+  //     stateSheet). The lead sings, the backups dance around her.
   //   Male pool — unchanged:
   //     vocal-2 = male (dark hair, red coat)  vocal-4 = male (silver hair, purple coat)
-  // VOCAL_FEMALE doubles as the idol group's *slot order*: index 0 is the
+  // VOCAL_FEMALE doubles as the group's *slot order*: index 0 is the
   // permanent main vocal (stays dead-center), and members join in this
-  // order as the group grows. Don't reorder casually — vox7-1 is the lead.
-  const VOCAL_FEMALE = ['vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7'];
+  // order as the group grows. Don't reorder casually — vocal-ex is the lead.
+  const VOCAL_FEMALE = ['vocal-ex', 'vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7'];
   const VOCAL_MALE   = ['vocal-2', 'vocal-4'];
-  const MAIN_VOCAL_ID = VOCAL_FEMALE[0];   // the lead — center stage, sticky
+  const MAIN_VOCAL_ID = VOCAL_FEMALE[0];   // 'vocal-ex' — the lead, center stage, sticky
+  const FEMALE_POOL   = new Set(VOCAL_FEMALE);  // whole group (lead + backups)
   let maleCursor = 0;
 
-  // Idol vocals sing AND dance. They ship `idle` + `dance` sheets (no
+  // Backup idols sing AND dance. They ship `idle` + `dance` sheets (no
   // `play` sheet), so their active logical state ('play') is remapped to
-  // the `dance` file by stateSheet(). They're also true vocals for stage
-  // layout (center main-vocal area) even though the id isn't `vocal-*`.
-  const IDOL_VOCALS = new Set(VOCAL_FEMALE);
+  // the `dance` file by stateSheet(). The MAIN VOCAL (vocal-ex) is NOT in
+  // this set — she keeps her `play` (singing) sheet. All are true vocals
+  // for stage layout (center main-vocal area).
+  const IDOL_VOCALS = new Set(['vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7']);
 
   // ── Idol group staging (v0.9) ────────────────────────────────────────
   // The female pool is staged as a GROUP, not a soloist. The first female
@@ -238,19 +257,20 @@
   // member per tick until only the (then fading) main vocal remains.
   const IDOL_RAMP_TICKS_PER_MEMBER = 2;  // +1 target member per N sustained ticks
   const IDOL_GENRE_BONUS_MAX = 3;        // "여자 + 장르n" → up to +3 members
-  const IDOL_GROUP_MAX = VOCAL_FEMALE.length; // 7 — the whole pool
+  const IDOL_GROUP_MAX = VOCAL_FEMALE.length; // 8 — lead + 7 backups
 
   let idolRenderedSize = 0;  // how many idols are currently staged (ramps ±1/tick)
   let idolPresentTicks = 0;  // consecutive ticks the female vocal has been heard
 
   // A performer is a "vocal" (center stage) if it's a classic vocal-* id
-  // or one of the new idol singers.
+  // (incl. the male pool and the vocal-ex lead) or one of the backup idols.
   function isVocal(id) {
     return id.startsWith('vocal-') || IDOL_VOCALS.has(id);
   }
 
-  // Resolve a performer's logical state to its on-disk sheet name. Idol
-  // singers have no `play` sheet — their active animation is `dance`.
+  // Resolve a performer's logical state to its on-disk sheet name. Backup
+  // idols have no `play` sheet — their active animation is `dance`. The
+  // main vocal (vocal-ex) and everyone else map 1:1.
   function stateSheet(id, state) {
     if (state === 'play' && IDOL_VOCALS.has(id)) return 'dance';
     return state;
@@ -558,10 +578,11 @@
       upsertPerformer(id, score, now);
     }
 
-    // Peel-off: any idol beyond the current group size fades promptly (one
-    // per tick as the group shrinks) instead of lingering on the unseen
-    // timer. Covers the size==0 case too — the main vocal fades last.
-    for (const id of IDOL_VOCALS) {
+    // Peel-off: any female-pool member beyond the current group size fades
+    // promptly (one per tick as the group shrinks) instead of lingering on
+    // the unseen timer. Covers the size==0 case too — the main vocal
+    // (vocal-ex) is slot 0 so it's always the last to peel off.
+    for (const id of VOCAL_FEMALE) {
       if (memberSet.has(id)) continue;
       const p = performers.get(id);
       if (p && !p.fading) { p.fading = true; p.fadeAt = now; p.state = 'idle'; }
@@ -740,9 +761,9 @@
   // (rare alongside the idol group) hug the outer edges of the cluster.
   function centerVocals(vocals) {
     const idols = vocals
-      .filter(p => IDOL_VOCALS.has(p.id))
+      .filter(p => FEMALE_POOL.has(p.id))
       .sort((a, b) => VOCAL_FEMALE.indexOf(a.id) - VOCAL_FEMALE.indexOf(b.id));
-    const males = vocals.filter(p => !IDOL_VOCALS.has(p.id));
+    const males = vocals.filter(p => !FEMALE_POOL.has(p.id));
 
     const left = [], right = [];
     idols.forEach((p, i) => {
@@ -1127,8 +1148,8 @@
     const dt = Math.min(0.1, (now - lastFrameMs) / 1000);
     lastFrameMs = now;
 
-    // Row 2 — dancers (back row)
-    const ds = [...dancers.values()];
+    // Row 2 — dancers (back row). Disabled in v0.10 (DANCE_TROUPE_ENABLED).
+    const ds = DANCE_TROUPE_ENABLED ? [...dancers.values()] : [];
     if (ds.length > 0) {
       const danceLayout = computeDanceLayout(ds, w, h);
       for (const d of ds) {
@@ -1262,7 +1283,7 @@
       window.zero.music.onTick(tick => {
         const labels = tick.labels || [];
         upsertPerformersFromLabels(labels);
-        upsertDancersFromLabels(labels);
+        if (DANCE_TROUPE_ENABLED) upsertDancersFromLabels(labels);
         renderLabelStrip(labels);
         els.diagTick.textContent = `tick ${tickCounter}`;
         els.diagInfer.textContent = `${tick.inferMs} ms`;
