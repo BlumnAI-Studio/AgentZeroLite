@@ -1,5 +1,21 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.12 changelog:
+//   • singer ASSIGNEE staging (replaces v0.11 loudness climax, which didn't
+//     distribute who-performs well). Singers now work like instruments —
+//     each is responsible for a label/mood and performs only while it
+//     sounds — but the genre→backup assignment is randomised and spread
+//     EVENLY (least-used wins) since a group's voices can't be told apart:
+//       - main vocal (vocal-ex): lead + spotlight for jazz / ballad-
+//         classical moods; performs while singing or a lead mood is active.
+//       - backup idols (vox7): each assigned a danceable genre (kpop /
+//         hiphop / waacking / cheer; Speech→rap counts as hiphop). Two
+//         co-occurring genres a,b light up two different backups.
+//       - females prioritised; males only on explicit "Male singing".
+//   • SINGER MODE option (#singerMode): 'group' (girl-group, main+backups)
+//     or 'solo' (main only). Concept targets an orchestra / girl-group pop
+//     stage.
+//
 // v0.11 changelog:
 //   • climax staging by LOUDNESS — the idol group's play/dance vs idle is
 //     now gated on volume (mean spectrum energy), not the AST label score:
@@ -201,20 +217,25 @@
   const SPEC_ATTACK  = 0.40;   // bars going UP — fast snap
   const SPEC_RELEASE = 0.10;   // bars going DOWN — smooth decay
 
-  // ── Climax gating (v0.11) ────────────────────────────────────────────
-  // Performance intensity is driven by LOUDNESS (mean spectrum energy),
-  // not the AST label score:
-  //   • normal volume  → "일반노래" — only the MAIN VOCAL performs
-  //     (play/dance); the backup idols hold their idle (normal-singing)
-  //     sheet.
-  //   • loud volume     → climax — the whole group performs together.
-  // Hysteresis (ENTER > EXIT) keeps it from flickering, and the ENTER
-  // threshold is set a touch high so the calmer "일반노래" state is held a
-  // little longer / shows up a little more often than a bare midpoint
-  // would give. volumeLevel is an eased 0..1 loudness read each frame.
-  const CLIMAX_VOL_ENTER = 0.30;  // mean smoothed-spectrum level to ENTER climax
-  const CLIMAX_VOL_EXIT  = 0.20;  // drop below this to fall back to "일반노래"
-  const CLIMAX_VOL_EASE  = 0.18;  // per-frame lerp toward the live mean level
+  // ── Singer staging — assignee model (v0.12) ──────────────────────────
+  // Replaces the v0.11 loudness-climax gate (it didn't distribute who-was-
+  // performing well). Singers now work like instruments: each performer is
+  // RESPONSIBLE for a label/mood and plays its active animation only while
+  // that responsibility is sounding. But because a group's voices can't be
+  // told apart, the genre→backup assignment is randomised and spread
+  // EVENLY across the pool (least-used wins) so everyone gets featured.
+  //
+  //   • main vocal (vocal-ex) — the lead. Always performs while present,
+  //     and is the spotlight for the LEAD moods (jazz / ballad / classical
+  //     + female singing).
+  //   • backup idols (vox7) — each gets assigned a danceable genre
+  //     (kpop / hiphop / waacking / cheer; speech→rap counts as hiphop).
+  //     A backup performs only while its assigned genre is active, so two
+  //     co-occurring genres a,b light up two different backups.
+  //   • SINGER MODE: 'group' (girl-group, main + backups) or 'solo'
+  //     (main only). Read live from the #singerMode <select>.
+  const STYLE_ACTIVE = DANCE_PRESENT;        // genre score to count as "sounding" this tick
+  const LEAD_STYLES  = new Set(['jazz', 'ballet']); // moods the MAIN VOCAL owns (jazz / ballad-classical)
 
   // ── Note particle effect (v0.7) ──────────────────────────────────────
   // Soft streaks rise from the band baseline; X position maps to a
@@ -242,13 +263,10 @@
   // Tier 2: parent-category labels — these dominate the top-K when the
   //   model can't decide between specific sub-classes. Map to a sensible
   //   default sprite for the family.
-  // Vocals are gender-aware: AST emits "Male singing" / "Female singing"
-  //   distinctly, so we route to gender-matched sprite pools and fall
-  //   back to the female pool when the label is gender-neutral ("Singing"
-  //   / "Choir" / "Vocal music" / etc.). Within each pool a per-tick
-  //   round-robin cursor fans co-occurring vocal labels across the two
-  //   sprites so a "Singing + Choir" tick reads as an ensemble, not a
-  //   single confused soloist.
+  // Vocals: only MALE-specific labels ("Male singing") are mapped here
+  //   (to the male pool, by operator rule males appear only when explicitly
+  //   recognized). FEMALE + gender-neutral vocals are handled by the idol
+  //   group controller (femaleVocalSignal / upsertIdolGroup), not here.
   //
   // Sprite roster (v0.10):
   //   Female pool — the idol group. Slot 0 is the MAIN VOCAL `vocal-ex`
@@ -282,7 +300,6 @@
   // around the main vocal. When the voice stops, it shrinks back one
   // member per tick until only the (then fading) main vocal remains.
   const IDOL_RAMP_TICKS_PER_MEMBER = 2;  // +1 target member per N sustained ticks
-  const IDOL_GENRE_BONUS_MAX = 3;        // "여자 + 장르n" → up to +3 members
   const IDOL_GROUP_MAX = VOCAL_FEMALE.length; // 8 — lead + 7 backups
 
   let idolRenderedSize = 0;  // how many idols are currently staged (ramps ±1/tick)
@@ -362,15 +379,40 @@
     return { score: Math.max(explicit, neutral), explicit: explicit > 0 };
   }
 
-  // How many distinct genres are co-occurring (reuses the dance-style
-  // mapping). "여자 + 장르n" — more genres → a richer, bigger idol group.
-  function countGenres(labels) {
-    const styles = new Set();
+  // Sum AST label scores per dance-style (genre) this tick — e.g.
+  // "Hip hop music" + "Rapping" stack onto hiphop. Speech is folded into
+  // hiphop (rap) inside labelToDance.
+  function styleScoresFromLabels(labels) {
+    const m = new Map();
     for (const l of labels) {
-      const g = labelToDance(l.name);
-      if (g && l.score >= DANCE_KEEP) styles.add(g);
+      const st = labelToDance(l.name);
+      if (!st) continue;
+      m.set(st, (m.get(st) || 0) + l.score);
     }
-    return styles.size;
+    return m;
+  }
+
+  // Assign each active danceable (non-lead) genre to a backup singer,
+  // spread EVENLY across the pool (least-used wins) so the group takes
+  // turns. Assignments persist while the genre stays active and the singer
+  // stays on stage; co-occurring genres a,b therefore light up two
+  // different backups. Returns the set of backup ids that should perform.
+  function assignBackups(activeStyles, presentBackups) {
+    for (const [style, id] of [...styleAssignee]) {
+      if (!activeStyles.includes(style) || !presentBackups.includes(id)) styleAssignee.delete(style);
+    }
+    const taken = new Set(styleAssignee.values());
+    for (const style of activeStyles) {
+      if (styleAssignee.has(style)) continue;
+      const avail = presentBackups.filter(id => !taken.has(id));
+      if (!avail.length) break;
+      avail.sort((a, b) => (backupUsage.get(a) || 0) - (backupUsage.get(b) || 0));
+      const pick = avail[0];
+      styleAssignee.set(style, pick);
+      taken.add(pick);
+      backupUsage.set(pick, (backupUsage.get(pick) || 0) + 1);
+    }
+    return taken;
   }
 
   // ── Band sprite cache — TexturePacker-style sheet + JSON ─────────────
@@ -470,6 +512,7 @@
    *    id: string,
    *    score: number,
    *    state: 'play' | 'idle',
+   *    playing: boolean,    // female pool only — assignee-model active flag (per tick)
    *    addedAt: number,
    *    lastSeenTick: number,
    *    fading: boolean,
@@ -479,6 +522,17 @@
   /** @type {Map<string, Performer>} */
   const performers = new Map();
   let tickCounter = 0;
+
+  // Singer mode — 'group' (girl-group: main + backups) or 'solo' (main
+  // only). Read live from the #singerMode <select> each tick.
+  let singerMode = 'group';
+
+  // Backup assignee distribution. styleAssignee maps an active danceable
+  // genre → the backup id currently performing it; backupUsage tracks how
+  // many times each backup has ever been assigned so new assignments go to
+  // the LEAST-used singer (even spread across the pool over a session).
+  const styleAssignee = new Map();   // style → backupId
+  const backupUsage   = new Map();   // backupId → cumulative assignment count
 
   // Spawn-or-refresh one performer at the given score. Marks it "seen this
   // tick" (so it won't fade) and resolves its idle/active state. Returns
@@ -494,7 +548,7 @@
     let p = performers.get(id);
     const state = score >= SCORE_ACTIVE ? 'play' : 'idle';
     if (!p) {
-      p = { id, score, state, addedAt: now, lastSeenTick: tickCounter, fading: false, fadeAt: 0 };
+      p = { id, score, state, playing: false, addedAt: now, lastSeenTick: tickCounter, fading: false, fadeAt: 0 };
       performers.set(id, p);
     } else {
       p.score = score;
@@ -553,34 +607,44 @@
     }
   }
 
-  // ── Idol group controller ────────────────────────────────────────────
+  // ── Idol group controller (assignee model) ──────────────────────────
   //
-  // Stages the female pool as a growing/shrinking GROUP centered on the
-  // main vocal:
-  //   • first female recognition → main vocal (vox7-1), center stage.
-  //   • while the voice keeps coming, the TARGET size climbs — faster the
-  //     richer the signal: +1 per IDOL_RAMP_TICKS_PER_MEMBER sustained
-  //     ticks, +1 per co-occurring genre (capped), +1 when the label is an
-  //     explicit "Female singing".
-  //   • the rendered size chases the target by ±1 per tick so members fan
-  //     out (and later peel off) one at a time rather than popping in/out.
-  //   • members are VOCAL_FEMALE[0..size); index 0 (main) is always present
-  //     while the group is up, and computeLayout centers it with the rest
-  //     alternating left/right (see centerVocals).
+  // Presence: the girl-group comes on when there's a female/neutral vocal
+  // OR an active danceable genre (instrumental pop/dance still summons the
+  // group). vocal-ex is slot 0 (always center). In SOLO mode only the lead
+  // is staged; in GROUP mode the group grows with richness.
+  //
+  // Performance (who animates): assignee model, not loudness —
+  //   • main vocal (vocal-ex) performs while singing OR a LEAD mood
+  //     (jazz / ballad-classical) is active → she's the spotlight there.
+  //   • each active non-lead genre is assigned to a backup (least-used →
+  //     even spread); that backup performs while its genre sounds, so two
+  //     co-occurring genres a,b light up two different backups.
   function upsertIdolGroup(labels, now) {
     const fem = femaleVocalSignal(labels);
+    const styles = styleScoresFromLabels(labels);
+    const activeStyles   = [...styles.entries()].filter(([, sc]) => sc >= STYLE_ACTIVE).map(([st]) => st);
+    const leadActive     = activeStyles.some(st => LEAD_STYLES.has(st));
+    const nonLeadStyles  = activeStyles.filter(st => !LEAD_STYLES.has(st));
+
     const onStage = idolRenderedSize > 0;
-    const required = onStage ? SCORE_KEEP : SCORE_PRESENT;
-    const present = fem.score >= required;
+    const vocalPresent = fem.score >= (onStage ? SCORE_KEEP : SCORE_PRESENT);
+    const present = vocalPresent || activeStyles.length > 0;
 
     let target;
     if (present) {
       idolPresentTicks++;
-      target = 1
-        + Math.floor(idolPresentTicks / IDOL_RAMP_TICKS_PER_MEMBER)
-        + Math.min(countGenres(labels), IDOL_GENRE_BONUS_MAX)
-        + (fem.explicit ? 1 : 0);
-      target = Math.max(1, Math.min(IDOL_GROUP_MAX, target));
+      if (singerMode === 'solo') {
+        target = 1;   // lead only
+      } else {
+        // Big enough to give every active non-lead genre its own dancer,
+        // and grows further with sustained singing / explicit female.
+        target = Math.max(
+          1 + nonLeadStyles.length,
+          1 + Math.floor(idolPresentTicks / IDOL_RAMP_TICKS_PER_MEMBER) + (fem.explicit ? 1 : 0),
+        );
+        target = Math.max(1, Math.min(IDOL_GROUP_MAX, target));
+      }
     } else {
       idolPresentTicks = 0;
       target = 0;   // ramp the whole group down
@@ -593,17 +657,29 @@
 
     const members = VOCAL_FEMALE.slice(0, idolRenderedSize);
     const memberSet = new Set(members);
-    // Presence score keeps members on stage; the actual play/dance-vs-idle
-    // animation is decided per-frame by performState() (volume-gated), not
-    // by this score. Floor at SCORE_PRESENT so members don't fade while the
-    // group is up.
+    const presentBackups = members.filter(id => id !== MAIN_VOCAL_ID);
+
+    // Distribute active non-lead genres across the present backups.
+    const playingBackups = assignBackups(nonLeadStyles, presentBackups);
+
+    // Presence score keeps members on stage (animation is decided by the
+    // `playing` flag below, not this score). Floor so they don't fade
+    // while the group is up.
     const memberScore = present ? Math.max(fem.score, SCORE_PRESENT) : SCORE_PRESENT;
     for (const id of members) {
       upsertPerformer(id, memberScore, now);
-      // Preload both sheets so the climax (idle↔play/dance) flip is instant.
+      const p = performers.get(id);
+      if (p) {
+        p.playing = id === MAIN_VOCAL_ID
+          ? (vocalPresent || leadActive)   // lead: sings, and spotlight for jazz/ballad
+          : playingBackups.has(id);        // backup: dances while its assigned genre sounds
+      }
+      // Preload both sheets so the idle↔play/dance flip is instant.
       ensureSpriteSet(id, 'idle');
       ensureSpriteSet(id, 'play');
     }
+
+    if (idolRenderedSize === 0) styleAssignee.clear();
 
     // Peel-off: any female-pool member beyond the current group size fades
     // promptly (one per tick as the group shrinks) instead of lingering on
@@ -633,7 +709,10 @@
 
     // Hip-hop & rap (includes the speech "Rapping" label per operator
     // request — rap performance always reads as hip-hop dance).
-    if (/hip hop|hiphop|\brap\b|rapping|trap music/.test(s))             return 'hiphop';
+    // Speech is treated as rap (operator decision) — spoken-word reads as a
+    // hip-hop performance on the band stage.
+    if (/hip hop|hiphop|\brap\b|rapping|trap music|\bspeech\b|speaking|narration|monologue/.test(s))
+                                                                          return 'hiphop';
 
     // Disco / funk / Latin → waacking (the style descended directly
     // from 70s disco-funk; salsa/Latin share the percussive groove).
@@ -1040,39 +1119,14 @@
     }
   }
 
-  // ── Climax (loudness) gate ───────────────────────────────────────────
-  // volumeLevel = eased mean of the smoothed spectrum (0..1). climaxActive
-  // flips on with hysteresis: a loud passage makes the whole idol group
-  // perform; otherwise only the main vocal does.
-  let volumeLevel = 0;
-  let climaxActive = false;
-
-  function updateClimax() {
-    if (smoothed && smoothed.length) {
-      let sum = 0;
-      for (let i = 0; i < smoothed.length; i++) sum += smoothed[i];
-      const mean = sum / smoothed.length;
-      volumeLevel += (mean - volumeLevel) * CLIMAX_VOL_EASE;
-    } else {
-      volumeLevel += (0 - volumeLevel) * CLIMAX_VOL_EASE;
-    }
-    if (climaxActive) {
-      if (volumeLevel < CLIMAX_VOL_EXIT) climaxActive = false;
-    } else if (volumeLevel > CLIMAX_VOL_ENTER) {
-      climaxActive = true;
-    }
-  }
-
   // The animation state a performer should SHOW this frame.
   //   • fading → idle.
-  //   • female pool → volume-gated: climax means everyone performs; in the
-  //     calm "일반노래" state only the main vocal does, the rest idle.
+  //   • female pool → assignee model: each member carries a `playing` flag
+  //     set per tick (main = lead/spotlight, backups = assigned-genre active).
   //   • instruments / male vocals → their score-derived p.state, unchanged.
   function performState(p) {
     if (p.fading) return 'idle';
-    if (FEMALE_POOL.has(p.id)) {
-      return (climaxActive || p.id === MAIN_VOCAL_ID) ? 'play' : 'idle';
-    }
+    if (FEMALE_POOL.has(p.id)) return p.playing ? 'play' : 'idle';
     return p.state;
   }
 
@@ -1212,10 +1266,8 @@
     const dt = Math.min(0.1, (now - lastFrameMs) / 1000);
     lastFrameMs = now;
 
-    // Update the smoothed spectrum + climax gate FIRST so this frame's
-    // performers draw with the current loudness state.
+    // Keep the smoothed spectrum current (drives the bars + note particles).
     tickSmoothSpectrum();
-    updateClimax();
 
     // Row 2 — dancers (back row). Disabled in v0.10 (DANCE_TROUPE_ENABLED).
     const ds = DANCE_TROUPE_ENABLED ? [...dancers.values()] : [];
@@ -1273,6 +1325,7 @@
     status: document.getElementById('bandStatus'),
     stagePick: document.getElementById('stagePicker'),
     source: document.getElementById('sourcePicker'),
+    singerMode: document.getElementById('singerMode'),
     topk: document.getElementById('topkInput'),
     diagSource: document.getElementById('diag-source'),
     diagTick: document.getElementById('diag-tick'),
@@ -1334,8 +1387,8 @@
     dancers.clear();
     idolRenderedSize = 0;
     idolPresentTicks = 0;
-    volumeLevel = 0;
-    climaxActive = false;
+    styleAssignee.clear();
+    backupUsage.clear();
     notes.length = 0;
     lastEmitMs.clear();
     renderLabelStrip([]);
@@ -1347,6 +1400,13 @@
     els.start.addEventListener('click', onStart);
     els.stop.addEventListener('click', onStop);
     els.stagePick.addEventListener('change', () => pickStage(els.stagePick.value));
+
+    // Singer mode (group / solo). Switching to solo while live trims the
+    // group back to the lead on the next tick (handled by upsertIdolGroup).
+    singerMode = els.singerMode ? els.singerMode.value : 'group';
+    if (els.singerMode) {
+      els.singerMode.addEventListener('change', () => { singerMode = els.singerMode.value; });
+    }
 
     if (window.zero && window.zero.music) {
       // Slow tick (1.5 s) — performer + dance registries + label strip.
