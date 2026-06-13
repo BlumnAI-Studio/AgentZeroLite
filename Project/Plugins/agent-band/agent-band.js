@@ -1,5 +1,34 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.9 changelog:
+//   • idol group staging — the female pool is no longer a soloist that
+//     fans out only when multiple distinct vocal labels co-occur. It's now
+//     a GROUP that builds around a fixed lead:
+//       - first female recognition → main vocal (vox7-1), dead-center.
+//       - while the voice keeps coming, the group grows one member per
+//         tick, fanning out alternately right/left around the lead. The
+//         richer the signal (sustained presence + co-occurring genres +
+//         explicit "Female singing"), the larger the target group.
+//       - when the voice stops, it shrinks one member per tick until only
+//         the (then fading) main vocal remains.
+//     New: femaleVocalSignal() / countGenres() / upsertIdolGroup() drive
+//     the size; centerVocals() keeps the lead centered while members
+//     alternate L/R. MAX_PERFORMERS raised to fit a full group.
+//
+// v0.8 changelog:
+//   • idol vocal roster — the female vocal pool is replaced by seven new
+//     higher-quality idol singers (vox7-1 … vox7-7). Unlike the old
+//     band sprites (idle + play), these idols sing AND dance: their
+//     resting sheet is `idle`, and when a vocal label clears
+//     SCORE_ACTIVE their active sheet is `dance` (not `play`). The
+//     play→dance file remap is centralised in stateSheet(); everything
+//     else (fps, glow, bob) keeps the existing 'play' logical state.
+//   • idols are first-class vocals — isVocal() recognises them so the
+//     stage layout keeps them in the center main-vocal area alongside
+//     any remaining vocal-* singers, never the instrument wings.
+//   • the old female sprites (vocal-1 / vocal-3) are retired; the male
+//     pool (vocal-2 / vocal-4) is unchanged.
+//
 // v0.7 changelog:
 //   • pitch-driven note particle effect — soft vertical streaks
 //     rise from the stage baseline and fade out as they ascend.
@@ -130,7 +159,7 @@
   const SCORE_KEEP      = 0.025;
   const PERSIST_TICKS   = 8;   // ~12 s of unseen labels before fade out
   const FADE_MS         = 700;
-  const MAX_PERFORMERS  = 8;
+  const MAX_PERFORMERS  = 11;  // room for a full 7-idol group + a few instruments
 
   // Layout — sprite width is capped so 1 performer doesn't blow up to fill
   // the whole canvas; the unused space stays as empty stage on the sides.
@@ -180,13 +209,52 @@
   //   sprites so a "Singing + Choir" tick reads as an ensemble, not a
   //   single confused soloist.
   //
-  // Sprite gender (visually verified from the assets):
-  //   vocal-1 = female (blonde, blue dress)   vocal-2 = male (dark hair, red coat)
-  //   vocal-3 = female (pink hair, red dress) vocal-4 = male (silver hair, purple coat)
-  const VOCAL_FEMALE = ['vocal-1', 'vocal-3'];
+  // Sprite roster (v0.8):
+  //   Female pool — seven new idol singers (vox7-1 … vox7-7). Higher
+  //     quality than the retired vocal-1/vocal-3, and they DANCE: their
+  //     active sheet is `dance`, not `play` (see IDOL_VOCALS / stateSheet).
+  //   Male pool — unchanged:
+  //     vocal-2 = male (dark hair, red coat)  vocal-4 = male (silver hair, purple coat)
+  // VOCAL_FEMALE doubles as the idol group's *slot order*: index 0 is the
+  // permanent main vocal (stays dead-center), and members join in this
+  // order as the group grows. Don't reorder casually — vox7-1 is the lead.
+  const VOCAL_FEMALE = ['vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7'];
   const VOCAL_MALE   = ['vocal-2', 'vocal-4'];
-  let femaleCursor = 0;
+  const MAIN_VOCAL_ID = VOCAL_FEMALE[0];   // the lead — center stage, sticky
   let maleCursor = 0;
+
+  // Idol vocals sing AND dance. They ship `idle` + `dance` sheets (no
+  // `play` sheet), so their active logical state ('play') is remapped to
+  // the `dance` file by stateSheet(). They're also true vocals for stage
+  // layout (center main-vocal area) even though the id isn't `vocal-*`.
+  const IDOL_VOCALS = new Set(VOCAL_FEMALE);
+
+  // ── Idol group staging (v0.9) ────────────────────────────────────────
+  // The female pool is staged as a GROUP, not a soloist. The first female
+  // recognition brings the main vocal (center). While female vocal keeps
+  // coming — and the richer the signal (sustained presence + genre
+  // variety) — the group grows one member per tick, fanning out left/right
+  // around the main vocal. When the voice stops, it shrinks back one
+  // member per tick until only the (then fading) main vocal remains.
+  const IDOL_RAMP_TICKS_PER_MEMBER = 2;  // +1 target member per N sustained ticks
+  const IDOL_GENRE_BONUS_MAX = 3;        // "여자 + 장르n" → up to +3 members
+  const IDOL_GROUP_MAX = VOCAL_FEMALE.length; // 7 — the whole pool
+
+  let idolRenderedSize = 0;  // how many idols are currently staged (ramps ±1/tick)
+  let idolPresentTicks = 0;  // consecutive ticks the female vocal has been heard
+
+  // A performer is a "vocal" (center stage) if it's a classic vocal-* id
+  // or one of the new idol singers.
+  function isVocal(id) {
+    return id.startsWith('vocal-') || IDOL_VOCALS.has(id);
+  }
+
+  // Resolve a performer's logical state to its on-disk sheet name. Idol
+  // singers have no `play` sheet — their active animation is `dance`.
+  function stateSheet(id, state) {
+    if (state === 'play' && IDOL_VOCALS.has(id)) return 'dance';
+    return state;
+  }
 
   function labelToPerformer(label) {
     const s = label.toLowerCase();
@@ -208,26 +276,15 @@
     if (/\bpiano\b/.test(s))                                       return 'piano';
     if (/\bdrum\b|cymbal|tom-tom|hi-hat|tabla|\bgong\b/.test(s))   return 'drum';
 
-    // ── Vocals — gender-aware fan-out ──
-    // Male-specific labels: only AudioSet's "Male singing" today, but the
-    // regex is tolerant of "man singing" / "man speaking" too.
+    // ── Vocals ──
+    // Male-specific labels still map to a single male sprite here.
+    // FEMALE + gender-neutral vocal labels are NOT handled here anymore —
+    // they feed the idol-group controller (femaleVocalSignal /
+    // upsertIdolGroupFromLabels) which stages a full group rather than a
+    // single soloist. Male-specific labels are excluded from that signal.
     if (/male sing|\bman sing\b/.test(s) && !/female/.test(s)) {
       const id = VOCAL_MALE[maleCursor % VOCAL_MALE.length];
       maleCursor++;
-      return id;
-    }
-    // Female-specific labels.
-    if (/female sing|\bwoman sing\b/.test(s)) {
-      const id = VOCAL_FEMALE[femaleCursor % VOCAL_FEMALE.length];
-      femaleCursor++;
-      return id;
-    }
-    // Gender-neutral vocal labels — default to the female pool per
-    // operator decision (matches the more common pop / OST voice register
-    // in mixed audio).
-    if (/sing(ing)?|choir|vocal|chant|yodel|rapping|hum/.test(s)) {
-      const id = VOCAL_FEMALE[femaleCursor % VOCAL_FEMALE.length];
-      femaleCursor++;
       return id;
     }
 
@@ -241,6 +298,33 @@
     if (/percussion/.test(s))                                     return 'drum';
 
     return null;
+  }
+
+  // Strength of the female / gender-neutral vocal signal this tick. Male
+  // singing is excluded so a male soloist never inflates the idol group.
+  // `explicit` is true when AudioSet actually said "Female singing" (vs a
+  // gender-neutral "Singing" / "Choir" / "Vocal music" that we attribute
+  // to the female pool by operator convention).
+  function femaleVocalSignal(labels) {
+    let explicit = 0, neutral = 0;
+    for (const l of labels) {
+      const s = l.name.toLowerCase();
+      if (/male sing|\bman sing\b/.test(s) && !/female/.test(s)) continue; // male soloist
+      if (/female sing|\bwoman sing\b/.test(s))                  explicit = Math.max(explicit, l.score);
+      else if (/sing(ing)?|choir|vocal|chant|yodel|rapping|hum/.test(s)) neutral = Math.max(neutral, l.score);
+    }
+    return { score: Math.max(explicit, neutral), explicit: explicit > 0 };
+  }
+
+  // How many distinct genres are co-occurring (reuses the dance-style
+  // mapping). "여자 + 장르n" — more genres → a richer, bigger idol group.
+  function countGenres(labels) {
+    const styles = new Set();
+    for (const l of labels) {
+      const g = labelToDance(l.name);
+      if (g && l.score >= DANCE_KEEP) styles.add(g);
+    }
+    return styles.size;
   }
 
   // ── Band sprite cache — TexturePacker-style sheet + JSON ─────────────
@@ -307,8 +391,10 @@
     entry = { sheet: null, frames: null };
     spriteCache.set(key, entry);
 
-    const sheetUrl = `${SPRITE_BASE}${id}/${state}.png`;
-    const jsonUrl  = `${SPRITE_BASE}${id}/${state}.json`;
+    // Idol vocals resolve 'play' → 'dance' sheet; everyone else 1:1.
+    const sheet = stateSheet(id, state);
+    const sheetUrl = `${SPRITE_BASE}${id}/${sheet}.png`;
+    const jsonUrl  = `${SPRITE_BASE}${id}/${sheet}.json`;
 
     // Fetch the atlas JSON first so the render loop sees a complete entry
     // (sheet AND frames) before it tries to draw. The two requests
@@ -348,16 +434,42 @@
   const performers = new Map();
   let tickCounter = 0;
 
+  // Spawn-or-refresh one performer at the given score. Marks it "seen this
+  // tick" (so it won't fade) and resolves its idle/active state. Returns
+  // false if the stage is full of active performers and this one couldn't
+  // get a slot.
+  function upsertPerformer(id, score, now) {
+    if (!performers.has(id) && performers.size >= MAX_PERFORMERS) {
+      // Evict a fading performer to make room; never bump an active one.
+      const fadingId = [...performers.entries()].find(([, p]) => p.fading)?.[0];
+      if (fadingId) performers.delete(fadingId);
+      else return false;
+    }
+    let p = performers.get(id);
+    const state = score >= SCORE_ACTIVE ? 'play' : 'idle';
+    if (!p) {
+      p = { id, score, state, addedAt: now, lastSeenTick: tickCounter, fading: false, fadeAt: 0 };
+      performers.set(id, p);
+    } else {
+      p.score = score;
+      p.state = state;
+      p.lastSeenTick = tickCounter;
+      p.fading = false;
+      p.fadeAt = 0;
+    }
+    ensureSpriteSet(id, p.state);
+    return true;
+  }
+
   function upsertPerformersFromLabels(labels) {
     tickCounter++;
     const now = performance.now();
-    // Reset both vocal cursors so a stable label order across ticks yields
-    // a stable sprite assignment (no flicker between vocal-1 and vocal-3).
-    femaleCursor = 0;
     maleCursor = 0;
 
     // Collapse multi-label hits onto a single sprite id with the strongest score
     // ("Guitar" + "Acoustic guitar" → one guitar slot with max score).
+    // NOTE: female / neutral vocals return null from labelToPerformer — the
+    // idol group is staged separately below.
     const collapsed = new Map();
     for (const l of labels) {
       const id = labelToPerformer(l.name);
@@ -375,35 +487,11 @@
       const onStage = performers.has(id);
       const required = onStage ? SCORE_KEEP : SCORE_PRESENT;
       if (score < required) continue;
-
-      if (!performers.has(id) && performers.size >= MAX_PERFORMERS) {
-        // Evict a fading performer to make room; never bump an active one.
-        const fadingId = [...performers.entries()].find(([, p]) => p.fading)?.[0];
-        if (fadingId) performers.delete(fadingId);
-        else continue;
-      }
-
-      let p = performers.get(id);
-      if (!p) {
-        p = {
-          id,
-          score,
-          state: score >= SCORE_ACTIVE ? 'play' : 'idle',
-          addedAt: now,
-          lastSeenTick: tickCounter,
-          fading: false,
-          fadeAt: 0,
-        };
-        performers.set(id, p);
-      } else {
-        p.score = score;
-        p.state = score >= SCORE_ACTIVE ? 'play' : 'idle';
-        p.lastSeenTick = tickCounter;
-        p.fading = false;
-        p.fadeAt = 0;
-      }
-      ensureSpriteSet(id, p.state);
+      upsertPerformer(id, score, now);
     }
+
+    // Stage the female idol group (main vocal + fan-out).
+    upsertIdolGroup(labels, now);
 
     // Unseen-for-N-ticks → fade-out → evict.
     for (const [id, p] of performers) {
@@ -416,6 +504,67 @@
       if (p.fading && now - p.fadeAt > FADE_MS) {
         performers.delete(id);
       }
+    }
+  }
+
+  // ── Idol group controller ────────────────────────────────────────────
+  //
+  // Stages the female pool as a growing/shrinking GROUP centered on the
+  // main vocal:
+  //   • first female recognition → main vocal (vox7-1), center stage.
+  //   • while the voice keeps coming, the TARGET size climbs — faster the
+  //     richer the signal: +1 per IDOL_RAMP_TICKS_PER_MEMBER sustained
+  //     ticks, +1 per co-occurring genre (capped), +1 when the label is an
+  //     explicit "Female singing".
+  //   • the rendered size chases the target by ±1 per tick so members fan
+  //     out (and later peel off) one at a time rather than popping in/out.
+  //   • members are VOCAL_FEMALE[0..size); index 0 (main) is always present
+  //     while the group is up, and computeLayout centers it with the rest
+  //     alternating left/right (see centerVocals).
+  function upsertIdolGroup(labels, now) {
+    const fem = femaleVocalSignal(labels);
+    const onStage = idolRenderedSize > 0;
+    const required = onStage ? SCORE_KEEP : SCORE_PRESENT;
+    const present = fem.score >= required;
+
+    let target;
+    if (present) {
+      idolPresentTicks++;
+      target = 1
+        + Math.floor(idolPresentTicks / IDOL_RAMP_TICKS_PER_MEMBER)
+        + Math.min(countGenres(labels), IDOL_GENRE_BONUS_MAX)
+        + (fem.explicit ? 1 : 0);
+      target = Math.max(1, Math.min(IDOL_GROUP_MAX, target));
+    } else {
+      idolPresentTicks = 0;
+      target = 0;   // ramp the whole group down
+    }
+
+    // Chase the target one member per tick.
+    if (target > idolRenderedSize) idolRenderedSize++;
+    else if (target < idolRenderedSize) idolRenderedSize--;
+    if (idolRenderedSize < 0) idolRenderedSize = 0;
+
+    const members = VOCAL_FEMALE.slice(0, idolRenderedSize);
+    const memberSet = new Set(members);
+    // Members "dance" at the live vocal score while present. The main vocal
+    // gets a score floor so the lead stays lively and center; during the
+    // silent ramp-down everyone idles (score 0).
+    const memberScore = present ? Math.max(fem.score, SCORE_PRESENT) : 0;
+    for (const id of members) {
+      const score = id === MAIN_VOCAL_ID
+        ? Math.max(memberScore, present ? SCORE_ACTIVE : 0)
+        : memberScore;
+      upsertPerformer(id, score, now);
+    }
+
+    // Peel-off: any idol beyond the current group size fades promptly (one
+    // per tick as the group shrinks) instead of lingering on the unseen
+    // timer. Covers the size==0 case too — the main vocal fades last.
+    for (const id of IDOL_VOCALS) {
+      if (memberSet.has(id)) continue;
+      const p = performers.get(id);
+      if (p && !p.fading) { p.fading = true; p.fadeAt = now; p.state = 'idle'; }
     }
   }
 
@@ -584,13 +733,35 @@
     'piano': 50, 'drum': 60,
   };
 
+  // Order the vocal cluster so the main vocal sits dead-center and the
+  // other idols fan out alternately right/left in join order — vox7-2 →
+  // right of main, vox7-3 → left, vox7-4 → further right, … — so the group
+  // grows symmetrically around a lead that never moves. Any male vocals
+  // (rare alongside the idol group) hug the outer edges of the cluster.
+  function centerVocals(vocals) {
+    const idols = vocals
+      .filter(p => IDOL_VOCALS.has(p.id))
+      .sort((a, b) => VOCAL_FEMALE.indexOf(a.id) - VOCAL_FEMALE.indexOf(b.id));
+    const males = vocals.filter(p => !IDOL_VOCALS.has(p.id));
+
+    const left = [], right = [];
+    idols.forEach((p, i) => {
+      if (i === 0) return;                      // main vocal stays center
+      (i % 2 === 1 ? right : left).push(p);
+    });
+    const centeredIdols = [...left.reverse(), ...(idols[0] ? [idols[0]] : []), ...right];
+
+    const mHalf = Math.ceil(males.length / 2);
+    return [...males.slice(0, mHalf), ...centeredIdols, ...males.slice(mHalf)];
+  }
+
   function computeLayout(allPerformers, w, h) {
     const layout = new Map();
     if (allPerformers.length === 0) return layout;
 
-    const vocals = allPerformers.filter(p => p.id.startsWith('vocal-'));
+    const vocals = centerVocals(allPerformers.filter(p => isVocal(p.id)));
     const insts  = allPerformers
-      .filter(p => !p.id.startsWith('vocal-'))
+      .filter(p => !isVocal(p.id))
       .sort((a, b) => (ORDER_RANK[a.id] ?? 99) - (ORDER_RANK[b.id] ?? 99));
 
     // Instruments split into L/R wings around the vocal cluster.
@@ -1072,6 +1243,8 @@
     els.stop.disabled = true;
     performers.clear();
     dancers.clear();
+    idolRenderedSize = 0;
+    idolPresentTicks = 0;
     notes.length = 0;
     lastEmitMs.clear();
     renderLabelStrip([]);

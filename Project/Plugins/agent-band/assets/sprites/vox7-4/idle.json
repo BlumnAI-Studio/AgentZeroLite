@@ -1,6 +1,6 @@
 {
   "frames": {
-    "vocal-1_idle_0.png": {
+    "vox7-4_idle_0.png": {
       "frame": {
         "x": 8,
         "y": 8,
@@ -21,7 +21,7 @@
       },
       "duration": 120
     },
-    "vocal-1_idle_1.png": {
+    "vox7-4_idle_1.png": {
       "frame": {
         "x": 208,
         "y": 8,
@@ -42,7 +42,7 @@
       },
       "duration": 120
     },
-    "vocal-1_idle_2.png": {
+    "vox7-4_idle_2.png": {
       "frame": {
         "x": 408,
         "y": 8,
@@ -63,9 +63,51 @@
       },
       "duration": 120
     },
-    "vocal-1_idle_3.png": {
+    "vox7-4_idle_3.png": {
       "frame": {
         "x": 608,
+        "y": 8,
+        "w": 192,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "duration": 120
+    },
+    "vox7-4_idle_4.png": {
+      "frame": {
+        "x": 808,
+        "y": 8,
+        "w": 192,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 192
+      },
+      "duration": 120
+    },
+    "vox7-4_idle_5.png": {
+      "frame": {
+        "x": 1008,
         "y": 8,
         "w": 192,
         "h": 192
@@ -91,7 +133,7 @@
     "image": "idle.png",
     "format": "RGBA8888",
     "size": {
-      "w": 808,
+      "w": 1208,
       "h": 208
     },
     "scale": "1",
@@ -99,10 +141,10 @@
       {
         "name": "idle",
         "from": 0,
-        "to": 3,
+        "to": 5,
         "direction": "forward"
       }
     ],
-    "slug": "vocal-1"
+    "slug": "vox7-4"
   }
 }
