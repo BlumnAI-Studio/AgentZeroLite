@@ -1,123 +1,115 @@
 {
   "_description": "PDSA Learning surface — bilingual EN/KO. Default audience: English. `sources[].title`, `tried[]`, `solved[]`, `remaining[]`, `learned.lead`, `learned.body` use `{ en, ko }` shape. Scalars (date/time/category/file/analyzedAt/windowDays) stay language-neutral. PDSA UPDATE mode in the harness-view-build skill must emit both languages.",
-  "analyzedAt": "2026-06-06",
-  "windowDays": 28,
+  "analyzedAt": "2026-06-14",
+  "windowDays": 14,
   "sources": [
     {
-      "date": "2026-06-06", "time": "22:10", "category": "tamer",
-      "file": "harness/logs/tamer/2026-06-06-2210-music-llm-rollout.md",
+      "date": "2026-06-14", "time": "20:40", "category": "mission-records",
+      "file": "harness/logs/mission-records/M0026-수행결과.md",
       "title": {
-        "en": "Harness v1.8.0 — Music LLM rollout: README + README-KR sections, new music-curator specialist (7th agent) with three convention docs (AST serving contract, audio capture pipeline, spectrum sensitivity), config bump + dedicated v1.8.0 doc",
-        "ko": "하네스 v1.8.0 — Music LLM 출시: README + README-KR 섹션, 신규 music-curator 전문가 (7번째 에이전트) 와 컨벤션 3종 (AST serving contract, audio capture pipeline, spectrum sensitivity), config bump + 전용 v1.8.0 문서"
+        "en": "M0026 — Agent Band YouTube embed stage: host-side oEmbed (CORS-safe) + stateless one-shot LLM genre classify; shipped v0.14.0 with persisted playlist and girl-group policy, plus follow-ups #1 classify provenance, #2 LLM-backed test, #3 persistence",
+        "ko": "M0026 — 에이전트 악단 유튜브 임베드 무대: 호스트 측 oEmbed(CORS 우회) + stateless 1회 LLM 장르 분류; v0.14.0(재생목록 영속화·걸그룹 정책) 출시, 후속 #1 분류 출처표시·#2 LLM 통합테스트·#3 영속화"
       }
     },
     {
-      "date": "2026-05-25", "time": "21:55", "category": "code-coach",
-      "file": "harness/logs/code-coach/2026-05-25-21-55-agentbot-gemma-toolcall-rca.md",
+      "date": "2026-06-14", "time": "20:10", "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-14-2010-m0026-youtube-stage-design.md",
       "title": {
-        "en": "AgentBot × Gemma 4 — function-call envelope RCA against Webnori a1; the raw payload was byte-identical to the system-prompt example, then patched with prompt-example rewrite + once-per-session done-envelope self-heal in ExternalAgentLoop, RED→GREEN online smoke",
-        "ko": "AgentBot × Gemma 4 — Webnori a1 펑션콜 envelope 드롭 RCA; raw 출력이 시스템 프롬프트 예시 문자열과 바이트 단위로 동일. 프롬프트 예시 envelope 형태 재작성 + ExternalAgentLoop 에 once-per-session 자가복구 추가로 RED→GREEN 온라인 스모크 전환"
+        "en": "Pencil-first design gate for M0026 — the brief required design → review → implement, so the .pen mockup + notes board landed and was approved before any code",
+        "ko": "M0026 펜슬 우선 설계 게이트 — 브리프가 설계 → 검토 → 구현을 요구해, 코드 전에 .pen 목업 + 노트 보드를 승인받고 진행"
       }
     },
     {
-      "date": "2026-05-23", "time": "07:42", "category": "tamer",
-      "file": "harness/logs/tamer/2026-05-23-07-42-relax-unit-test-policy-author-verify.md",
+      "date": "2026-06-13", "time": "21:00", "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2100-singer-assignee-staging.md",
       "title": {
-        "en": "Harness v1.7.1 — relax unit-test automation policy with a narrow Author-verify exception (newly written tests auto-run, but LLM-smoke paths ask first)",
-        "ko": "하네스 v1.7.1 — 유닛테스트 자동 정책 완화 + Author-verify 예외 신설 (신규 작성 테스트만 자동 수행, LLM 스모크 경로는 사용자 승인 우선)"
+        "en": "Singer assignee staging (v0.12.0) — replaced the loudness climax gate with an instruments-like model: female vocal → main, genres → backups via least-used random assignment, co-occurring genres light two backups",
+        "ko": "싱어 담당자(assignee) 연출 (v0.12.0) — 음량 climax 게이트를 악기형 모델로 교체: 여성보컬→메인, 장르→백업(least-used 랜덤·균등), 동시 장르는 두 백업 점등"
       }
     },
     {
-      "date": "2026-05-10", "time": "15:30", "category": "tamer",
-      "file": "harness/logs/tamer/2026-05-10-15-30-webnori-a1-a2-model-survey.md",
+      "date": "2026-06-13", "time": "21:30", "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2130-stadium-stage-girlgroup-female-only.md",
       "title": {
-        "en": "Live probe of Webnori a1/a2 free gateways via OpenAI-compatible /v1/models — found roster reshuffle (a1 = production workhorse, a2 = experimental), and that the committed WebnoriDefaults.KnownModels referenced a model no longer served",
-        "ko": "Webnori a1/a2 무료 게이트웨이를 OpenAI 호환 /v1/models 로 라이브 조회 — 카탈로그 재정렬 발견 (a1 = 프로덕션 워크호스, a2 = 실험), 코드에 박힌 WebnoriDefaults.KnownModels 가 더 이상 서빙되지 않는 모델을 참조 중이었다"
+        "en": "Stadium (FIFA 26) background + girl-group female-only (v0.12.1) — one stagePicker option for the uncommitted asset, and male singers dropped at the collapse step in group mode (instruments unaffected)",
+        "ko": "Stadium(FIFA 26) 배경 + 걸그룹 여성 전용 (v0.12.1) — 언커밋 에셋을 stagePicker 옵션 한 줄로 등록, group 모드에서 collapse 단계 남성 싱어 스킵(악기 무관)"
       }
     },
     {
-      "date": "2026-05-10", "time": "10:31", "category": "kakashi-copy",
-      "file": "harness/logs/kakashi-copy/2026-05-10-10-31-pencil-design-from-pencil-creator.md",
+      "date": "2026-06-13", "time": "22:00", "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2200-per-stage-position-offset.md",
       "title": {
-        "en": "Mode C Kakashi Copy — pencil-design skill ingested from the sibling pencil-creator project (5 files / 1191 lines) with security grep + .secret/ confirmed in .gitignore, plus harness provenance knowledge file",
-        "ko": "Mode C 카카시 카피 — 형제 프로젝트 pencil-creator 에서 pencil-design 스킬 이식 (5 파일 / 1191 줄) + 보안 grep + .secret/ .gitignore 등재 확인, 하네스 provenance 지식 파일 동시 신설"
+        "en": "Per-stage position offset (v0.12.2) — STAGE_Y_OFFSET map nudges the cast vertically per background (Stadium −50px) so performers land on each background's floor line; unlisted stages unchanged",
+        "ko": "배경별 위치 오프셋 (v0.12.2) — STAGE_Y_OFFSET 맵으로 배경마다 캐릭터 수직 보정(Stadium −50px), 미등록 배경은 그대로"
       }
     }
   ],
   "tried": [
     {
-      "en": "Open a new audio axis — bring AST AudioSet (MIT/ast-finetuned-audioset-10-10-0.4593) into AgentZero via ONNX Runtime 1.20 on a sliding 10s window, dual-source capture (mic + WASAPI loopback against any render endpoint), and a 64-band log-frequency dBFS spectrum repainting at ~30 Hz.",
-      "ko": "새 오디오 축 개통 — AST AudioSet (MIT/ast-finetuned-audioset-10-10-0.4593) 을 ONNX Runtime 1.20 으로 슬라이딩 10초 윈도우에 도입, 듀얼 소스 캡처 (마이크 + 임의 렌더 엔드포인트 대상 WASAPI 루프백), 64밴드 로그 주파수 dBFS 스펙트럼 ~30 Hz 리페인트."
+      "en": "Open a new media axis on the band stage — embed a YouTube player in the UPPER region without changing the window size (split the 1fr stage cell, keep the band in the lower region reacting via the existing SystemLoopback + AST path, no new audio wiring).",
+      "ko": "악단 무대에 새 미디어 축 개통 — 창 크기 변경 없이 상단에 유튜브 플레이어 임베드(1fr 스테이지 셀 분할, 하단 악단은 기존 SystemLoopback + AST 경로로 반응 유지, 신규 오디오 배선 0)."
     },
     {
-      "en": "Pair every major code surface with its harness specialist before it can drift — Music tab landed simultaneously with music-curator agent (7th) and three binding convention docs (AST serving / capture pipeline / spectrum sensitivity) in harness v1.8.0.",
-      "ko": "주요 코드 표면이 drift 하기 전 하네스 전문가와 항상 페어링 — Music 탭이 music-curator 에이전트 (7번째) + 컨벤션 3종 (AST serving / capture pipeline / spectrum sensitivity) 과 동시에 하네스 v1.8.0 으로 합류."
+      "en": "Keep the metadata path key-free and the LLM call clean — fetch YouTube oEmbed HOST-side to dodge browser CORS (SSRF-safe: rebuild the canonical watch URL from a validated 11-char id), and classify genre with a STATELESS one-shot LLM session that never pollutes chat history.",
+      "ko": "메타 경로는 키 불필요·LLM 호출은 깨끗하게 — 유튜브 oEmbed를 호스트 측에서 가져와 브라우저 CORS 우회(SSRF 안전: 검증된 11자 id로 canonical URL 재조립), 장르는 채팅 히스토리를 오염시키지 않는 stateless 1회 LLM 세션으로 분류."
     },
     {
-      "en": "Live-probe external dependencies instead of trusting committed catalogs — direct /v1/models call against Webnori a1/a2 revealed a roster reshuffle the codebase's WebnoriDefaults.KnownModels missed.",
-      "ko": "커밋된 카탈로그를 믿지 말고 외부 의존성을 라이브 probe — Webnori a1/a2 의 /v1/models 직접 호출로 코드의 WebnoriDefaults.KnownModels 가 놓친 카탈로그 재정렬을 발견."
+      "en": "Make the played list durable and browsable — persist to localStorage with an open/close toggle and replay; and gate the whole feature behind a pencil-first design → review → implement contract.",
+      "ko": "재생 목록을 영속·열람 가능하게 — localStorage 저장 + 열고/닫기 토글 + 재생, 그리고 전체 기능을 펜슬 우선 설계 → 검토 → 구현 계약으로 게이트."
     },
     {
-      "en": "Tighten test-policy CPU cost while opening a narrow Author-verify exception in v1.7.1 — newly written tests auto-run filtered, but LLM-smoke paths (Whisper / Gemma / Webnori) ask first.",
-      "ko": "v1.7.1 에서 테스트 정책 CPU 비용 압축 + 좁은 Author-verify 예외 신설 — 신규 작성 테스트만 필터로 자동 수행, LLM 스모크 (Whisper / Gemma / Webnori) 닿으면 사용자에게 먼저 확인."
+      "en": "Reshape idol-group staging across v0.12.x — assignee model (genres → least-used backups), Stadium background, per-stage Y offset, girl-group female-only, then the M0026 policy: GROUP excludes the main vocal (7 idols), SOLO keeps vocal-ex.",
+      "ko": "v0.12.x에 걸쳐 아이돌 그룹 연출 재구성 — assignee 모델(장르→least-used 백업), Stadium 배경, 배경별 Y 오프셋, 걸그룹 여성 전용, 이어 M0026 정책: GROUP은 메인보컬 제외(7인), SOLO는 vocal-ex 유지."
     },
     {
-      "en": "Catch the few-shot regression where Gemma copied the system-prompt example verbatim — capture raw=={\"message\":...}, prove it byte-equals the prompt example, ship envelope-form example rewrite + once-per-session self-heal in ExternalAgentLoop locked by RED→GREEN online smoke.",
-      "ko": "Gemma 가 시스템 프롬프트 예시를 그대로 복사한 few-shot 회귀 적발 — raw=={\"message\":...} 캡쳐, 프롬프트 예시와 바이트 일치 증명, ExternalAgentLoop 에 envelope 형태 예시 재작성 + once-per-session 자가복구 출시 후 RED→GREEN 온라인 스모크로 고정."
+      "en": "Diagnose three LLM-settings symptoms by reading the app log, not guessing — 'everything classified 기타', 'External saved but not applied', and 'LLM Settings Chat Test dead' while AIMODE worked.",
+      "ko": "LLM 설정 3대 증상을 추측이 아닌 앱 로그로 진단 — '모두 기타 분류', 'External 저장됐는데 미적용', 'AIMODE는 되는데 LLM 설정 ChatTest 먹통'."
     }
   ],
   "solved": [
     {
-      "en": "Music tab live end-to-end: 347 MB AST ONNX downloads from onnx-community mirror via the shared ModelDownloadDialog (no Python optimum-cli detour), capture pipeline normalizes arbitrary mixer formats to 16 kHz mono PCM16, interlocked single-flight gate keeps backlog at zero during ONNX warm-up.",
-      "ko": "Music 탭 라이브 end-to-end: 347 MB AST ONNX 가 공용 ModelDownloadDialog 로 onnx-community 미러에서 다운로드 (Python optimum-cli 우회 불필요), 캡처 파이프라인이 임의 믹서 포맷을 16 kHz 모노 PCM16 으로 정규화, interlocked 단일-flight 게이트로 ONNX 워밍업 중 백로그 0."
+      "en": "M0026 shipped end-to-end: agent-band v0.14.0 (YouTube embed stage + categorized, persisted playlist), new host bridge ops youtube.oembed / llm.classify (IZeroBrowser unchanged), girl-group 7-member policy. Verified: AgentZeroWpf 0 CS errors, ZeroCommon.Tests 294 pass, integration test green (BABYMONSTER → K-Pop via Webnori A2).",
+      "ko": "M0026 end-to-end 출시: 에이전트 악단 v0.14.0(유튜브 임베드 + 카테고리·영속 재생목록), 신규 호스트 op youtube.oembed / llm.classify(IZeroBrowser 불변), 걸그룹 7인 정책. 검증: AgentZeroWpf CS 0, ZeroCommon.Tests 294 pass, 통합테스트 green(BABYMONSTER → K-Pop, Webnori A2)."
     },
     {
-      "en": "Harness v1.7.2 → v1.8.0 minor bump landed with the 7th specialist (music-curator), pure-addition migration — no existing agent / engine / knowledge file modified, rollback procedure documented in v1.8.0.md.",
-      "ko": "하네스 v1.7.2 → v1.8.0 minor bump 가 7번째 전문가 (music-curator) 와 함께 합류, 순수 추가 마이그레이션 — 기존 에이전트 / 엔진 / 지식 파일 0개 수정, 롤백 절차는 v1.8.0.md 에 문서화."
+      "en": "Root-caused the all-기타 + dead-Chat-Test bug to ONE line: LlmGateway.HasUsableExternal omitted ExternalProviderNames.WebnoriA2, so IsActiveAvailable() returned false for a2 — breaking every IsActiveAvailable-gated consumer (Chat Test, plugin classify) while AIMODE worked because it gates on CreateExternalProvider() instead. Fixed and committed separately (a6634b9).",
+      "ko": "모두-기타 + ChatTest 먹통을 한 줄로 근본원인 규명: LlmGateway.HasUsableExternal가 WebnoriA2를 빠뜨려 a2에서 IsActiveAvailable()=false → IsActiveAvailable로 게이트하는 모든 소비자(ChatTest·플러그인 classify) 붕괴, 반면 AIMODE는 CreateExternalProvider()로 게이트해 정상. 수정 후 별도 커밋(a6634b9)."
     },
     {
-      "en": "Webnori catalog survey produced a sharp role split — a1 = production workhorse (Gemma 4 E4B + GPT-OSS 20B + nomic embedding), a2 = experimental comparison group (Qwen3.6-27B + Nemotron-3-Nano-4B). models.json now reflects the live roster.",
-      "ko": "Webnori 카탈로그 조사로 역할 분리 명확화 — a1 = 프로덕션 워크호스 (Gemma 4 E4B + GPT-OSS 20B + nomic embedding), a2 = 실험 비교군 (Qwen3.6-27B + Nemotron-3-Nano-4B). models.json 이 라이브 카탈로그를 반영."
+      "en": "Closed the 'saved-but-inactive' settings trap — External 'Save Options' now activates External; Local Save/Load load-then-patches so it no longer wipes the External provider config or resets ActiveBackend; the Test-chat session is now keyed by backend+model so it follows the active LLM after a switch.",
+      "ko": "'저장됐지만 비활성' 설정 함정 해소 — External 'Save Options'가 External을 활성화; Local Save/Load는 load-then-patch로 External 설정·ActiveBackend를 더는 지우지 않음; Test-chat 세션을 백엔드+모델로 키잉해 전환 후 활성 LLM을 따라감."
     },
     {
-      "en": "REST agent loop now survives Gemma's literal-example mimic — prompt examples ship as full envelopes; ExternalAgentLoop wraps inner-only done bodies once per session before hard-failing, with the online smoke pinning the fix.",
-      "ko": "REST agent loop 가 Gemma 의 리터럴 모방을 견딤 — 프롬프트 예시는 풀 envelope 형식, ExternalAgentLoop 가 inner-only done body 를 세션당 1회 wrap 후 hard-fail, 온라인 스모크가 패치를 고정."
-    },
-    {
-      "en": "Cross-project skill ingestion via Kakashi Copy proven safe — pencil-design copied from sibling pencil-creator with a security grep pass (no hardcoded keys, .secret/ already gitignored) and a provenance knowledge file co-created.",
-      "ko": "카카시 카피로 프로젝트 간 스킬 이식이 안전하게 입증 — pencil-design 을 형제 프로젝트 pencil-creator 에서 복사, 보안 grep 통과 (하드코딩 키 0, .secret/ 이미 gitignore) + provenance 지식 파일 동시 생성."
+      "en": "Proved the configured LLM actually classifies — added AgentTest/YouTubeClassifyTests that parses the exact operator link and runs the configured backend (loads the saved Local model or uses External), skipping when unavailable; green with the genre returned, not 기타.",
+      "ko": "설정된 LLM이 실제로 분류함을 증명 — 운영자 링크를 파싱하고 설정된 백엔드(저장된 Local 로드 또는 External)로 돌리는 AgentTest/YouTubeClassifyTests 추가, 미가용 시 skip; 장르 반환(기타 아님)으로 green."
     }
   ],
   "remaining": [
     {
-      "en": "AST mel preprocessing in this build uses Hann + HTK as a pure-.NET approximation of training-time Kaldi compliance.kaldi.fbank — clear instruments come back accurately, environmental edge cases drift a few percent. Kaldi parity refinement plan tracked in harness/knowledge/music-curator/ast-audioset-model-serving.md.",
-      "ko": "이번 빌드의 AST mel 전처리는 학습 시 Kaldi compliance.kaldi.fbank 의 .NET 근사 (Hann + HTK) — 명확한 악기는 정확, 환경음 엣지 케이스는 몇 퍼센트 드리프트. Kaldi 정확 호환 refinement plan 은 harness/knowledge/music-curator/ast-audioset-model-serving.md 추적."
+      "en": "WebView2 may block the youtube.com iframe under stricter CSP / virtual-host policies — verified working on the operator's box but not hardened. If the player goes blank elsewhere, the host needs an explicit CSP / frame allowance.",
+      "ko": "WebView2가 더 엄격한 CSP / 가상호스트 정책에서 youtube.com iframe을 막을 수 있음 — 운영자 환경에선 동작 확인했으나 hardening 미완. 다른 환경에서 플레이어가 비면 호스트 CSP / 프레임 허용 필요."
     },
     {
-      "en": "MERT (m-a-p) and CLAP (LAION) are listed as next-up music models in models.json but not yet integrated as IMusicClassifier implementations — needed when pitch-aware tasks (chord / key detection) or zero-shot text-conditioned classification become user-visible needs.",
-      "ko": "MERT (m-a-p) 와 CLAP (LAION) 이 models.json 에 next-up 음악 모델로 등재되어 있으나 아직 IMusicClassifier 구현체로 통합되지 않음 — 음정 인식 (코드 / 키) 이나 zero-shot 텍스트 조건부 분류가 사용자 니즈가 될 때 필요."
+      "en": "Classification quality depends on the active LLM being loaded — the keyword fallback is coarse, and a2-hosted non-Gemma models may struggle with some titles. The plugin now shows provenance (LLM vs keyword) so the gap is visible, but accuracy still hinges on the user loading a model.",
+      "ko": "분류 품질은 활성 LLM 로드 여부에 의존 — 키워드 폴백은 거칠고, a2의 비-Gemma 모델은 일부 제목에서 약함. 플러그인이 출처(LLM vs 키워드)를 표시해 격차는 보이지만, 정확도는 여전히 모델 로드에 달려 있음."
     },
     {
-      "en": "agent-origin docs still reference Webnori a2 as the default backend (2026-04-27 snapshot) — needs a refresh after the a1/a2 role flip that surfaced in the 2026-05-10 survey.",
-      "ko": "agent-origin 문서가 여전히 Webnori a2 를 기본 백엔드로 참조 (2026-04-27 스냅샷) — 2026-05-10 조사에서 드러난 a1/a2 역할 뒤바뀜 이후 갱신 필요."
+      "en": "The IsActiveAvailable vs CreateExternalProvider divergence is a smell — only IsActiveAvailable was audited for the missing provider. Any other provider switch that enumerates the allowed set could have the same gap; the two gates should collapse to one provider-capability source of truth.",
+      "ko": "IsActiveAvailable vs CreateExternalProvider 분기는 냄새 — 이번엔 IsActiveAvailable만 감사함. 허용 provider 집합을 열거하는 다른 switch도 같은 누락이 있을 수 있음; 두 게이트를 하나의 provider-capability 단일 진실로 합쳐야 함."
     },
     {
-      "en": "PDSA refresh is still operator-pulled — no automation watches log accumulation. Same shape applies to live-probe checks (Webnori catalog, model versions on HF mirrors); periodic CI cron diffing live state against committed catalogs would surface drift instead of waiting for a coincidence question.",
-      "ko": "PDSA 갱신이 여전히 operator pull 기반 — 로그 누적을 자동 감시하는 장치 없음. 같은 모양이 라이브 probe 체크 (Webnori 카탈로그, HF 미러 모델 버전) 에도 적용 — 라이브 상태 vs 커밋된 카탈로그를 diff 하는 주기 CI cron 이 우연한 질문을 기다리는 대신 drift 를 표면화할 것."
-    },
-    {
-      "en": "doc-v* publish gate means Music v0.10 + harness v1.8.0 reach Pages only on the next tag bump — accepted trade-off vs. CI churn from harness/logs frequency, but the lag is visible when the operator visits Pages immediately after this rollout.",
-      "ko": "doc-v* 게시 게이트로 인해 Music v0.10 + 하네스 v1.8.0 이 다음 태그 bump 까지 Pages 에 반영 안 됨 — harness/logs 잦음으로 인한 CI 부하 회피의 트레이드오프지만, 이번 출시 직후 Pages 방문 시 시차가 드러남."
+      "en": "doc-v* publish gate still defers Pages — agent-band v0.14.0 + the LLM-gate fix reach the live site only on the next doc-v tag bump (this publish). Accepted trade-off vs CI churn, but the lag is visible right after a rollout.",
+      "ko": "doc-v* 게시 게이트로 Pages 반영 지연 — 에이전트 악단 v0.14.0 + LLM 게이트 픽스가 다음 doc-v 태그(이번 게시)에서야 라이브 반영. CI 부하 회피의 트레이드오프지만 출시 직후 시차가 보임."
     }
   ],
   "learned": {
     "lead": {
-      "en": "Live probe beats committed catalog — external gateways, model rosters, and few-shot prompt examples all drift, and the harness should treat its own knowledge files as snapshots, not fact. Pair each major surface with a specialist agent + a probe procedure so the snapshot can be re-validated cheaply.",
-      "ko": "커밋된 카탈로그보다 라이브 probe — 외부 게이트웨이, 모델 카탈로그, few-shot 프롬프트 예시 모두 drift 한다. 하네스는 자신의 지식 파일을 사실이 아닌 스냅샷으로 다뤄야 한다. 주요 표면마다 전문가 에이전트 + probe 절차를 페어링해 스냅샷을 저렴하게 재검증할 수 있게 할 것."
+      "en": "When two code paths gate the same capability differently, they WILL diverge — and the log tells the truth the moment you read it instead of guessing. AIMODE checked CreateExternalProvider() while the Chat Test and the plugin checked IsActiveAvailable(); a one-line provider omission made the SAME backend 'ready' in one path and 'not loaded' in the others.",
+      "ko": "같은 기능을 두 코드 경로가 다르게 게이트하면 반드시 어긋난다 — 그리고 추측 대신 로그를 읽는 순간 진실이 드러난다. AIMODE는 CreateExternalProvider()를, ChatTest·플러그인은 IsActiveAvailable()를 확인했고, provider 한 줄 누락이 같은 백엔드를 한 경로에선 '준비됨', 다른 경로에선 '미로드'로 만들었다."
     },
     "body": {
-      "en": "The Webnori a1/a2 survey caught a roster flip that none of our committed docs reflected — `WebnoriDefaults.KnownModels` listed a model that no longer exists on the live gateway. The same lens applied to the Gemma RCA: a system-prompt example that became object code the moment Gemma copied it byte-for-byte, dropping the envelope. The same lens now applied to the Music tab rollout: instead of hard-coding 'AST is the only music model', `IMusicClassifier` keeps the next swap (MERT, CLAP) a same-shape extension; specialist agents are the durable artifact — when the third audio model ships, `music-curator` (v1.8.0) is already in place to own its serving contract, and the rollback procedure in `v1.8.0.md` recognises that the knowledge files survive whichever agent owns them. Next concrete action: a periodic probe job (CI cron, not operator-pulled) that diffs live `/v1/models` against `WebnoriDefaults.KnownModels` and live HuggingFace mirror state against `harness/knowledge/music-curator/ast-audioset-model-serving.md` — drift then surfaces in a check-run instead of being discovered by a coincidence question.",
-      "ko": "Webnori a1/a2 조사가 커밋된 어떤 문서도 반영하지 못한 카탈로그 재정렬을 잡아냈다 — `WebnoriDefaults.KnownModels` 는 라이브 게이트웨이에 더 이상 존재하지 않는 모델을 참조하고 있었다. 같은 렌즈가 Gemma RCA 에도 적용됐다: 시스템 프롬프트 안의 예시가 Gemma 가 바이트 단위로 그대로 복사하는 순간 object code 가 되어 envelope 을 떨궜다. 같은 렌즈가 이번 Music 탭 출시에도 적용된다: 'AST 가 유일한 음악 모델' 이라고 박지 않고 `IMusicClassifier` 시암으로 다음 교체 (MERT, CLAP) 를 같은 모양의 확장으로 유지; 전문가 에이전트가 영구 자산이다 — 세 번째 오디오 모델이 들어올 때 `music-curator` (v1.8.0) 가 이미 그 serving contract 를 소유하고 있고, `v1.8.0.md` 의 롤백 절차는 지식 파일이 어느 에이전트가 소유하든 살아남는다는 것을 인정한다. 다음 구체 액션: 라이브 `/v1/models` 와 `WebnoriDefaults.KnownModels` 를 diff, 라이브 허깅페이스 미러 상태와 `harness/knowledge/music-curator/ast-audioset-model-serving.md` 를 diff 하는 주기 probe (CI cron, operator pull 아님) — drift 가 우연한 질문이 아니라 check-run 으로 표면화된다."
+      "en": "The all-기타 regression looked like a metadata/CORS/'a2-has-no-Gemma' problem until app-log.txt showed AIMODE succeeding with WebnoriA2 at the same instant the plugin logged 'LLM backend not loaded' — pointing straight at the gate, not the data. The fix was one line: add WebnoriA2 to LlmGateway.HasUsableExternal. A second, independent bug rode along — settings persisted the External config but ActiveBackend stayed Local because activation lives in a separate radio, and the Local-tab save built a fresh object that silently wiped External; fixed by save-activates + load-then-patch + a backend-keyed test session. A tooling gotcha also bit: PowerShell 5.1's Compress-Archive writes BACKSLASH zip separators that the installer can't parse, while pwsh 7+ writes slashes — so verify zip ENTRY separators, not just that a zip was produced. Next concrete action: collapse IsActiveAvailable() and CreateExternalProvider() onto a single provider-capability source so a provider can never be 'usable' in one and 'unknown' in the other, and grep every provider enumeration for WebnoriA2 completeness.",
+      "ko": "모두-기타 회귀는 메타/CORS/'a2엔 Gemma 없음' 문제처럼 보였지만, app-log.txt가 같은 순간 AIMODE는 WebnoriA2로 성공하고 플러그인은 'LLM backend not loaded'를 찍는 걸 보여주며 곧장 데이터가 아닌 게이트를 가리켰다. 수정은 한 줄: LlmGateway.HasUsableExternal에 WebnoriA2 추가. 독립적인 두 번째 버그가 동반됐다 — 설정은 External 구성을 저장했지만 활성화는 별도 라디오에 있어 ActiveBackend가 Local에 머물렀고, Local 탭 저장은 새 객체를 만들어 External을 조용히 지웠다; save-activates + load-then-patch + 백엔드 키잉 테스트 세션으로 해결. 도구 함정도 물었다: PowerShell 5.1의 Compress-Archive는 설치기가 못 읽는 백슬래시 zip 구분자를 쓰고 pwsh 7+는 슬래시를 쓴다 — zip이 생성됐다가 아니라 zip 엔트리 구분자를 검증할 것. 다음 구체 액션: IsActiveAvailable()와 CreateExternalProvider()를 단일 provider-capability로 합쳐 provider가 한쪽에선 '사용가능' 다른쪽에선 '미지'가 되지 못하게 하고, 모든 provider 열거를 WebnoriA2 완전성으로 grep."
     }
   }
 }

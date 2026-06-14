@@ -1,6 +1,7 @@
 {
   "base": "harness/logs",
   "categories": [
+    "agent-band",
     "build-doctor",
     "code-coach",
     "kakashi-copy",
@@ -11,16 +12,89 @@
     "tamer"
   ],
   "counts": {
+    "agent-band": 9,
     "build-doctor": 6,
     "code-coach": 24,
     "kakashi-copy": 1,
-    "mission-records": 23,
+    "mission-records": 26,
     "pre-commit-review": 8,
     "release-build-pipeline": 6,
     "security-guard": 8,
     "tamer": 20
   },
   "items": [
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-14-2010-m0026-youtube-stage-design.md",
+      "date": "2026-06-14",
+      "time": "20:10",
+      "title": "m0026 youtube stage design",
+      "size": 3194
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2200-per-stage-position-offset.md",
+      "date": "2026-06-13",
+      "time": "22:00",
+      "title": "per stage position offset",
+      "size": 1979
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2130-stadium-stage-girlgroup-female-only.md",
+      "date": "2026-06-13",
+      "time": "21:30",
+      "title": "stadium stage girlgroup female only",
+      "size": 2148
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2100-singer-assignee-staging.md",
+      "date": "2026-06-13",
+      "time": "21:00",
+      "title": "singer assignee staging",
+      "size": 4046
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2030-recognized-tag-taxonomy.md",
+      "date": "2026-06-13",
+      "time": "20:30",
+      "title": "recognized tag taxonomy",
+      "size": 2891
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-2000-volume-climax-staging.md",
+      "date": "2026-06-13",
+      "time": "20:00",
+      "title": "volume climax staging",
+      "size": 4001
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-1930-main-vocal-ex-troupe-off.md",
+      "date": "2026-06-13",
+      "time": "19:30",
+      "title": "main vocal ex troupe off",
+      "size": 3861
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-1900-idol-group-staging.md",
+      "date": "2026-06-13",
+      "time": "19:00",
+      "title": "idol group staging",
+      "size": 4559
+    },
+    {
+      "category": "agent-band",
+      "file": "harness/logs/agent-band/2026-06-13-1830-idol-vocal-roster-swap.md",
+      "date": "2026-06-13",
+      "time": "18:30",
+      "title": "idol vocal roster swap",
+      "size": 4553
+    },
     {
       "category": "tamer",
       "file": "harness/logs/tamer/2026-06-06-2210-music-llm-rollout.md",
@@ -788,6 +862,30 @@
       "time": null,
       "title": "M0023-수행결과",
       "size": 8313
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0024-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0024-수행결과",
+      "size": 25120
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0025-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0025-수행결과",
+      "size": 15558
+    },
+    {
+      "category": "mission-records",
+      "file": "harness/logs/mission-records/M0026-수행결과.md",
+      "date": null,
+      "time": null,
+      "title": "M0026-수행결과",
+      "size": 15727
     }
   ]
 }

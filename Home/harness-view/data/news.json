@@ -1,79 +1,79 @@
 {
   "_description": "Recent Updates surface — bilingual EN/KO. Default audience: English. `headline`, `narrative`, `highlights[].label/text`, `prompts[].tag/text` use `{ en, ko }` shape. Scalars (updatedAt, tone) stay language-neutral.",
-  "updatedAt": "2026-06-06",
+  "updatedAt": "2026-06-14",
   "headline": {
-    "en": "v0.10 cycle — Music LLM lands: AST AudioSet instrument classifier with mic + WASAPI loopback dual source, sliding-window inference, and a live log-frequency dBFS spectrum",
-    "ko": "v0.10 사이클 — Music LLM 합류: AST AudioSet 악기 분류기 + 마이크/WASAPI 루프백 듀얼 소스 + 슬라이딩 윈도우 추론 + 라이브 로그 주파수 dBFS 스펙트럼"
+    "en": "M0026 cycle — Agent Band gets a YouTube stage: paste a link, it plays in the upper stage while the band reacts below; metadata + genre come from host-side oEmbed and a stateless LLM classify, and the played list now persists",
+    "ko": "M0026 사이클 — 에이전트 악단에 유튜브 무대 추가: 링크를 붙이면 상단 무대에서 재생되고 하단 악단이 반응, 메타·장르는 호스트 oEmbed + stateless LLM 분류로, 재생 목록은 이제 영속"
   },
   "narrative": {
-    "en": "Voice taught AgentZero to listen and speak; this cycle adds the third leg — listen and understand. Settings → 🎵 Music runs MIT's `ast-finetuned-audioset-10-10-0.4593` (Audio Spectrogram Transformer, 86.6M params, 527 AudioSet classes) via ONNX Runtime on a sliding 10-second window. Two input sources funnel into the same classifier: microphone (NAudio WaveIn — the Voice pipeline reused) or system output (WASAPI loopback via `WasapiLoopbackCapture` — analyse whatever Spotify / YouTube / a game is currently playing through the speakers, no virtual cable needed). The capture path runs any render-endpoint mixer format through `BufferedWaveProvider → StereoToMono → WdlResamplingSampleProvider(16 kHz) → SampleToWaveProvider16` so AST always sees its canonical 16 kHz mono PCM16. Single-flight interlocked gate re-infers every 1.5 s; the top-K labels list updates in place and a separate 2048-pt FFT spectrum bar canvas (64 log-spaced bands across 30 Hz–8 kHz, dBFS-normalized -60/-3) repaints at ~30 Hz above the labels. The model + AudioSet labels CSV pull from the `onnx-community` HuggingFace mirror (no Python `optimum-cli` detour) through the same `ModelDownloadDialog` Supertonic uses — ~347 MB, one-time, resumable cleanup via 'Start fresh'. Harness v1.8.0 adds the matching specialist agent `music-curator` with three convention documents (model serving contract, audio capture pipeline, spectrum sensitivity).",
-    "ko": "Voice 가 AgentZero 에게 듣고 말하기를 가르쳤다면, 이번 사이클은 세 번째 축 — 듣고 이해하기 — 를 추가한다. Settings → 🎵 Music 에서 MIT 의 `ast-finetuned-audioset-10-10-0.4593` (Audio Spectrogram Transformer, 86.6M params, AudioSet 527 클래스) 를 ONNX Runtime 으로 슬라이딩 10초 윈도우에 대해 구동. 두 입력 소스가 같은 분류기로 흐른다: 마이크 (NAudio WaveIn — Voice 파이프라인 재사용) 또는 시스템 출력 (`WasapiLoopbackCapture` 기반 WASAPI 루프백 — 스피커로 재생 중인 Spotify / YouTube / 게임 분석, 가상 케이블 불필요). 캡처 경로는 임의 렌더 엔드포인트 믹서 포맷을 `BufferedWaveProvider → StereoToMono → WdlResamplingSampleProvider(16 kHz) → SampleToWaveProvider16` 체인으로 통과시켜 AST 가 항상 정규 16 kHz 모노 PCM16 을 받게 함. interlocked 단일-flight 게이트로 1.5초마다 재추론, Top-K 라벨이 in-place 갱신되고 별도 2048-pt FFT 스펙트럼 바 캔버스 (30 Hz–8 kHz 64 로그 밴드, dBFS -60/-3 정규화) 가 라벨 위에서 약 30 Hz 로 다시 그려진다. 모델 + AudioSet 라벨 CSV 는 `onnx-community` 허깅페이스 미러에서 Supertonic 이 쓰는 동일한 `ModelDownloadDialog` 로 받아옴 (Python `optimum-cli` 우회 불필요) — 약 347 MB, 1회, 'Start fresh' 로 클린 재시작. 하네스 v1.8.0 이 대응 specialist 에이전트 `music-curator` 와 컨벤션 문서 3종 (model serving / audio capture / spectrum sensitivity) 을 동시 신설."
+    "en": "The Agent Band plugin (M0025) learned to listen to system audio and summon performers; this cycle gives it a screen. Paste a YouTube link into the stage-top bar and the video embeds in the UPPER region — the window size never changes, the 1fr stage cell is split, and the band keeps the lower region, reacting exactly as before because the video's audio rides the existing SystemLoopback + AST path (no new audio wiring). Metadata is fetched HOST-side: a new `youtube.oembed` bridge op pulls title / channel / thumbnail without tripping browser CORS, and it's SSRF-safe (the host rebuilds the canonical watch URL from a validated 11-character id). Genre classification routes through a new `llm.classify` op — a STATELESS one-shot LLM session that never pollutes the chat history, with the reply clamped to a fixed category whitelist and a keyword fallback when no model is loaded; the caption badge shows whether the label came from the LLM or a keyword guess. Played videos accumulate in a categorized playlist that now persists to localStorage (survives restarts) with an open/close toggle and one-click replay. Singer staging also changed: GIRL-GROUP mode now excludes the main vocal — the group is the seven idols (vox7) only — while SOLO mode keeps the dedicated main female vocal (vocal-ex). Along the way a one-line External-LLM bug was caught and fixed: `LlmGateway.HasUsableExternal` had omitted the Webnori a2 provider, so `IsActiveAvailable()` returned false for a2 and silently broke the LLM Settings Chat Test and the plugin's classify — even though AIMODE worked, because it gates on a different function. Shipped as agent-band v0.14.0 with the LLM-core fix committed separately.",
+    "ko": "에이전트 악단 플러그인(M0025)이 시스템 오디오를 듣고 연주자를 소환하는 법을 배웠다면, 이번 사이클은 화면을 준다. 무대 상단 바에 유튜브 링크를 붙이면 영상이 상단 영역에 임베드된다 — 창 크기는 그대로, 1fr 스테이지 셀만 분할되고, 하단은 악단이 차지해 예전처럼 반응한다(영상 소리가 기존 SystemLoopback + AST 경로를 타므로 신규 오디오 배선 0). 메타는 호스트 측에서 가져온다: 신규 `youtube.oembed` op가 브라우저 CORS 없이 제목 / 채널 / 썸네일을 받고 SSRF에 안전하다(호스트가 검증된 11자 id로 canonical watch URL 재조립). 장르 분류는 신규 `llm.classify` op로 — 채팅 히스토리를 오염시키지 않는 stateless 1회 LLM 세션, 응답은 고정 카테고리 화이트리스트로 클램프, 모델 미로드 시 키워드 폴백; 캡션 배지가 LLM 분류인지 키워드 추정인지 표시한다. 재생한 영상은 카테고리 재생 목록에 쌓이고 이제 localStorage에 영속(재시작 후에도 유지)되며 열고/닫기 토글과 원클릭 재생을 제공한다. 싱어 연출도 바뀌었다: 걸그룹 모드는 이제 메인보컬을 제외 — 그룹은 7인 아이돌(vox7)만 — 솔로 모드는 전용 메인 여성보컬(vocal-ex)을 유지한다. 도중에 한 줄짜리 External-LLM 버그를 잡아 고쳤다: `LlmGateway.HasUsableExternal`가 Webnori a2 provider를 빠뜨려 a2에서 `IsActiveAvailable()`가 false를 반환, LLM 설정 ChatTest와 플러그인 classify를 조용히 망가뜨렸다 — AIMODE는 다른 함수로 게이트해 정상이었다. 에이전트 악단 v0.14.0으로 출시, LLM 코어 픽스는 별도 커밋."
   },
   "highlights": [
     {
-      "label": { "en": "AST AudioSet ONNX",  "ko": "AST AudioSet ONNX" },
-      "text":  {
-        "en": "MIT/ast-finetuned-audioset-10-10-0.4593, 86.6M params, 527 classes, served via Microsoft.ML.OnnxRuntime 1.20 on CPU (~200–400 ms/pass on modern x64)",
-        "ko": "MIT/ast-finetuned-audioset-10-10-0.4593, 86.6M params, 527 클래스, Microsoft.ML.OnnxRuntime 1.20 CPU 추론 (모던 x64 기준 ~200–400 ms/pass)"
+      "label": { "en": "YouTube embed stage", "ko": "유튜브 임베드 무대" },
+      "text": {
+        "en": "Paste a link → embeds in the upper stage region; window size unchanged (1fr cell split), the band stays below and reacts via the existing SystemLoopback + AST path with no new audio wiring",
+        "ko": "링크 붙이기 → 상단 무대에 임베드; 창 크기 불변(1fr 셀 분할), 하단 악단은 기존 SystemLoopback + AST 경로로 반응(신규 오디오 배선 0)"
       },
       "tone": "purple"
     },
     {
-      "label": { "en": "Dual capture source", "ko": "듀얼 캡처 소스" },
-      "text":  {
-        "en": "Microphone (NAudio WaveIn — Voice pipeline reused) OR System Output (WASAPI loopback against any render endpoint — analyse what's playing without a virtual cable)",
-        "ko": "마이크 (NAudio WaveIn — Voice 파이프라인 재사용) 또는 시스템 출력 (임의 렌더 엔드포인트 대상 WASAPI 루프백 — 가상 케이블 없이 재생 중인 음악 분석)"
+      "label": { "en": "Host-side oEmbed (CORS-safe)", "ko": "호스트 oEmbed (CORS 우회)" },
+      "text": {
+        "en": "New youtube.oembed bridge op fetches title/channel/thumbnail server-side, dodging browser CORS; SSRF-safe — the canonical watch URL is rebuilt from a validated 11-char video id",
+        "ko": "신규 youtube.oembed op가 제목/채널/썸네일을 서버 측에서 가져와 브라우저 CORS 우회; SSRF 안전 — 검증된 11자 id로 canonical URL 재조립"
       },
       "tone": "blue"
     },
     {
-      "label": { "en": "Sliding-window live inference", "ko": "슬라이딩 윈도우 라이브 추론" },
-      "text":  {
-        "en": "Rolling 10 s PCM buffer + interlocked single-flight gate re-infers every 1.5 s; top-K labels update in place without backlogged ticks during ONNX warm-up",
-        "ko": "롤링 10초 PCM 버퍼 + interlocked 단일-flight 게이트로 1.5초마다 재추론; ONNX 워밍업 중에도 백로그 없이 Top-K 라벨이 in-place 갱신"
+      "label": { "en": "Stateless LLM classify", "ko": "stateless LLM 분류" },
+      "text": {
+        "en": "New llm.classify op runs a throwaway one-shot session (chat history untouched); reply clamped to a category whitelist, keyword fallback when no model is loaded, provenance badge on the caption",
+        "ko": "신규 llm.classify op가 1회용 세션 구동(채팅 히스토리 불변); 응답을 카테고리 화이트리스트로 클램프, 모델 미로드 시 키워드 폴백, 캡션에 출처 배지"
       },
       "tone": "green"
     },
     {
-      "label": { "en": "Live dBFS spectrum bars", "ko": "라이브 dBFS 스펙트럼 바" },
-      "text":  {
-        "en": "Independent 2048-pt Hann FFT → 64 log-spaced bands (30 Hz–8 kHz) → dBFS-normalized -60/-3 → WPF Canvas at ~30 Hz repaint, cyan→magenta gradient",
-        "ko": "독립 2048-pt Hann FFT → 64 로그 밴드 (30 Hz–8 kHz) → dBFS -60/-3 정규화 → WPF Canvas 약 30 Hz repaint, 시안→마젠타 그라데이션"
+      "label": { "en": "Persisted playlist + toggle", "ko": "영속 재생목록 + 토글" },
+      "text": {
+        "en": "Played videos persist to localStorage (survive restarts), categorized with a 📂 open/close toggle and one-click replay; girl-group mode now excludes the main vocal (7 idols), solo keeps vocal-ex",
+        "ko": "재생 영상이 localStorage에 영속(재시작 후 유지), 카테고리화 + 📂 열고/닫기 토글 + 원클릭 재생; 걸그룹은 메인보컬 제외(7인), 솔로는 vocal-ex 유지"
       },
       "tone": "amber"
     },
     {
-      "label": { "en": "music-curator agent",  "ko": "music-curator 에이전트" },
-      "text":  {
-        "en": "Harness v1.8.0 — 7th specialist owns AST serving contract, mel preprocessing conventions, WASAPI loopback pitfalls; mandatory consult before any new music model (MERT / CLAP / Qwen-Audio)",
-        "ko": "하네스 v1.8.0 — 7번째 specialist 가 AST serving contract / mel 전처리 컨벤션 / WASAPI 루프백 함정 소유; 새 음악 모델 (MERT / CLAP / Qwen-Audio) 추가 전 mandatory consult"
+      "label": { "en": "External LLM gate fix (a2)", "ko": "External LLM 게이트 픽스 (a2)" },
+      "text": {
+        "en": "LlmGateway.HasUsableExternal omitted WebnoriA2, so IsActiveAvailable() was false for a2 — breaking Chat Test + plugin classify while AIMODE worked (it gates on CreateExternalProvider). One-line fix, plus save-activates + load-then-patch for the settings flow",
+        "ko": "LlmGateway.HasUsableExternal가 WebnoriA2를 빠뜨려 a2에서 IsActiveAvailable()=false — AIMODE는 되는데(다른 함수로 게이트) ChatTest·플러그인 classify가 붕괴. 한 줄 픽스 + 설정 흐름 save-activates·load-then-patch"
       },
       "tone": "purple"
     }
   ],
   "prompts": [
     {
-      "tag":  { "en": "Music tab drive",     "ko": "Music 탭 시연" },
+      "tag": { "en": "Drive the YouTube stage", "ko": "유튜브 무대 시연" },
       "tone": "purple",
       "text": {
-        "en": "Settings → 🎵 Music → Download (one-time ~347 MB) → Source = 'System Output' → play any track in Spotify / YouTube → START TEST — watch tick #N labels refresh every 1.5 s with the spectrum bars dancing above",
-        "ko": "Settings → 🎵 Music → Download (1회 ~347 MB) → Source = 'System Output' → Spotify / YouTube 에서 곡 재생 → START TEST — tick #N 라벨이 1.5초마다 갱신되고 위쪽 스펙트럼 바가 움직이는 것 관찰"
+        "en": "Open Agent Band → paste a music link in the stage-top bar → 붙이기 — the video plays up top, the caption shows the LLM-classified genre; press ▶ Start (Source = System Loopback) and the band reacts to the audio",
+        "ko": "에이전트 악단 → 무대 상단 바에 음악 링크 붙이기 → 붙이기 — 상단에 영상 재생, 캡션에 LLM 분류 장르 표시; ▶ Start(Source = System Loopback) 누르면 악단이 소리에 반응"
       }
     },
     {
-      "tag":  { "en": "Mic-source playing",  "ko": "마이크 소스 연주" },
+      "tag": { "en": "Playlist persistence", "ko": "재생목록 영속" },
+      "tone": "amber",
+      "text": {
+        "en": "Play a few links, restart the app, click 📂 목록 — the categorized history is still there; toggle Singer = Group (7 idols, no main vocal) vs Solo (main female vocal)",
+        "ko": "링크 몇 개 재생 → 앱 재시작 → 📂 목록 클릭 — 카테고리 이력 그대로; Singer = Group(7인, 메인보컬 없음) vs Solo(메인 여성보컬) 토글"
+      }
+    },
+    {
+      "tag": { "en": "External Webnori a2", "ko": "External Webnori a2" },
       "tone": "blue",
       "text": {
-        "en": "Same Music tab, switch Source = 'Microphone', play a real guitar / piano / kazoo near the mic; AST should top-K with the instrument label within the first tick",
-        "ko": "동일 Music 탭에서 Source = 'Microphone' 으로 전환, 마이크 근처에서 실제 기타 / 피아노 / 카주 연주; AST 가 첫 tick 내에 해당 악기 라벨을 Top-K 로 잡아야 함"
-      }
-    },
-    {
-      "tag":  { "en": "Knowledge consult",   "ko": "지식 조회" },
-      "tone": "green",
-      "text": {
-        "en": "Open Knowledge → music-curator branch — three convention docs explain AST input contract, capture pipeline, and why the spectrum bars normalize to dBFS instead of raw FFT power",
-        "ko": "Knowledge → music-curator 브랜치 — AST 입력 contract, 캡처 파이프라인, 스펙트럼 바가 raw FFT 가 아닌 dBFS 로 정규화하는 이유를 컨벤션 문서 3종이 설명"
+        "en": "Settings → LLM → External → provider Webnori a2 → Save Options (now activates External) → Chat Test now responds, and the plugin classifies genres without a local model loaded",
+        "ko": "Settings → LLM → External → provider Webnori a2 → Save Options(이제 External 활성화) → Chat Test 응답, 로컬 모델 없이도 플러그인이 장르 분류"
       }
     }
   ]

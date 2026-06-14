@@ -137,6 +137,15 @@
       "modified": "2026-05-28"
     },
     {
+      "id": "harness/knowledge/music-curator/agent-band-mapping.md",
+      "file": "harness/knowledge/music-curator/agent-band-mapping.md",
+      "name": "agent-band-mapping.md",
+      "title": "agent-band-mapping",
+      "heading": "Agent Band — AudioSet label → performer sprite mapping",
+      "size": 20600,
+      "modified": "2026-06-07"
+    },
+    {
       "id": "harness/knowledge/music-curator/ast-audioset-model-serving.md",
       "file": "harness/knowledge/music-curator/ast-audioset-model-serving.md",
       "name": "ast-audioset-model-serving.md",
@@ -234,6 +243,24 @@
       "heading": "Voice TTS↔STT Round-Trip Testing — Methodology",
       "size": 10274,
       "modified": "2026-05-28"
+    },
+    {
+      "id": "harness/knowledge/voice-curator/sherpa-onnx-integration.md",
+      "file": "harness/knowledge/voice-curator/sherpa-onnx-integration.md",
+      "name": "sherpa-onnx-integration.md",
+      "title": "sherpa-onnx-integration",
+      "heading": "Sherpa-ONNX speaker diarization — integration contract",
+      "size": 7369,
+      "modified": "2026-06-06"
+    },
+    {
+      "id": "harness/knowledge/voice-curator/speaker-diarization-pipeline.md",
+      "file": "harness/knowledge/voice-curator/speaker-diarization-pipeline.md",
+      "name": "speaker-diarization-pipeline.md",
+      "title": "speaker-diarization-pipeline",
+      "heading": "Speaker diarization pipeline — capture → STT + diarize → merge → render",
+      "size": 7105,
+      "modified": "2026-06-06"
     }
   ],
   "tree": [
@@ -319,6 +346,13 @@
       "name": "music-curator",
       "path": "music-curator",
       "children": [
+        {
+          "type": "file",
+          "name": "agent-band-mapping.md",
+          "path": "music-curator/agent-band-mapping.md",
+          "size": 20600,
+          "modified": "2026-06-07"
+        },
         {
           "type": "file",
           "name": "ast-audioset-model-serving.md",
@@ -423,6 +457,27 @@
           "path": "test-sentinel/voice-roundtrip-testing.md",
           "size": 10274,
           "modified": "2026-05-28"
+        }
+      ]
+    },
+    {
+      "type": "dir",
+      "name": "voice-curator",
+      "path": "voice-curator",
+      "children": [
+        {
+          "type": "file",
+          "name": "sherpa-onnx-integration.md",
+          "path": "voice-curator/sherpa-onnx-integration.md",
+          "size": 7369,
+          "modified": "2026-06-06"
+        },
+        {
+          "type": "file",
+          "name": "speaker-diarization-pipeline.md",
+          "path": "voice-curator/speaker-diarization-pipeline.md",
+          "size": 7105,
+          "modified": "2026-06-06"
         }
       ]
     },

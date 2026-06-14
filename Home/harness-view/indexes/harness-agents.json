@@ -63,6 +63,15 @@
       "heading": "Test Sentinel",
       "size": 6234,
       "modified": "2026-05-28"
+    },
+    {
+      "id": "harness/agents/voice-curator.md",
+      "file": "harness/agents/voice-curator.md",
+      "name": "voice-curator.md",
+      "title": "voice-curator",
+      "heading": "Voice Curator",
+      "size": 8049,
+      "modified": "2026-06-06"
     }
   ]
 }
