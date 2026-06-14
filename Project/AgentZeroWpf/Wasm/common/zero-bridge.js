@@ -174,6 +174,22 @@
     // recursively, then merged. Returns { ok, summary, inputChars, chunks, error }.
     summarize: (text, maxChars) => invoke('summarize', { text, maxChars }),
 
+    // Agent Band (M0026) — YouTube oEmbed metadata is fetched host-side so
+    // the plugin isn't blocked by the missing CORS headers on the public
+    // oEmbed endpoint. SSRF-safe: only an 11-char video id crosses the bridge.
+    youtube: {
+      // videoId → { ok, videoId, title, author, thumbnail, error }
+      oembed: (videoId) => invoke('youtube.oembed', { videoId }),
+    },
+
+    // Stateless one-shot LLM classification (M0026). Does NOT touch the
+    // chat.* conversation history — the host opens a throwaway session and
+    // clamps the reply to the supplied category whitelist.
+    llm: {
+      // { title, channel?, categories?: string[] } → { ok, category, raw?, error? }
+      classify: (opts) => invoke('llm.classify', opts || {}),
+    },
+
     // Token-monitor plugin surface (M0009). Read-only — the host runs an
     // internal collector that polls Claude Code / Codex CLI JSONL files
     // every minute and persists rows. Plugins query via these methods

@@ -133,10 +133,207 @@ body {
 #band-header .status.err  { color: var(--err); }
 
 /* ── Stage ──────────────────────────────────────────────── */
+/* M0026: the stage area is now a vertical stack — URL bar, an
+   optional YouTube video region (top), and the band region (bottom).
+   The overall window grid (header / 1fr / footer) is unchanged; only
+   this 1fr cell is split so the band keeps the larger share. */
 #stage-wrap {
   position: relative;
   overflow: hidden;
   background: #050608;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── YouTube URL bar (무대 상단) ─────────────────────────── */
+#yt-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 12px;
+  background: rgba(18, 22, 30, 0.85);
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+}
+#yt-bar .yt-ic { font-size: 14px; }
+#ytUrl {
+  flex: 1 1 auto;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: inherit;
+}
+#ytUrl::placeholder { color: #6b7686; }
+#yt-bar .yt-paste {
+  border: none;
+  background: var(--accent-2);
+  color: #0b0d12;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#yt-bar .yt-paste:active { transform: scale(0.97); }
+#yt-bar .yt-list-btn {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#yt-bar .yt-list-btn:hover { background: rgba(255, 255, 255, 0.1); }
+#yt-bar .yt-list-btn.on {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: rgba(0, 229, 255, 0.45);
+  color: #d6f8ff;
+}
+#yt-bar .yt-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+#yt-bar .yt-meta.ok   { color: var(--ok);   background: rgba(108, 240, 157, 0.12); border-color: rgba(108, 240, 157, 0.3); }
+#yt-bar .yt-meta.warn { color: var(--warn); background: rgba(255, 200, 87, 0.12);  border-color: rgba(255, 200, 87, 0.3); }
+#yt-bar .yt-meta.err  { color: var(--err);  background: rgba(255, 107, 107, 0.12); border-color: rgba(255, 107, 107, 0.3); }
+
+/* ── Top video region (영상 + 재생목록) ──────────────────── */
+#yt-top {
+  flex: 0 0 42%;
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 0;
+}
+#yt-top.hidden { display: none; }
+
+#yt-player {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+#yt-frame-wrap { position: relative; flex: 1 1 auto; min-height: 0; background: #000; }
+#ytFrame { width: 100%; height: 100%; border: 0; display: block; }
+/* Placeholder shown when the playlist is open but no video is loaded. */
+.player-empty {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  background: #0b0d12;
+}
+#yt-player.empty .player-empty { display: flex; }
+#yt-playlist.hidden { display: none; }
+
+#yt-caption {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  background: #0b0d12;
+}
+#yt-caption .cap-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#yt-caption .cap-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#yt-caption .cap-channel { font-size: 11px; color: var(--muted); }
+#yt-caption .cap-right { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+#yt-caption .cap-llm {
+  font-size: 10px; font-weight: 600; color: #c4b5fd;
+  padding: 4px 8px; border-radius: 999px;
+  background: rgba(139, 92, 246, 0.16); border: 1px solid rgba(139, 92, 246, 0.3);
+}
+/* keyword-fallback provenance — amber so it reads as "guessed, not LLM" */
+#yt-caption .cap-llm.guess {
+  color: var(--warn);
+  background: rgba(255, 200, 87, 0.14); border-color: rgba(255, 200, 87, 0.34);
+}
+#yt-caption .cap-cat {
+  font-size: 11px; font-weight: 700; color: #7df0ff;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(0, 229, 255, 0.12); border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+/* ── Playlist panel ──────────────────────────────────────── */
+#yt-playlist {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 0;
+}
+#yt-playlist .pl-head { display: flex; align-items: center; justify-content: space-between; }
+#yt-playlist .pl-title { font-size: 12px; font-weight: 700; color: var(--text); }
+#yt-playlist .pl-count {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.35);
+}
+#yt-playlist .pl-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+#yt-playlist .pl-tab {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  padding: 4px 9px; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+}
+#yt-playlist .pl-tab.active { color: #7df0ff; background: rgba(0, 229, 255, 0.14); border-color: rgba(0, 229, 255, 0.4); }
+#yt-playlist .pl-list { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+#yt-playlist .pl-empty { font-size: 11px; color: var(--muted); padding: 6px 2px; }
+#yt-playlist .pl-item {
+  display: flex; gap: 8px; align-items: center; cursor: pointer;
+  padding: 6px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);
+}
+#yt-playlist .pl-item:hover { background: rgba(0, 229, 255, 0.08); border-color: rgba(0, 229, 255, 0.3); }
+#yt-playlist .pl-thumb {
+  flex: 0 0 auto; width: 54px; height: 34px; border-radius: 5px;
+  background: #0b0d12 center/cover no-repeat;
+}
+#yt-playlist .pl-col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#yt-playlist .pl-t {
+  font-size: 12px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#yt-playlist .pl-c { font-size: 10px; font-weight: 600; color: #7df0ff; }
+
+/* ── Band region (하단 무대) ─────────────────────────────── */
+#band-region {
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 
 #stage {

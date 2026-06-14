@@ -1,5 +1,40 @@
 // agent-band.js — M0025 Agent Band plugin.
 //
+// v0.14.0 changelog (M0026 follow-up #3):
+//   • played list now PERSISTS to localStorage (YT_STORE_KEY) so the
+//     history survives app restarts. The playlist panel can be opened /
+//     closed independently via a "📂 목록" toggle in the URL bar — open it
+//     to browse / replay saved videos even with no video loaded (the player
+//     shows a placeholder). Auto-opens on boot when saved history exists.
+//   • girl-group policy change — the GROUP ('group') mode now EXCLUDES the
+//     main vocal (vocal-ex): the girl-group is the 7 idols vox7-1…7 only.
+//     The center idol (vox7-1) performs on vocal / jazz-ballad lead mood;
+//     the rest dance to their assigned genres. SOLO mode is unchanged —
+//     it still stages vocal-ex (the dedicated main female vocal). Roster is
+//     now mode-derived via femalePool() (SOLO=[vocal-ex], GROUP=the 7).
+//
+// v0.13.0 changelog (M0026 — YouTube embed stage):
+//   • the stage area is split — an embedded YouTube player occupies the
+//     upper region (above an optional playlist panel), the band stays in
+//     the lower region. The window grid (header / 1fr / footer) is
+//     unchanged; only the 1fr cell is divided (see agent-band.css), and
+//     the band canvas now lives in #band-region so fitCanvasToParent sizes
+//     it to that lower area automatically.
+//   • 무대 상단 URL bar: paste a YouTube link → [붙이기] embeds + plays it.
+//     videoId is parsed from watch / youtu.be / embed / shorts / live URLs
+//     or a bare 11-char id.
+//   • metadata + category come from the host (new bridge ops):
+//       - youtube.oembed → title / author / thumbnail (fetched host-side to
+//         dodge the oEmbed endpoint's missing CORS headers; SSRF-safe).
+//       - llm.classify   → ONE category from YT_CATEGORIES via a STATELESS
+//         one-shot LLM call (does not pollute chat.* history). Offline /
+//         failure falls back to keywordCategory().
+//   • played videos accumulate in a categorized playlist (tabs filter by
+//     category; click an item to replay it).
+//   • band reaction is UNCHANGED — the video's audio rides the system
+//     mixer, the existing SystemLoopback capture + AST tick drive the
+//     performers. No new audio path. Press ▶ Start (Source=System Loopback).
+//
 // v0.12.2 changelog:
 //   • per-stage layout adjustment (first introduction) — STAGE_Y_OFFSET maps
 //     a background name → vertical px nudge for the cast so performers land
@@ -289,28 +324,34 @@
   //   group controller (femaleVocalSignal / upsertIdolGroup), not here.
   //
   // Sprite roster (v0.10):
-  //   Female pool — the idol group. Slot 0 is the MAIN VOCAL `vocal-ex`
-  //     (the lead — sings via its `idle`+`play` sheets, stays dead-center).
-  //     Slots 1..7 are the seven backup idols vox7-1 … vox7-7, who DANCE:
-  //     their active sheet is `dance`, not `play` (see IDOL_VOCALS /
-  //     stateSheet). The lead sings, the backups dance around her.
+  //   Female roster splits by Singer mode (M0026 policy change):
+  //     • SOLO  → `vocal-ex`, the dedicated main vocal (idle+play sheets —
+  //       she SINGS, stays dead-center).
+  //     • GROUP → the SEVEN idols vox7-1 … vox7-7 (sing+dance; idle+dance
+  //       sheets). Per operator: the main vocal (vocal-ex) is EXCLUDED from
+  //       the girl-group — the group is the 7 idols ONLY (vocal-ex never
+  //       appears in group mode). The center idol (vox7-1) acts as the
+  //       on-vocal performer; the rest dance to their assigned genres.
   //   Male pool — unchanged:
   //     vocal-2 = male (dark hair, red coat)  vocal-4 = male (silver hair, purple coat)
-  // VOCAL_FEMALE doubles as the group's *slot order*: index 0 is the
-  // permanent main vocal (stays dead-center), and members join in this
-  // order as the group grows. Don't reorder casually — vocal-ex is the lead.
-  const VOCAL_FEMALE = ['vocal-ex', 'vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7'];
+  const SOLO_VOCAL   = 'vocal-ex';   // SOLO mode only
+  const GIRL_GROUP   = ['vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7']; // GROUP mode (7)
+  // Full roster — only for layout / fade / FEMALE_POOL bookkeeping. The
+  // ACTIVE roster for a given mode comes from femalePool() below.
+  const VOCAL_FEMALE = [SOLO_VOCAL, ...GIRL_GROUP];
   const VOCAL_MALE   = ['vocal-2', 'vocal-4'];
-  const MAIN_VOCAL_ID = VOCAL_FEMALE[0];   // 'vocal-ex' — the lead, center stage, sticky
-  const FEMALE_POOL   = new Set(VOCAL_FEMALE);  // whole group (lead + backups)
+  const FEMALE_POOL   = new Set(VOCAL_FEMALE);
   let maleCursor = 0;
 
-  // Backup idols sing AND dance. They ship `idle` + `dance` sheets (no
-  // `play` sheet), so their active logical state ('play') is remapped to
-  // the `dance` file by stateSheet(). The MAIN VOCAL (vocal-ex) is NOT in
-  // this set — she keeps her `play` (singing) sheet. All are true vocals
-  // for stage layout (center main-vocal area).
-  const IDOL_VOCALS = new Set(['vox7-1', 'vox7-2', 'vox7-3', 'vox7-4', 'vox7-5', 'vox7-6', 'vox7-7']);
+  // The active female roster for the current Singer mode. SOLO = just the
+  // main vocal; GROUP = the 7-member girl-group (vocal-ex excluded).
+  function femalePool() { return singerMode === 'solo' ? [SOLO_VOCAL] : GIRL_GROUP; }
+
+  // Idols sing AND dance. They ship `idle` + `dance` sheets (no `play`
+  // sheet), so their active logical state ('play') is remapped to the
+  // `dance` file by stateSheet(). vocal-ex (SOLO) is NOT in this set — she
+  // keeps her `play` (singing) sheet. All are true vocals for stage layout.
+  const IDOL_VOCALS = new Set(GIRL_GROUP);
 
   // ── Idol group staging (v0.9) ────────────────────────────────────────
   // The female pool is staged as a GROUP, not a soloist. The first female
@@ -320,7 +361,7 @@
   // around the main vocal. When the voice stops, it shrinks back one
   // member per tick until only the (then fading) main vocal remains.
   const IDOL_RAMP_TICKS_PER_MEMBER = 2;  // +1 target member per N sustained ticks
-  const IDOL_GROUP_MAX = VOCAL_FEMALE.length; // 8 — lead + 7 backups
+  // Max group size is now mode-derived (femalePool().length) — SOLO=1, GROUP=7.
 
   let idolRenderedSize = 0;  // how many idols are currently staged (ramps ±1/tick)
   let idolPresentTicks = 0;  // consecutive ticks the female vocal has been heard
@@ -650,6 +691,10 @@
     const leadActive     = activeStyles.some(st => LEAD_STYLES.has(st));
     const nonLeadStyles  = activeStyles.filter(st => !LEAD_STYLES.has(st));
 
+    // Active roster for the current mode: SOLO=[vocal-ex], GROUP=the 7 idols.
+    const pool = femalePool();
+    const poolMax = pool.length;   // 1 (solo) or 7 (girl-group)
+
     const onStage = idolRenderedSize > 0;
     const vocalPresent = fem.score >= (onStage ? SCORE_KEEP : SCORE_PRESENT);
     const present = vocalPresent || activeStyles.length > 0;
@@ -658,7 +703,7 @@
     if (present) {
       idolPresentTicks++;
       if (singerMode === 'solo') {
-        target = 1;   // lead only
+        target = 1;   // main vocal only
       } else {
         // Big enough to give every active non-lead genre its own dancer,
         // and grows further with sustained singing / explicit female.
@@ -666,7 +711,7 @@
           1 + nonLeadStyles.length,
           1 + Math.floor(idolPresentTicks / IDOL_RAMP_TICKS_PER_MEMBER) + (fem.explicit ? 1 : 0),
         );
-        target = Math.max(1, Math.min(IDOL_GROUP_MAX, target));
+        target = Math.max(1, Math.min(poolMax, target));
       }
     } else {
       idolPresentTicks = 0;
@@ -677,10 +722,13 @@
     if (target > idolRenderedSize) idolRenderedSize++;
     else if (target < idolRenderedSize) idolRenderedSize--;
     if (idolRenderedSize < 0) idolRenderedSize = 0;
+    if (idolRenderedSize > poolMax) idolRenderedSize = poolMax;  // clamp when mode shrinks the pool
 
-    const members = VOCAL_FEMALE.slice(0, idolRenderedSize);
+    const members = pool.slice(0, idolRenderedSize);
     const memberSet = new Set(members);
-    const presentBackups = members.filter(id => id !== MAIN_VOCAL_ID);
+    // Center performer: SOLO → vocal-ex, GROUP → vox7-1 (the lead idol).
+    const leadId = members[0];
+    const presentBackups = members.filter(id => id !== leadId);
 
     // Distribute active non-lead genres across the present backups.
     const playingBackups = assignBackups(nonLeadStyles, presentBackups);
@@ -693,9 +741,9 @@
       upsertPerformer(id, memberScore, now);
       const p = performers.get(id);
       if (p) {
-        p.playing = id === MAIN_VOCAL_ID
-          ? (vocalPresent || leadActive)   // lead: sings, and spotlight for jazz/ballad
-          : playingBackups.has(id);        // backup: dances while its assigned genre sounds
+        p.playing = id === leadId
+          ? (vocalPresent || leadActive)   // center: performs on vocal / jazz-ballad lead mood
+          : playingBackups.has(id);        // others: dance while their assigned genre sounds
       }
       // Preload both sheets so the idle↔play/dance flip is instant.
       ensureSpriteSet(id, 'idle');
@@ -704,10 +752,11 @@
 
     if (idolRenderedSize === 0) styleAssignee.clear();
 
-    // Peel-off: any female-pool member beyond the current group size fades
+    // Peel-off: any female-pool member NOT in the current roster fades
     // promptly (one per tick as the group shrinks) instead of lingering on
-    // the unseen timer. Covers the size==0 case too — the main vocal
-    // (vocal-ex) is slot 0 so it's always the last to peel off.
+    // the unseen timer. Iterates the FULL roster so a mode switch (e.g.
+    // group→solo) also fades the now-excluded sprites — vocal-ex in group
+    // mode, the vox7 idols in solo mode.
     for (const id of VOCAL_FEMALE) {
       if (memberSet.has(id)) continue;
       const p = performers.get(id);
@@ -1455,9 +1504,275 @@
     }
   }
 
+  // ── YouTube embed + categorized playlist (M0026) ─────────────────────
+  //
+  // The stage's upper region hosts an embedded YouTube player; the band
+  // stays in the lower region. Audio reaction is automatic — the video's
+  // sound goes out the system mixer, the existing SystemLoopback capture
+  // picks it up, and the AST tick drives the performers exactly as before
+  // (no new audio wiring). Metadata + category come from the host:
+  //   • youtube.oembed  → title / author / thumbnail (no CORS, SSRF-safe)
+  //   • llm.classify    → one category from YT_CATEGORIES (stateless; does
+  //                       NOT touch the chat history). Offline/failure falls
+  //                       back to keywordCategory().
+  const YT_CATEGORIES = ['재즈', 'K-Pop', '클래식', '힙합', 'EDM', '발라드', '록', 'OST', '기타'];
+  const YT_STORE_KEY  = 'agentBand.playlist.v1';   // localStorage — survives restarts
+  const YT_STORE_MAX  = 60;                          // cap persisted entries
+  const ytPlaylist = [];   // { videoId, title, author, thumbnail, category, url, by }
+  let ytFilter = 'all';
+  let currentVideoId = null;   // the video currently loaded in the iframe
+  let playlistOpen = false;    // panel open/closed (set on boot from saved history)
+
+  const ytEls = {
+    top:      document.getElementById('yt-top'),
+    player:   document.getElementById('yt-player'),
+    playlist: document.getElementById('yt-playlist'),
+    empty:    document.getElementById('ytEmpty'),
+    toggle:   document.getElementById('ytListToggle'),
+    url:      document.getElementById('ytUrl'),
+    paste:    document.getElementById('ytPaste'),
+    meta:     document.getElementById('ytMeta'),
+    frame:    document.getElementById('ytFrame'),
+    title:    document.getElementById('ytTitle'),
+    channel:  document.getElementById('ytChannel'),
+    by:       document.getElementById('ytBy'),
+    cat:      document.getElementById('ytCat'),
+    plCount:  document.getElementById('plCount'),
+    plTabs:   document.getElementById('plTabs'),
+    plList:   document.getElementById('plList'),
+  };
+
+  // ── Persistence (localStorage) ──────────────────────────────────────
+  // The played list is kept per WebView origin so it survives app
+  // restarts — the user's history is there next time they open the band.
+  function savePlaylist() {
+    try { localStorage.setItem(YT_STORE_KEY, JSON.stringify(ytPlaylist.slice(0, YT_STORE_MAX))); }
+    catch (_) { /* storage full / disabled — non-fatal */ }
+  }
+  function loadStoredPlaylist() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(YT_STORE_KEY) || '[]');
+      if (Array.isArray(arr)) {
+        for (const p of arr) {
+          if (p && typeof p.videoId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(p.videoId)) {
+            ytPlaylist.push({
+              videoId: p.videoId, title: p.title || '', author: p.author || '',
+              thumbnail: p.thumbnail || '', category: p.category || '기타',
+              url: p.url || `https://www.youtube.com/watch?v=${p.videoId}`, by: p.by || 'keyword',
+            });
+          }
+        }
+      }
+    } catch (_) { /* corrupt store — start fresh */ }
+  }
+
+  // Show/hide the top region. #yt-top is visible when a video is loaded OR
+  // the playlist panel is open; the player shows a placeholder when there's
+  // no video (so the saved list can be browsed/replayed with no video yet).
+  function updateTopVisibility() {
+    const hasVideo = !!currentVideoId;
+    if (ytEls.top)      ytEls.top.classList.toggle('hidden', !(hasVideo || playlistOpen));
+    if (ytEls.player)   ytEls.player.classList.toggle('empty', !hasVideo);
+    if (ytEls.playlist) ytEls.playlist.classList.toggle('hidden', !playlistOpen);
+    if (ytEls.toggle) {
+      ytEls.toggle.classList.toggle('on', playlistOpen);
+      ytEls.toggle.textContent = playlistOpen
+        ? '📂 목록 닫기'
+        : `📂 목록${ytPlaylist.length ? ' (' + ytPlaylist.length + ')' : ''}`;
+    }
+  }
+
+  function togglePlaylist() { playlistOpen = !playlistOpen; updateTopVisibility(); }
+
+  // Call a host op directly via the bridge's generic invoke so the plugin
+  // works even if the typed zero.youtube / zero.llm surface isn't present
+  // (older bridge) — it only needs the host to know the op.
+  function hostInvoke(op, args) {
+    if (window.zero && typeof window.zero.invoke === 'function') return window.zero.invoke(op, args);
+    return Promise.reject(new Error('bridge unavailable'));
+  }
+
+  // Accept a full watch/share/embed/shorts/live URL or a bare 11-char id.
+  function parseVideoId(raw) {
+    if (!raw) return null;
+    const s = raw.trim();
+    if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+    let m;
+    if ((m = s.match(/[?&]v=([A-Za-z0-9_-]{11})/)))       return m[1];
+    if ((m = s.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)))  return m[1];
+    if ((m = s.match(/\/embed\/([A-Za-z0-9_-]{11})/)))    return m[1];
+    if ((m = s.match(/\/shorts\/([A-Za-z0-9_-]{11})/)))   return m[1];
+    if ((m = s.match(/\/live\/([A-Za-z0-9_-]{11})/)))     return m[1];
+    return null;
+  }
+
+  function setYtMeta(text, cls) {
+    if (!ytEls.meta) return;
+    ytEls.meta.textContent = text;
+    ytEls.meta.className = 'yt-meta' + (cls ? ' ' + cls : '');
+  }
+
+  function loadVideoFrame(videoId) {
+    if (!ytEls.frame) return;
+    // autoplay=1 is honoured because this runs from the paste/click gesture.
+    ytEls.frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+    currentVideoId = videoId;
+    updateTopVisibility();
+  }
+
+  function setCaption(item) {
+    if (ytEls.title)   ytEls.title.textContent   = item.title || '(제목 없음)';
+    if (ytEls.channel) ytEls.channel.textContent = (item.author || 'YouTube') + ' · oEmbed';
+    if (ytEls.cat)     ytEls.cat.textContent     = item.category || '분류 중…';
+    // Provenance badge — so the operator can see at a glance whether the LLM
+    // actually classified it or we fell back to a keyword guess.
+    if (ytEls.by) {
+      const by = item.by || 'llm';
+      ytEls.by.textContent = by === 'llm' ? '✦ LLM 분류'
+                           : by === 'keyword' ? '≈ 키워드 추정'
+                           : '· 분류 중';
+      ytEls.by.classList.toggle('guess', by === 'keyword');
+    }
+  }
+
+  async function onPasteYoutube() {
+    let url = ytEls.url ? ytEls.url.value.trim() : '';
+    // Empty field → try the clipboard so "붙이기" works as a one-click paste.
+    if (!url && navigator.clipboard && navigator.clipboard.readText) {
+      try { url = (await navigator.clipboard.readText()).trim(); if (ytEls.url) ytEls.url.value = url; }
+      catch (_) { /* clipboard denied — user can type instead */ }
+    }
+    const videoId = parseVideoId(url);
+    if (!videoId) { setYtMeta('유효한 유튜브 링크가 아님', 'err'); return; }
+
+    // 1) Play immediately — don't make the user wait on metadata.
+    const item = { videoId, title: '', author: '', thumbnail: '', category: '', url };
+    loadVideoFrame(videoId);
+    setCaption(item);
+    setYtMeta('메타 가져오는 중…');
+
+    // 2) oEmbed metadata (host-side; avoids CORS).
+    try {
+      const meta = await hostInvoke('youtube.oembed', { videoId });
+      if (meta && meta.ok) {
+        item.title = meta.title || '';
+        item.author = meta.author || '';
+        item.thumbnail = meta.thumbnail || '';
+        setCaption(item);
+        setYtMeta('✓ 메타 획득', 'ok');
+      } else {
+        setYtMeta('메타 실패 — 재생은 계속', 'warn');
+      }
+    } catch (_) { setYtMeta('메타 오류 — 재생은 계속', 'warn'); }
+
+    // 3) LLM categorization (host-side, stateless; fallback to keyword/기타).
+    const res = await classifyVideo(item);
+    item.category = res.category;
+    item.by = res.by;
+    setCaption(item);
+    if (res.by === 'keyword') {
+      setYtMeta(res.llmOff ? 'LLM 꺼짐 → 키워드 추정' : '키워드 추정', 'warn');
+    }
+
+    // 4) Register in the categorized playlist (dedupe by videoId).
+    upsertPlaylist(item);
+  }
+
+  // Returns { category, by:'llm'|'keyword', llmOff } so the UI can show
+  // provenance (LLM 분류 vs 키워드 추정) — the all-"기타" regression was an
+  // invisible LLM-off fallback, so provenance is now first-class.
+  async function classifyVideo(item) {
+    const title = item.title || item.url;
+    if (!title) return { category: '기타', by: 'keyword', llmOff: false };
+    try {
+      const r = await hostInvoke('llm.classify', { title, channel: item.author, categories: YT_CATEGORIES });
+      if (r && r.ok && r.category) return { category: r.category, by: 'llm', llmOff: false };
+      const llmOff = !!(r && r.error === 'llm-not-ready');
+      return { category: keywordCategory(title, item.author), by: 'keyword', llmOff };
+    } catch (_) {
+      return { category: keywordCategory(title, item.author), by: 'keyword', llmOff: false };
+    }
+  }
+
+  // Offline / LLM-unavailable fallback — coarse keyword buckets over the
+  // title + channel. Only a heuristic; the LLM path is what makes this
+  // accurate. Order matters (OST/주제가 before the idol-name K-Pop net so a
+  // game/drama theme song isn't swallowed as K-Pop).
+  function keywordCategory(title, channel) {
+    const s = ((title || '') + ' ' + (channel || '')).toLowerCase();
+    if (/\bost\b|soundtrack|sound\s?track|테마곡|주제가|theme song|more than a game|드라마|애니메이션/.test(s)) return 'OST';
+    if (/jazz|재즈|bossa|보사노바|swing|블루스|blues/.test(s))               return '재즈';
+    if (/classic|클래식|symphony|교향|orchestra|관현악|베토벤|모차르트|쇼팽|바흐|sonata|협주|concerto/.test(s)) return '클래식';
+    if (/hip\s?hop|힙합|\brap\b|래퍼|랩\b|trap/.test(s))                     return '힙합';
+    if (/\bedm\b|house music|techno|trance|dubstep|일렉트로|electronic dance/.test(s)) return 'EDM';
+    if (/ballad|발라드/.test(s))                                            return '발라드';
+    if (/\brock\b|록 밴드|메탈|metal|punk|밴드 라이브/.test(s))               return '록';
+    // K-Pop net last among the specific buckets — broad idol/group lexicon.
+    if (/k-?pop|아이돌|걸그룹|보이그룹|newjeans|뉴진스|babymonster|베이비몬스터|le\s?sserafim|르세라핌|aespa|에스파|ive|아이브|nmixx|엔믹스|bts|blackpink|블랙핑크|twice|트와이스|seventeen|세븐틴|stray\s?kids|스트레이키즈|riize|라이즈|gidle|여자아이들|컬투쇼/.test(s)) return 'K-Pop';
+    return '기타';
+  }
+
+  function upsertPlaylist(item) {
+    const i = ytPlaylist.findIndex(p => p.videoId === item.videoId);
+    if (i >= 0) ytPlaylist[i] = item; else ytPlaylist.unshift(item);
+    if (ytPlaylist.length > YT_STORE_MAX) ytPlaylist.length = YT_STORE_MAX;
+    savePlaylist();
+    renderPlaylist();
+    updateTopVisibility();   // refresh the toggle's count badge
+  }
+
+  function renderPlaylist() {
+    if (ytEls.plCount) ytEls.plCount.textContent = String(ytPlaylist.length);
+
+    if (ytEls.plTabs) {
+      const used = YT_CATEGORIES.filter(c => ytPlaylist.some(p => p.category === c));
+      const cats = ['all', ...used];
+      if (!cats.includes(ytFilter)) ytFilter = 'all';
+      ytEls.plTabs.innerHTML = cats.map(c => {
+        const label = c === 'all' ? '전체' : c;
+        const active = c === ytFilter ? ' active' : '';
+        return `<button class="pl-tab${active}" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</button>`;
+      }).join('');
+      ytEls.plTabs.querySelectorAll('.pl-tab').forEach(btn =>
+        btn.addEventListener('click', () => { ytFilter = btn.getAttribute('data-cat'); renderPlaylist(); }));
+    }
+
+    if (ytEls.plList) {
+      const items = ytPlaylist.filter(p => ytFilter === 'all' || p.category === ytFilter);
+      if (items.length === 0) {
+        ytEls.plList.innerHTML = '<span class="pl-empty">목록이 비어 있습니다</span>';
+        return;
+      }
+      ytEls.plList.innerHTML = items.map(p =>
+        `<div class="pl-item" data-id="${escapeHtml(p.videoId)}">` +
+          `<div class="pl-thumb" style="background-image:url('${escapeHtml(p.thumbnail || '')}')"></div>` +
+          `<div class="pl-col">` +
+            `<div class="pl-t">${escapeHtml(p.title || p.videoId)}</div>` +
+            `<div class="pl-c">✦ ${escapeHtml(p.category || '기타')}</div>` +
+          `</div>` +
+        `</div>`).join('');
+      ytEls.plList.querySelectorAll('.pl-item').forEach(el =>
+        el.addEventListener('click', () => {
+          const it = ytPlaylist.find(p => p.videoId === el.getAttribute('data-id'));
+          if (it) { loadVideoFrame(it.videoId); setCaption(it); setYtMeta('▶ 재생', 'ok'); }
+        }));
+    }
+  }
+
+  function bindYouTube() {
+    loadStoredPlaylist();                       // restore history from localStorage
+    if (ytEls.paste)  ytEls.paste.addEventListener('click', onPasteYoutube);
+    if (ytEls.url)    ytEls.url.addEventListener('keydown', e => { if (e.key === 'Enter') onPasteYoutube(); });
+    if (ytEls.toggle) ytEls.toggle.addEventListener('click', togglePlaylist);
+    playlistOpen = ytPlaylist.length > 0;       // auto-open when there's saved history
+    renderPlaylist();
+    updateTopVisibility();
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────────
   pickStage(els.stagePick.value);
   bindEvents();
+  bindYouTube();
   requestAnimationFrame(renderLoop);
 
   window.addEventListener('beforeunload', () => {

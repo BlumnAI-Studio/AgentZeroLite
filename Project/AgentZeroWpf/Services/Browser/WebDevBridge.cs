@@ -324,6 +324,32 @@ public sealed class WebDevBridge
                 return _noteHost!.GetMusicStatus();
             }
 
+            // ─── Agent Band (M0026) — YouTube oEmbed + stateless LLM classify ─
+            case "youtube.oembed":
+            {
+                EnsureNoteHost();
+                var vid = args?.TryGetProperty("videoId", out var vEl) == true && vEl.ValueKind == JsonValueKind.String
+                    ? vEl.GetString() ?? "" : "";
+                return await _noteHost!.YouTubeOEmbedAsync(vid);
+            }
+            case "llm.classify":
+            {
+                EnsureNoteHost();
+                var title = args?.TryGetProperty("title", out var tEl) == true && tEl.ValueKind == JsonValueKind.String
+                    ? tEl.GetString() ?? "" : "";
+                string? channel = args?.TryGetProperty("channel", out var cEl) == true && cEl.ValueKind == JsonValueKind.String
+                    ? cEl.GetString() : null;
+                var cats = new List<string>();
+                if (args?.TryGetProperty("categories", out var caEl) == true && caEl.ValueKind == JsonValueKind.Array)
+                    foreach (var el in caEl.EnumerateArray())
+                        if (el.ValueKind == JsonValueKind.String)
+                        {
+                            var s = el.GetString();
+                            if (!string.IsNullOrWhiteSpace(s)) cats.Add(s!);
+                        }
+                return await _noteHost!.ClassifyAsync(title, channel, cats);
+            }
+
             // ─── Token-monitor plugin surface (read-only) ───────────────
             case "tokens.summary":
             {

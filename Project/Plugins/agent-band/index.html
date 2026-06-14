@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>Agent Band — M0025</title>
+  <title>Agent Band — M0026</title>
   <link rel="stylesheet" href="agent-band.css" />
 </head>
 <body>
   <header id="band-header">
     <div class="left">
-      <h1>Agent Band <span class="tag">M0025</span></h1>
-      <span class="hint" id="band-hint">시스템 사운드를 듣고 보컬/악기를 자동 소환합니다.</span>
+      <h1>Agent Band <span class="tag">M0026</span></h1>
+      <span class="hint" id="band-hint">유튜브 링크를 붙이면 상단 무대에서 재생되고, ▶ Start(System Loopback)로 악단이 반응합니다.</span>
     </div>
     <div class="right">
       <label class="ctrl">
@@ -46,9 +46,55 @@
   </header>
 
   <main id="stage-wrap">
-    <canvas id="stage"></canvas>
-    <div id="overlay">
-      <div id="label-strip"><span class="empty">대기 중 …</span></div>
+    <!-- 무대 상단 — 유튜브 링크 붙이기 -->
+    <div id="yt-bar">
+      <span class="yt-ic">🔗</span>
+      <input id="ytUrl" type="text" spellcheck="false"
+             placeholder="https://www.youtube.com/watch?v=…  유튜브 링크를 붙여넣기" />
+      <button id="ytPaste" class="yt-paste">붙이기</button>
+      <button id="ytListToggle" class="yt-list-btn" title="재생 목록 열기/닫기">📂 목록</button>
+      <span class="yt-meta" id="ytMeta">대기</span>
+    </div>
+
+    <!-- 상단 영상 영역 (영상 없으면 접힘) -->
+    <div id="yt-top" class="hidden">
+      <div id="yt-player">
+        <div id="yt-frame-wrap">
+          <iframe id="ytFrame" title="YouTube"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen></iframe>
+          <div class="player-empty" id="ytEmpty">▶ 재생 목록에서 영상을 선택하거나,<br/>위에 유튜브 링크를 붙여넣으세요.</div>
+        </div>
+        <div id="yt-caption">
+          <div class="cap-left">
+            <div class="cap-title" id="ytTitle">—</div>
+            <div class="cap-channel" id="ytChannel">—</div>
+          </div>
+          <div class="cap-right">
+            <span class="cap-llm" id="ytBy">✦ LLM 분류</span>
+            <span class="cap-cat" id="ytCat">—</span>
+          </div>
+        </div>
+      </div>
+      <aside id="yt-playlist">
+        <div class="pl-head">
+          <span class="pl-title">재생 목록 · 카테고리</span>
+          <span class="pl-count" id="plCount">0</span>
+        </div>
+        <div class="pl-tabs" id="plTabs"></div>
+        <div class="pl-list" id="plList">
+          <span class="pl-empty">아직 추가된 영상이 없습니다</span>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 하단 무대 — 악단/연주단 (시스템 루프백 반응) -->
+    <div id="band-region">
+      <canvas id="stage"></canvas>
+      <div id="overlay">
+        <div id="label-strip"><span class="empty">대기 중 …</span></div>
+      </div>
     </div>
   </main>
 
