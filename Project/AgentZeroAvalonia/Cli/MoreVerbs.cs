@@ -235,4 +235,65 @@ internal static class MoreVerbs
         Console.WriteLine("Output is one JSON object; exit code 0 when ok is true.");
         Console.WriteLine("Default --timeout for this group is 45000 ms (page loads are slow).");
     }
+
+    // ── mcp (this host only: the Settings → MCP page from a shell) ──
+
+    public static int Mcp(CliClient client, string[] args)
+    {
+        if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
+        {
+            McpUsage();
+            return args.Length == 0 ? 1 : 0;
+        }
+        var verb = args[0].ToLowerInvariant();
+        var payload = new JsonObject { ["command"] = "mcp", ["verb"] = verb };
+        switch (verb)
+        {
+            case "list":
+                break;
+            case "import":
+                if (args.Length < 2 || !File.Exists(args[1])) { Console.Error.WriteLine("Usage: mcp import <file.json>   (an mcpServers block)"); return 1; }
+                // The file is read here and sent over the local pipe; the GUI seals the keys when it saves.
+                payload["json"] = File.ReadAllText(args[1]);
+                break;
+            case "refresh":
+                if (args.Length < 2) { Console.Error.WriteLine("Usage: mcp refresh <server>"); return 1; }
+                payload["name"] = args[1];
+                break;
+            case "allow":
+            case "deny":
+                if (args.Length < 2) { Console.Error.WriteLine($"Usage: mcp {verb} <server>.<tool>"); return 1; }
+                payload["name"] = args[1];
+                break;
+            case "call":
+                if (args.Length < 2) { Console.Error.WriteLine("Usage: mcp call <server>.<tool> [json-args]"); return 1; }
+                payload["name"] = args[1];
+                payload["args"] = args.Length > 2 ? string.Join(" ", args.Skip(2)) : "{}";
+                break;
+            default:
+                McpUsage();
+                return 1;
+        }
+        if (client.TimeoutMs < 120000) client.TimeoutMs = 120000;
+        var reply = client.Send(payload.ToJsonString());
+        if (reply is null) return client.NoWait ? 0 : 1;
+        Console.WriteLine(reply);
+        return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
+    }
+
+    private static void McpUsage()
+    {
+        Console.WriteLine("Usage: AgentZeroLite -cli mcp <verb> [options]");
+        Console.WriteLine();
+        Console.WriteLine("The MCP servers AgentBot's AI mode may call (Settings -> MCP, mcp-settings.json). The GUI must be running.");
+        Console.WriteLine();
+        Console.WriteLine("Verbs:");
+        Console.WriteLine("  list                               Servers, their loaded tools and whether each is allowed");
+        Console.WriteLine("  import <file.json>                 Add the servers in an mcpServers block (.mcp.json shape), load their tools, save");
+        Console.WriteLine("  refresh <server>                   Reconnect and reload a server's tool list");
+        Console.WriteLine("  allow|deny <server>.<tool>         Let the agent call a tool, or keep it from doing so");
+        Console.WriteLine("  call <server>.<tool> [json-args]   Call a tool as the agent would (allow list applies)");
+        Console.WriteLine();
+        Console.WriteLine("Output is one JSON object; exit code 0 when ok is true. Default --timeout is 120000 ms.");
+    }
 }

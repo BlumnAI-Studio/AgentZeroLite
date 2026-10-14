@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Agent.Common;
 using Agent.Common.Agents;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Module;
 using Agent.Common.Platform;
 using Agent.Common.Services;
@@ -19,7 +20,8 @@ namespace AgentZeroAvalonia.Cli;
 /// every request and reply is the WPF host's JSON shape, so <c>-cli help agentzero</c> and
 /// the printers apply unchanged. Verbs: <c>status</c>, <c>close-win</c>, <c>terminal-list</c>,
 /// <c>terminal-send/-key/-read</c> (by index or <c>alias</c>), <c>terminal-alias</c>,
-/// <c>layout</c>, <c>bot-chat</c>, <c>bot-ask</c>, <c>web</c> (off the UI thread, <c>req</c> echoed).
+/// <c>layout</c>, <c>bot-chat</c>, <c>bot-ask</c>, <c>web</c> (off the UI thread, <c>req</c> echoed),
+/// <c>mcp</c> (Settings → MCP from a shell: list, import, refresh, allow/deny, call).
 /// The hooks below are set by the app; the tests set fakes.
 /// </summary>
 internal sealed class CliCommandRouter
@@ -111,6 +113,9 @@ internal sealed class CliCommandRouter
 
                     case "web":
                         return WebAsync(root.Clone());
+
+                    case "mcp":
+                        return McpAsync(root.Clone());
 
                     default:
                         return Task.FromResult(CliIpcProtocol.ErrorJson($"unknown command '{command}' (not ported to the Avalonia host yet)"));
@@ -435,6 +440,116 @@ internal sealed class CliCommandRouter
         catch
         {
             return json;
+        }
+    }
+
+    // ── mcp: the Settings → MCP page from a shell (this host only) ──────────────
+
+    private static async Task<string> McpAsync(JsonElement root)
+    {
+        var verb = Str(root, "verb");
+        var name = Str(root, "name");
+        var opts = ToolJson.Options;
+        switch (verb)
+        {
+            case "list":
+            {
+                var settings = McpSettingsStore.Load();
+                var servers = new JsonArray();
+                foreach (var s in settings.Servers)
+                    servers.Add(new JsonObject
+                    {
+                        ["name"] = s.Name,
+                        ["enabled"] = s.Enabled,
+                        ["transport"] = s.Transport,
+                        ["target"] = s.Transport == McpTransportKind.Stdio ? $"{s.Command} {string.Join(' ', s.Args)}".TrimEnd() : s.Url,
+                        ["tools_loaded_at"] = s.ToolsLoadedAt?.ToString("o"),
+                        ["tools"] = new JsonArray(s.Tools.Select(t => (JsonNode)new JsonObject
+                        {
+                            ["name"] = McpToolNames.Qualify(s.Name, t.Name),
+                            ["allowed"] = s.IsToolAllowed(t.Name),
+                            ["args"] = DynamicToolCatalog.DescribeArgs(t.InputSchema),
+                        }).ToArray()),
+                    });
+                return new JsonObject
+                {
+                    ["ok"] = true,
+                    ["servers"] = servers,
+                    ["agent_tools"] = McpHub.EnabledToolSpecs(settings).Count,
+                }.ToJsonString(opts);
+            }
+
+            case "import":
+            {
+                List<McpServerConfig> found;
+                try { found = McpSettingsStore.ParseServersJson(Str(root, "json")); }
+                catch (JsonException ex) { return CliIpcProtocol.ErrorJson("not an mcpServers JSON block: " + ex.Message); }
+                if (found.Count == 0) return CliIpcProtocol.ErrorJson("no servers in that JSON");
+                var settings = McpSettingsStore.Load();
+                var report = new JsonArray();
+                foreach (var cfg in found)
+                {
+                    settings.Servers.RemoveAll(s => string.Equals(s.Name, cfg.Name, StringComparison.OrdinalIgnoreCase));
+                    settings.Servers.Add(cfg);
+                    report.Add(await LoadInto(cfg));
+                }
+                McpSettingsStore.Save(settings);
+                await McpHub.Shared.ResetAsync();
+                return new JsonObject { ["ok"] = true, ["imported"] = report }.ToJsonString(opts);
+            }
+
+            case "refresh":
+            {
+                var settings = McpSettingsStore.Load();
+                var cfg = settings.Find(name);
+                if (cfg is null) return CliIpcProtocol.ErrorJson($"no MCP server named '{name}'");
+                var r = await LoadInto(cfg);
+                McpSettingsStore.Save(settings);
+                await McpHub.Shared.ResetAsync();
+                return new JsonObject { ["ok"] = r["error"] is null, ["server"] = r }.ToJsonString(opts);
+            }
+
+            case "allow":
+            case "deny":
+            {
+                if (!McpToolNames.TrySplit(name, out var server, out var tool)) return CliIpcProtocol.ErrorJson("expected <server>.<tool>");
+                var settings = McpSettingsStore.Load();
+                var cfg = settings.Find(server);
+                if (cfg is null) return CliIpcProtocol.ErrorJson($"no MCP server named '{server}'");
+                if (cfg.Tools.All(t => t.Name != tool)) return CliIpcProtocol.ErrorJson($"'{server}' has no loaded tool '{tool}' (mcp refresh {server})");
+                cfg.DisabledTools.RemoveAll(t => t == tool);
+                if (verb == "deny") cfg.DisabledTools.Add(tool);
+                McpSettingsStore.Save(settings);
+                return new JsonObject { ["ok"] = true, ["tool"] = name, ["allowed"] = verb == "allow" }.ToJsonString(opts);
+            }
+
+            case "call":
+            {
+                JsonObject args;
+                try { args = JsonNode.Parse(Str(root, "args") is { Length: > 0 } a ? a : "{}") as JsonObject ?? new JsonObject(); }
+                catch (JsonException ex) { return CliIpcProtocol.ErrorJson("args is not a JSON object: " + ex.Message); }
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(110));
+                return await McpHub.Shared.CallAsync(name, args, cts.Token);
+            }
+
+            default:
+                return CliIpcProtocol.ErrorJson($"unknown mcp verb '{verb}' (list | import | refresh | allow | deny | call)");
+        }
+
+        static async Task<JsonObject> LoadInto(McpServerConfig cfg)
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+                var (tools, label) = await McpHub.LoadToolsAsync(cfg, cts.Token);
+                cfg.Tools = tools.ToList();
+                cfg.ToolsLoadedAt = DateTime.UtcNow;
+                return new JsonObject { ["name"] = cfg.Name, ["server"] = label, ["tools"] = tools.Count };
+            }
+            catch (Exception ex)
+            {
+                return new JsonObject { ["name"] = cfg.Name, ["error"] = ex.Message };
+            }
         }
     }
 }

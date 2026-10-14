@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentZeroAvalonia.ViewModels;
 
-public enum SettingsSection { Llm, Cli, Terminal, Voice }
+public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice }
 
 /// <summary>A catalog model for the local-LLM combo.</summary>
 public sealed record ModelChoice(LlmModelCatalogEntry Entry)
@@ -107,6 +107,10 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsCli => Section == SettingsSection.Cli;
     public bool IsTerminal => Section == SettingsSection.Terminal;
     public bool IsVoice => Section == SettingsSection.Voice;
+    public bool IsMcp => Section == SettingsSection.Mcp;
+
+    /// <summary>Settings → MCP: the servers (and per-tool permissions) the bot's AI mode may use — mcp-settings.json.</summary>
+    public McpSettingsViewModel Mcp { get; } = new();
 
     /// <summary>Settings → Voice: its own view-model, the same voice-settings.json the WPF host and the wearable host read.</summary>
     public VoiceSettingsViewModel Voice { get; } = new();
@@ -117,12 +121,14 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsCli));
         OnPropertyChanged(nameof(IsTerminal));
         OnPropertyChanged(nameof(IsVoice));
+        OnPropertyChanged(nameof(IsMcp));
     }
 
     [RelayCommand] private void ShowLlm() => Section = SettingsSection.Llm;
     [RelayCommand] private void ShowCli() => Section = SettingsSection.Cli;
     [RelayCommand] private void ShowTerminal() => Section = SettingsSection.Terminal;
     [RelayCommand] private void ShowVoice() => Section = SettingsSection.Voice;
+    [RelayCommand] private void ShowMcp() => Section = SettingsSection.Mcp;
 
     /// <summary>The definitions changed — the shell reloads its new-tab menu.</summary>
     public event Action? CliDefinitionsChanged;

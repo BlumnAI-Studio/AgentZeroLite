@@ -58,6 +58,7 @@
             <StackPanel Margin="0,10">
                 <TextBlock Text="SETTINGS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextDim}" Margin="12,4,12,8" />
                 <Button Classes="nav" Classes.selected="{Binding IsLlm}" Content="LLM" Command="{Binding ShowLlmCommand}" />
+                <Button Classes="nav" Classes.selected="{Binding IsMcp}" Content="MCP" Command="{Binding ShowMcpCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsCli}" Content="CLI definitions" Command="{Binding ShowCliCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsTerminal}" Content="Terminal" Command="{Binding ShowTerminalCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsVoice}" Content="Voice" Command="{Binding ShowVoiceCommand}" />
@@ -269,6 +270,150 @@
                         <Button Content="Apply and save" Command="{Binding SaveTerminalCommand}" />
                     </StackPanel>
                     <TextBlock Classes="status" Text="{Binding TerminalStatus}" />
+                </StackPanel>
+
+                <!-- ═══ MCP ═══ -->
+                <StackPanel IsVisible="{Binding IsMcp}" MaxWidth="780" HorizontalAlignment="Left">
+                  <StackPanel DataContext="{Binding Mcp}" x:DataType="vm:McpSettingsViewModel">
+                    <TextBlock Classes="h1" Text="MCP servers" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="Model Context Protocol servers the bot's AI mode may call. Load a server's tools to teach them to the agent; untick a tool to keep the agent from calling it. The agent names them server.tool (memorizer.search). Header and env values are stored encrypted (mcp-settings.json)." />
+
+                    <Grid ColumnDefinitions="190,*" Margin="0,12,0,0">
+                        <!-- server list -->
+                        <DockPanel Grid.Column="0">
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                                <Button Content="+ Add" Command="{Binding AddServerCommand}" />
+                                <Button Content="Remove" Command="{Binding RemoveServerCommand}" IsEnabled="{Binding HasSelection}" />
+                            </StackPanel>
+                            <ListBox ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" MinHeight="160"
+                                     Background="{DynamicResource CyberBgPanel}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:McpServerItem">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ListLabel}" FontSize="12" />
+                                            <TextBlock Text="{Binding AllowedSummary}" FontSize="10" Foreground="{DynamicResource TextDim}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+
+                        <!-- server editor -->
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" IsVisible="{Binding HasSelection}">
+                          <StackPanel DataContext="{Binding SelectedServer}" x:DataType="vm:McpServerItem">
+                            <Grid Classes="form" ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                                <TextBlock Classes="lbl" Grid.Row="0" Text="Name" />
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                    <TextBox Text="{Binding Name}" Width="200" Watermark="memorizer" />
+                                    <CheckBox Content="Enabled" IsChecked="{Binding Enabled}" />
+                                </StackPanel>
+                                <TextBlock Classes="lbl" Grid.Row="1" Text="Transport" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Transports}" SelectedItem="{Binding Transport}" Width="140" HorizontalAlignment="Left"
+                                          ToolTip.Tip="stdio = a local process; http = Streamable HTTP (current spec); sse = the older HTTP+SSE transport" />
+                                <TextBlock Classes="lbl" Grid.Row="2" Text="URL" IsVisible="{Binding IsHttp}" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Url}" IsVisible="{Binding IsHttp}" Watermark="https://example.com/mcp" />
+                                <TextBlock Classes="lbl" Grid.Row="3" Text="Command" IsVisible="{Binding IsStdio}" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Command}" IsVisible="{Binding IsStdio}" Watermark="npx  (or uvx, node, a full path)" />
+                                <TextBlock Classes="lbl" Grid.Row="4" Text="Arguments" IsVisible="{Binding IsStdio}" VerticalAlignment="Top" Margin="0,6,10,0" />
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ArgsText}" IsVisible="{Binding IsStdio}" AcceptsReturn="True" MinHeight="54"
+                                         Watermark="one argument per line, e.g.&#10;-y&#10;@modelcontextprotocol/server-filesystem" />
+                            </Grid>
+
+                            <TextBlock Classes="h2" Text="HEADERS" IsVisible="{Binding IsHttp}" />
+                            <StackPanel IsVisible="{Binding IsHttp}">
+                                <ItemsControl ItemsSource="{Binding Headers}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:McpKeyValueRow">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                                                <TextBox Text="{Binding Key}" Width="160" Watermark="X-API-Key" />
+                                                <TextBox Text="{Binding Value}" Width="280" PasswordChar="●" Watermark="value" />
+                                                <Button Content="✕" Command="{Binding $parent[ItemsControl].((vm:McpServerItem)DataContext).RemoveHeaderCommand}" CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Content="+ Header" Command="{Binding AddHeaderCommand}" Margin="0,4,0,0" />
+                            </StackPanel>
+
+                            <TextBlock Classes="h2" Text="ENVIRONMENT" IsVisible="{Binding IsStdio}" />
+                            <StackPanel IsVisible="{Binding IsStdio}">
+                                <ItemsControl ItemsSource="{Binding Env}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:McpKeyValueRow">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                                                <TextBox Text="{Binding Key}" Width="160" Watermark="GITHUB_TOKEN" />
+                                                <TextBox Text="{Binding Value}" Width="280" PasswordChar="●" Watermark="value" />
+                                                <Button Content="✕" Command="{Binding $parent[ItemsControl].((vm:McpServerItem)DataContext).RemoveEnvCommand}" CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Content="+ Variable" Command="{Binding AddEnvCommand}" Margin="0,4,0,0" />
+                            </StackPanel>
+
+                            <TextBlock Classes="h2" Text="TOOLS — ALLOW THE AGENT TO CALL" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="⟳ Load tools" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).Mcp.LoadToolsCommand}"
+                                        ToolTip.Tip="Connect with the settings above (saved or not) and list the server's tools" />
+                                <Button Content="Allow all" Command="{Binding AllowAllToolsCommand}" />
+                                <Button Content="Deny all" Command="{Binding DenyAllToolsCommand}" />
+                                <TextBlock Text="{Binding AllowedSummary}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource CyberTealBrush}" />
+                            </StackPanel>
+                            <TextBlock Classes="status" Text="{Binding ToolsState}" />
+                            <ItemsControl ItemsSource="{Binding Tools}" Margin="0,6,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:McpToolItem">
+                                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,5">
+                                            <DockPanel>
+                                                <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Allowed}" VerticalAlignment="Top" Margin="0,0,8,0" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" />
+                                                    <TextBlock Text="{Binding ArgsSummary}" FontSize="10" FontFamily="JetBrains Mono, Cascadia Mono, Consolas, monospace"
+                                                               Foreground="{DynamicResource CyberTealBrush}" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource TextDim}"
+                                                               TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                        <Button Content="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding IsIdle}" />
+                    </StackPanel>
+                    <ProgressBar Margin="0,8,0,0" Height="4" IsVisible="{Binding IsBusy}" IsIndeterminate="True" />
+                    <TextBlock Classes="status" Text="{Binding Status}" />
+
+                    <TextBlock Classes="h2" Text="TEST A TOOL" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox ItemsSource="{Binding SelectedServer.Tools}" SelectedItem="{Binding TestTool}" MinWidth="220">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:McpToolItem">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Content="▶ Call" Command="{Binding TestCallCommand}" IsEnabled="{Binding IsIdle}"
+                                ToolTip.Tip="Run the tool once with these arguments, as the agent would (works before saving)" />
+                    </StackPanel>
+                    <TextBox Text="{Binding TestArgs}" Margin="0,6,0,0" FontFamily="JetBrains Mono, Cascadia Mono, Consolas, monospace"
+                             Watermark="{}{&quot;query&quot;: &quot;actor model&quot;}" />
+                    <TextBox Text="{Binding TestResult}" IsReadOnly="True" TextWrapping="Wrap" Margin="0,6,0,0" MinHeight="60" MaxHeight="320" />
+
+                    <TextBlock Classes="h2" Text="IMPORT (mcpServers JSON)" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="Paste an mcpServers block from Claude Code (.mcp.json, ~/.claude.json), Claude Desktop or Cursor. Imported servers load their tools right away; a server with the same name is replaced." />
+                    <TextBox Text="{Binding ImportText}" AcceptsReturn="True" MinHeight="80" Margin="0,6,0,0" FontFamily="JetBrains Mono, Cascadia Mono, Consolas, monospace"
+                             Watermark="{}{ &quot;mcpServers&quot;: { &quot;memorizer&quot;: { &quot;type&quot;: &quot;sse&quot;, &quot;url&quot;: &quot;https://…/sse&quot;, &quot;headers&quot;: { &quot;X-API-Key&quot;: &quot;…&quot; } } } }" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                        <Button Content="Import" Command="{Binding ImportCommand}" IsEnabled="{Binding IsIdle}" />
+                    </StackPanel>
+                  </StackPanel>
                 </StackPanel>
 
                 <!-- ═══ VOICE ═══ -->

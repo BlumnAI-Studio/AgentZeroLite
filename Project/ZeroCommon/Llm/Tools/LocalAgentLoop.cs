@@ -55,7 +55,9 @@ public sealed class LocalAgentLoop : IAgentLoop
         var (weights, modelParams) = llm.GetInternals();
         _context = weights.CreateContext(modelParams);
         _executor = new InteractiveExecutor(_context);
-        _grammar = new Grammar(AgentToolGrammar.Gbnf, AgentToolGrammar.GrammarRootRule);
+        _grammar = new Grammar(
+            AgentToolGrammar.BuildGbnf(_opts.DynamicTools.Select(t => t.Name)),
+            AgentToolGrammar.GrammarRootRule);
     }
 
     /// <summary>
@@ -107,7 +109,7 @@ public sealed class LocalAgentLoop : IAgentLoop
                 break;
             }
 
-            if (!AgentToolGrammar.KnownTools.Contains(call.Tool))
+            if (!AgentToolGrammar.IsKnownTool(call.Tool, _opts.DynamicTools))
             {
                 failure = $"model called unknown tool '{call.Tool}' at iteration {iter}";
                 break;
@@ -417,12 +419,14 @@ public sealed class LocalAgentLoop : IAgentLoop
             }
 
             default:
+                if (DynamicToolCatalog.Contains(_opts.DynamicTools, call.Tool))
+                    return await _host.CallDynamicToolAsync(call.Tool, call.Args, ct);
                 return $"{{\"error\":\"unknown tool {EscapeJsonString(call.Tool)}\"}}";
         }
     }
 
-    private static string FormatFirstTurn(string userRequest)
-        => $"{AgentToolGrammar.SystemPrompt}\n\n--- USER REQUEST ---\n{userRequest}";
+    private string FormatFirstTurn(string userRequest)
+        => $"{AgentToolGrammar.BuildSystemPrompt(_opts.DynamicTools)}\n\n--- USER REQUEST ---\n{userRequest}";
 
     private static string FormatFollowupUserTurn(string userRequest)
         => $"--- USER REQUEST ---\n{userRequest}";
@@ -620,4 +624,12 @@ public sealed record AgentLoopOptions
     /// without an HTTP layer to stall.</para>
     /// </summary>
     public TimeSpan TurnTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Tools known only at run time — the host's MCP servers (<c>memorizer.search</c>). Their names
+    /// join <see cref="AgentToolGrammar.KnownTools"/> for this loop, the local grammar and the system
+    /// prompt list them, and a call goes to <see cref="IAgentToolbelt.CallDynamicToolAsync"/>. Read
+    /// once, when the loop is built: a change in Settings reaches the next session, not a running one.
+    /// </summary>
+    public IReadOnlyList<DynamicToolSpec> DynamicTools { get; init; } = [];
 }

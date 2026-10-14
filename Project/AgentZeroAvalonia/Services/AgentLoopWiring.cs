@@ -2,6 +2,7 @@ using Agent.Common;
 using Agent.Common.Actors;
 using Agent.Common.Llm;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Module;
 
 namespace AgentZeroAvalonia.Services;
@@ -34,6 +35,9 @@ internal static class AgentLoopWiring
                 // from the persisted settings on both paths — LlmService.CurrentSettings
                 // mirrors the loaded model and says nothing about how long a chain may run.
                 var maxTurns = settings.ResolveAgentLoopMaxTurns();
+                // MCP tools come from the settings file's cached tool lists — no connection is
+                // made here; the first call to a server opens it (McpHub).
+                var mcpTools = McpHub.Shared.EnabledToolSpecs();
                 if (settings.ActiveBackend == LlmActiveBackend.Local)
                 {
                     var s = LlmService.CurrentSettings;
@@ -42,14 +46,14 @@ internal static class AgentLoopWiring
                     var isVulkan = s.Backend == LocalLlmBackend.Vulkan;
                     var temp = (isLlama31 && isVulkan) ? 0.0f : s.Temperature;
                     var cap = Math.Max(256, s.AgentToolLoopMaxTokens);
-                    AppLogger.Log($"[AIMODE] options: backend=Local maxTokens={cap} maxTurns={maxTurns} temp={temp:0.00} family={entry.ChatFamily}");
-                    return new AgentLoopOptions { MaxTokensPerTurn = cap, MaxIterations = maxTurns, Temperature = temp };
+                    AppLogger.Log($"[AIMODE] options: backend=Local maxTokens={cap} maxTurns={maxTurns} temp={temp:0.00} family={entry.ChatFamily} mcpTools={mcpTools.Count}");
+                    return new AgentLoopOptions { MaxTokensPerTurn = cap, MaxIterations = maxTurns, Temperature = temp, DynamicTools = mcpTools };
                 }
                 else
                 {
                     var cap = Math.Max(256, settings.External.MaxTokens);
-                    AppLogger.Log($"[AIMODE] options: backend=External provider={settings.External.Provider} model={settings.ResolveExternalModel()} maxTokens={cap} maxTurns={maxTurns} temp={settings.Temperature:0.00}");
-                    return new AgentLoopOptions { MaxTokensPerTurn = cap, MaxIterations = maxTurns, Temperature = settings.Temperature };
+                    AppLogger.Log($"[AIMODE] options: backend=External provider={settings.External.Provider} model={settings.ResolveExternalModel()} maxTokens={cap} maxTurns={maxTurns} temp={settings.Temperature:0.00} mcpTools={mcpTools.Count}");
+                    return new AgentLoopOptions { MaxTokensPerTurn = cap, MaxIterations = maxTurns, Temperature = settings.Temperature, DynamicTools = mcpTools };
                 }
             },
             AgentLoopFactory: (opts, host) =>

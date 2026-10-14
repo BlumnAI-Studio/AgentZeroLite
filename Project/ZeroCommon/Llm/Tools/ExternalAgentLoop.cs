@@ -75,7 +75,7 @@ public sealed class ExternalAgentLoop : IAgentLoop
         // every prompt.
         if (_isFirstUserSend)
         {
-            _messages.Add(LlmMessage.System(AgentToolGrammar.SystemPrompt));
+            _messages.Add(LlmMessage.System(AgentToolGrammar.BuildSystemPrompt(_opts.DynamicTools)));
             _messages.Add(LlmMessage.User($"--- USER REQUEST ---\n{userRequest}"));
             _isFirstUserSend = false;
         }
@@ -110,7 +110,7 @@ public sealed class ExternalAgentLoop : IAgentLoop
                 instruction = "";
                 if (_formatCorrections >= _opts.MaxFormatCorrections) return false;
                 _formatCorrections++;
-                instruction = BuildFormatCorrectionInstruction(offendingPreview);
+                instruction = BuildFormatCorrectionInstruction(offendingPreview, _opts.DynamicTools);
                 AppLogger.Log(
                     $"[ExternalAgentLoop] format correction {_formatCorrections}/{_opts.MaxFormatCorrections} " +
                     $"injected — {detail}");
@@ -198,7 +198,7 @@ public sealed class ExternalAgentLoop : IAgentLoop
                 }
             }
 
-            if (!AgentToolGrammar.KnownTools.Contains(call.Tool))
+            if (!AgentToolGrammar.IsKnownTool(call.Tool, _opts.DynamicTools))
             {
                 // A well-formed envelope naming a tool that doesn't exist.
                 // BuildFormatCorrectionInstruction lists the exact KnownTools,
@@ -415,8 +415,12 @@ public sealed class ExternalAgentLoop : IAgentLoop
     /// wrong". Keeping it terse and imperative matches the
     /// system-prompt tool-calling voice (R-1..R-5, prompts default English).
     /// </summary>
-    internal static string BuildFormatCorrectionInstruction(string? offendingPreview)
+    internal static string BuildFormatCorrectionInstruction(string? offendingPreview,
+        IReadOnlyList<DynamicToolSpec>? dynamicTools = null)
     {
+        var names = dynamicTools is { Count: > 0 }
+            ? AgentToolGrammar.KnownTools.Concat(dynamicTools.Select(t => t.Name))
+            : AgentToolGrammar.KnownTools;
         var offending = offendingPreview is null
             ? ""
             : $"\n\nYour previous turn was not a valid tool call (it started with: \"{offendingPreview}\").";
@@ -424,7 +428,7 @@ public sealed class ExternalAgentLoop : IAgentLoop
                "No prose before or after. The envelope is: " +
                "{\"tool\":\"<tool_name>\",\"args\":{...}} " +
                "where <tool_name> is one of " +
-               string.Join(", ", AgentToolGrammar.KnownTools) + ". " +
+               string.Join(", ", names) + ". " +
                "Call done when the user's request is satisfied." + offending;
     }
 
@@ -674,6 +678,8 @@ public sealed class ExternalAgentLoop : IAgentLoop
             }
 
             default:
+                if (DynamicToolCatalog.Contains(_opts.DynamicTools, call.Tool))
+                    return await _host.CallDynamicToolAsync(call.Tool, call.Args, ct);
                 return $"{{\"error\":\"unknown tool {EscapeJsonString(call.Tool)}\"}}";
         }
     }

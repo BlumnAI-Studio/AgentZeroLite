@@ -351,6 +351,35 @@ ws           ::= ([ \t\n\r])*
     public const string GrammarRootRule = "root";
 
     /// <summary>
+    /// <see cref="Gbnf"/> with <paramref name="dynamicToolNames"/> added to the <c>toolname</c>
+    /// alternatives, so the local sampler can emit an MCP tool's name. Returns <see cref="Gbnf"/>
+    /// itself when there are none. Names are expected to be <c>[A-Za-z0-9_.-]</c>
+    /// (<c>McpToolNames</c> guarantees it); anything else is dropped rather than escaped.
+    /// </summary>
+    public static string BuildGbnf(IEnumerable<string>? dynamicToolNames)
+    {
+        var extra = (dynamicToolNames ?? [])
+            .Where(n => n.Length > 0 && n.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.'))
+            .Where(n => !KnownTools.Contains(n))
+            .Distinct()
+            .ToList();
+        if (extra.Count == 0) return Gbnf;
+        const string anchor = "| \"\\\"done\\\"\"";
+        var additions = string.Concat(extra.Select(n => $" | \"\\\"{n}\\\"\""));
+        return Gbnf.Replace(anchor, anchor + additions);
+    }
+
+    /// <summary><see cref="SystemPrompt"/> plus the catalog of the run's dynamic tools, if any.</summary>
+    public static string BuildSystemPrompt(IReadOnlyList<DynamicToolSpec>? dynamicTools)
+        => dynamicTools is { Count: > 0 }
+            ? SystemPrompt + DynamicToolCatalog.BuildPromptSection(dynamicTools)
+            : SystemPrompt;
+
+    /// <summary>A built-in tool or one of the run's dynamic tools.</summary>
+    public static bool IsKnownTool(string name, IReadOnlyList<DynamicToolSpec>? dynamicTools)
+        => KnownTools.Contains(name) || DynamicToolCatalog.Contains(dynamicTools, name);
+
+    /// <summary>
     /// Sentinel tool name for "session is finished". When the model emits this,
     /// the loop terminates and reports the <c>message</c> arg as the final
     /// user-facing message.

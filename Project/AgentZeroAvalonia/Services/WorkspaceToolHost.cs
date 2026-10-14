@@ -1,9 +1,11 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Akka.Actor;
 using Agent.Common;
 using Agent.Common.Actors;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Module;
 using Agent.Common.Services;
 using Agent.Common.Web;
@@ -19,7 +21,8 @@ namespace AgentZeroAvalonia.Services;
 /// <c>AgentBotActor</c> tracks; files through <see cref="FileToolCore"/> under the active
 /// workspace root; <c>find_files/open_file/stop_media</c> through <see cref="FileOpenPolicy"/>
 /// and the OS's default program; web through the headless surface (no browser page in
-/// this host yet). The OS-control verbs keep the interface's "not available" defaults.
+/// this host yet); MCP tools (<c>server.tool</c>) through <see cref="McpHub.Shared"/>. The
+/// OS-control verbs keep the interface's "not available" defaults.
 /// </summary>
 internal sealed class WorkspaceToolHost : IAgentToolbelt
 {
@@ -274,4 +277,12 @@ internal sealed class WorkspaceToolHost : IAgentToolbelt
     public Task<string> WebSearchAsync(string query, int maxResults, CancellationToken ct) => Web.SearchAsync(query, maxResults, ct);
     public Task<string> WebOpenAsync(string url, int tab, CancellationToken ct) => Web.OpenAsync(url, tab, ct);
     public Task<string> WebReadAsync(int tab, string? mode, string? find, int maxChars, CancellationToken ct) => Web.ReadAsync(tab, mode, find, maxChars, ct);
+
+    // ── MCP servers (Settings → MCP) ─────────────────────────────────────────
+
+    public Task<string> CallDynamicToolAsync(string name, JsonObject args, CancellationToken ct)
+    {
+        AppLogger.Log($"[AIMODE] mcp {name} args={McpWire.Serialize(args)}");
+        return McpHub.Shared.CallAsync(name, args, ct);
+    }
 }

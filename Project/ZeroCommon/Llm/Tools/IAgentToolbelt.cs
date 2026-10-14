@@ -148,6 +148,14 @@ public interface IAgentToolbelt
     /// <summary>Read an open tab: mode summary | links | find.</summary>
     Task<string> WebReadAsync(int tab, string? mode, string? find, int maxChars, CancellationToken ct)
         => Task.FromResult("{\"ok\":false,\"error\":\"web tools not available in this host\"}");
+
+    // ====================== Dynamic tools (MCP servers) ========================
+    // A host that passes AgentLoopOptions.DynamicTools implements this; the Avalonia
+    // host routes it to McpHub. Everything else keeps the "not available" default.
+
+    /// <summary>Run a tool from <see cref="AgentLoopOptions.DynamicTools"/> by its full name. JSON envelope.</summary>
+    Task<string> CallDynamicToolAsync(string name, JsonObject args, CancellationToken ct)
+        => Task.FromResult("{\"ok\":false,\"error\":\"MCP tools are not available in this host\"}");
 }
 
 /// <summary>

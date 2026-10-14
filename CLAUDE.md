@@ -284,7 +284,7 @@ What differs from the WPF host, and why:
 
 - **Terminal**: xterm.js inside `NativeWebView`, served by `LocalAssetServer` (loopback, token path) because the Avalonia WebView cannot map a folder; the PTY is `ConPtyHost` (a copy of `ManagedConPtyHost`) on Windows and `PortaPtyHost` (Porta.Pty) on macOS behind ZeroCommon's `IPtyHost`/`XtermTerminalSession`. Two ConPTY facts the WPF copy never hit: a parent whose stdio is a pipe hands its std handles to the child (blanked around `CreateProcess`), and pipe EOF is not the exit signal (a process-handle watcher is).
 - **Split panes**: `WorkspaceLayout<T>` + one Canvas that positions every renderer over its pane slot — no native re-parenting. The stored `CliGroup.LayoutJson` is byte-identical to what WPF writes.
-- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask` and `layout`. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout` and `mcp`. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it
@@ -310,6 +310,17 @@ What differs from the WPF host, and why:
   settings installer create their processes with the desktop-app breakaway policy (`ZeroCommon/Services/
   DesktopAppBreakaway.cs`, applied only when `IsPackagedProcess()`), so npm -g / claude / git write the real
   profile. Packaging, verification and submission history: `Docs/avalonia-v2/microsoft-store.md`.
+- **MCP servers in AI mode (Avalonia first)** — Settings → MCP / `-cli mcp list|import|refresh|allow|deny|call`,
+  stored in `mcp-settings.json` (`ZeroCommon/Mcp`: our own `McpClient` over stdio, Streamable HTTP and the older
+  HTTP+SSE; header and env values sealed like the LLM keys). The agent calls an allowed tool as `server.tool`
+  through `AgentLoopOptions.DynamicTools` → `IAgentToolbelt.CallDynamicToolAsync` → `McpHub`; those names are added
+  to the loop's known set, the local GBNF and the prompt *per run*, so the static catalog (`AgentToolGrammar.KnownTools`
+  + `AgentToolCatalogTests`) is untouched. Three things the code relies on: the prompt is built from the tool lists
+  cached at *Load tools* (a session start never waits on a server); the allow list is checked again at call time,
+  because a model can name a tool that is not in its prompt; and arguments are coerced to the tool's schema, because
+  the local grammar emits only strings, integers and booleans. On Windows a stdio command that resolves to a
+  `.cmd`/`.bat` (npx, uvx) runs through `cmd.exe /d /s /c` — same no-shell trap as the npm installer.
+  `McpLiveTests` runs against a real server when `AGENTZERO_MCP_LIVE_FILE` names an `mcpServers` file.
 - **Local LLM is Windows-only** (LLamaSharp DLLs); macOS uses External providers. Gemma 4's native tool-call syntax is converted to the JSON envelope by `GemmaNativeToolCall` (ZeroCommon, benefits both hosts).
 - CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`); `release.yml` is untouched. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
 

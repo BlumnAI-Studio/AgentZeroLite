@@ -112,6 +112,10 @@ public partial class App : Application
                 try { vm.Bot.Detach(); } catch { }
                 try { vm.Wearable?.Shutdown(); } catch { }
                 try { _cliServer?.Dispose(); } catch { }
+                // stdio MCP servers are child processes; end them with the app. Off the UI
+                // thread: waiting here on continuations that post back to it would deadlock
+                // (the same trap ActorSystemManager.Shutdown documents).
+                try { Task.Run(() => Agent.Common.Mcp.McpHub.Shared.ResetAsync()).Wait(TimeSpan.FromSeconds(3)); } catch { }
                 ActorSystemManager.Shutdown();
             };
         }
