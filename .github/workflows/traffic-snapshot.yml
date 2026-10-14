@@ -8,9 +8,10 @@ name: Traffic Snapshot
 # Release-download tracking was turned off on 2026-10-15. downloads.json and
 # releases.json stay as the record up to 2026-10-13 and are no longer updated.
 
+# The daily schedule was removed on 2026-10-15: its snapshot commits buried the
+# development history in git log. Run it by hand when a trend is wanted
+# (the workflow is also disabled in the repo's Actions settings).
 on:
-  schedule:
-    - cron: '0 18 * * *'   # 03:00 KST daily
   workflow_dispatch: {}      # manual run button
 
 concurrency:
