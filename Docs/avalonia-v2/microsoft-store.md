@@ -1,7 +1,7 @@
 # AgentZero Lite (Avalonia) — Microsoft Store 등록 가이드
 
 Avalonia 호스트(`Project/AgentZeroAvalonia`)의 Windows 빌드를 Microsoft Store에 올리는 절차와 설계.
-**현재 기준(2차 제출, 2026-10-02~)** 으로 쓰여 있고, 1차 제출과 반려의 기록, 공개 후 업데이트(5차~)는 §6에 있다.
+**현재 기준(2차 제출, 2026-10-02~)** 으로 쓰여 있고, 1차 제출과 반려의 기록, 공개 후 업데이트(5차·6차)는 §6에 있다.
 
 > 2026-09 기준으로 확인한 사실: 개인·회사 개발자 계정 모두 등록비 무료(정부 신분증 + 셀피 인증),
 > MSIX 제출은 Store가 Microsoft 인증서로 다시 서명하므로 코드 서명 인증서가 필요 없음,
@@ -126,7 +126,7 @@ cd Project\AgentZeroAvalonia\msix
 
 1. **Packages** — (b)의 `.msix` 업로드. 장치 패밀리: Desktop만. 자동화(CDP 파일 주입)는 기존 패키지와 이름이
    겹치면 멈추므로, 교체할 때는 버전을 올리고 직접 끌어다 놓는 것이 안전하다. 자동화한다면 Playwright
-   `setInputFiles`가 아니라 CDP `DOM.setFileInputFiles`로(50 MB 제한, §6 5차 제출).
+   `setInputFiles`가 아니라 CDP `DOM.setFileInputFiles`로, 경로는 슬래시로(50 MB 제한, §6 5차·6차 제출).
 2. **Properties** — Category: *Developer tools / Utilities*. Privacy policy URL: §1-4. 웹사이트 = 저장소,
    지원 연락처 = `psmon@live.co.kr`(심사자가 직접 연락처를 요구했다). 생성형 AI 기능 선언 체크.
 3. **Age ratings** — IARC 설문. "다운로드 외 콘텐츠 접근"(웹·AI 생성 텍스트)만 예. 결과 3+ / Everyone.
@@ -223,6 +223,29 @@ Packages에 새 MSIX → Store listings(English)의 *What's new in this version*
 - 로그인은 사람이 한다: 자동화 전용 프로필의 Edge를 `--remote-debugging-port`로 띄우고, 로그인 후
   `chromium.connectOverCDP`로 붙었다. 개요 화면의 섹션 링크는 클릭보다 `submissions/<id>/packages` 같은 URL로
   바로 가는 편이 안정적이었다.
+
+### 6차 제출 — 두 번째 업데이트 (1.25.4.0, 2026-10-15)
+
+5차 이후 Avalonia 호스트에 들어온 기능을 묶은 업데이트: Plugins 페이지(WPF 웹 플러그인 이식 — Voice Note,
+Agent Band, Token Monitor/Remaining), Settings → Models(음악 분류·비전·화자 분리 모델 내려받기), Settings → Voice,
+AI 모드의 MCP 서버, 사이드바 ACTIVE SESSIONS(에이전트 상태, 포커스 세션 강조), 오프라인 네트워크 드라이브 멈춤 수정.
+`version.txt`를 `0.25.4`로 올리고 `-Version` 없이 빌드(147 MB). 매니페스트에 `DeviceCapability microphone`이
+새로 들어갔고, 개인정보 처리방침을 같은 날 갱신(마이크·시스템 오디오, OpenAI 음성, MCP, 플러그인 설치·YouTube)한 뒤
+제출했다. 절차는 5차와 같다 — Start update(Submission 3) → Packages → Store listings(English)의 *What's new*와
+Product features 두 줄 → Submit for certification.
+
+이번에 확인한 것:
+
+- **`DOM.setFileInputFiles`의 경로는 슬래시로 넘긴다.** 백슬래시 경로가 명령 파일을 거치며 빠져
+  (`C:codepsmon…msix`) 브라우저가 이름만 있고 0바이트인 파일을 만들었고, 업로드가 "0 Bytes / Uploading"에서
+  멈췄다. `C:/code/…` 형태로는 154,411,714바이트 그대로 잡혔다. 먼저 빈 `input[type=file]`을 만들어
+  `files[0].size`를 확인하면 업로드 전에 알 수 있다. 실패한 항목은 "Paused · Delete · Retry"로 남아 저장을 막으니
+  **Delete**로 지운다.
+- **"Analyzing package"가 다시 멈췄다**(147 MB, 20분+). 표에는 이미 v1.25.4.0이 1순위로 올라와 있었고, 새로고침하자
+  패키지가 남아 있고 Save가 풀렸다(2차 제출 때와 같은 현상). 저장 후 개요에서 1.25.4.0 하나만 Validated.
+- **인증 노트는 더 이상 Submission options에 없다.** 그 화면은 "Additional Testing Information 페이지에 적으라"는
+  안내만 남았고, 노트는 제품 단위 페이지(`suppinfo/additionaltestinginfo`, 저장 버튼은 **Save description**)에 있다.
+  기존 노트 끝에 마이크 안내 한 단락을 붙였다(`store-listing/listing.md`의 "About the microphone").
 
 ## 참고
 
