@@ -37,6 +37,7 @@ public sealed class TokenRemainingCollector
     private CancellationTokenSource? _cts;
     private Task _running = Task.CompletedTask;
     private bool _ticking;
+    private int _compacted;
 
     public static TimeSpan DefaultInterval { get; } = TimeSpan.FromSeconds(30);
     public TimeSpan PollInterval { get; private set; } = DefaultInterval;
@@ -129,33 +130,31 @@ public sealed class TokenRemainingCollector
             using var db = new AppDbContext();
             db.Database.EnsureCreated();
 
+            // Once per process: drop the copies the old dedup rule left behind.
+            if (Interlocked.Exchange(ref _compacted, 1) == 0) CompactDuplicates(db);
+
             // v3 layout: snapshots live at SnapshotsDir/{account}/{sessionId}.json
             // (one file per session). v2 wrote SnapshotsDir/{account}.json
             // (flat) — wrapper v3 deletes those on first tick, but if the
             // user's wrapper hasn't upgraded yet we still want to see them.
             // Recurse so both layouts work.
+            var snapshots = new List<SnapshotPayload>();
             foreach (var file in Directory.EnumerateFiles(SnapshotsDir, "*.json", SearchOption.AllDirectories))
             {
                 if (ct.IsCancellationRequested) break;
                 files++;
+                if (TryReadSnapshot(file) is { } snap) snapshots.Add(snap);
+            }
 
-                var snap = TryReadSnapshot(file);
-                if (snap is null) continue;
+            var inserts = PlanInserts(snapshots, (account, model) => db.TokenRemainingObservations
+                .Where(o => o.AccountKey == account && o.Model == model)
+                .OrderByDescending(o => o.ObservedAtUtc)
+                .Select(o => new LatestState(o.FiveHourPercent, o.FiveHourResetsAtUtc,
+                    o.SevenDayPercent, o.SevenDayResetsAtUtc, o.ObservedAtUtc))
+                .FirstOrDefault(), out skipped);
 
-                // Look up the latest existing row for this (account, model)
-                var latest = db.TokenRemainingObservations
-                    .Where(o => o.AccountKey == snap.AccountKey && o.Model == snap.Model)
-                    .OrderByDescending(o => o.ObservedAtUtc)
-                    .FirstOrDefault();
-
-                bool changed = latest is null
-                    || latest.FiveHourPercent != snap.FiveHourPercent
-                    || latest.SevenDayPercent != snap.SevenDayPercent
-                    || NotSameDateTime(latest.FiveHourResetsAtUtc, snap.FiveHourResetsAtUtc)
-                    || NotSameDateTime(latest.SevenDayResetsAtUtc, snap.SevenDayResetsAtUtc);
-
-                if (!changed) { skipped++; continue; }
-
+            foreach (var snap in inserts)
+            {
                 db.TokenRemainingObservations.Add(new TokenRemainingObservation
                 {
                     Vendor              = "claude",
@@ -167,8 +166,8 @@ public sealed class TokenRemainingCollector
                     SevenDayResetsAtUtc = snap.SevenDayResetsAtUtc,
                     ObservedAtUtc       = snap.WrittenAtUtc,
                 });
-                inserted++;
             }
+            inserted = inserts.Count;
 
             db.SaveChanges();
         }
@@ -199,7 +198,116 @@ public sealed class TokenRemainingCollector
         return Math.Abs((a.Value - b.Value).TotalSeconds) > 1.0;
     }
 
-    private sealed record SnapshotPayload(
+    /// <summary>The newest stored state of one (account, model) — what a snapshot is compared with.</summary>
+    internal sealed record LatestState(
+        int FiveHourPercent,
+        DateTime? FiveHourResetsAtUtc,
+        int SevenDayPercent,
+        DateTime? SevenDayResetsAtUtc,
+        DateTime ObservedAtUtc);
+
+    /// <summary>
+    /// Which snapshots become rows. A snapshot is a state change only if it is
+    /// <b>newer</b> than the newest stored state and differs from it; snapshots are
+    /// walked oldest first, each accepted one becoming the state the next is compared
+    /// with.
+    ///
+    /// <para>Measured (2026-10-15): the old rule compared every file with the newest
+    /// row but ignored the file's age. The wrapper keeps one file per session and
+    /// finished sessions' files stay, so every stale file whose numbers differed from
+    /// the live session's was inserted again on every 30 s tick — 3,717,787 rows for
+    /// 1,181 distinct snapshots, one of them 25,640 times, and the widget's queries
+    /// over that table froze the UI for 30 s.</para>
+    /// </summary>
+    internal static List<SnapshotPayload> PlanInserts(
+        IEnumerable<SnapshotPayload> snapshots,
+        Func<string, string, LatestState?> latestStored,
+        out int skipped)
+    {
+        skipped = 0;
+        var result = new List<SnapshotPayload>();
+        var latest = new Dictionary<(string, string), LatestState?>();
+        foreach (var snap in snapshots.OrderBy(s => s.WrittenAtUtc))
+        {
+            var key = (snap.AccountKey, snap.Model);
+            if (!latest.TryGetValue(key, out var current))
+                latest[key] = current = latestStored(snap.AccountKey, snap.Model);
+
+            if (current is not null && snap.WrittenAtUtc <= current.ObservedAtUtc)
+            {
+                skipped++; // already recorded, or an older session's leftover
+                continue;
+            }
+
+            bool changed = current is null
+                || current.FiveHourPercent != snap.FiveHourPercent
+                || current.SevenDayPercent != snap.SevenDayPercent
+                || NotSameDateTime(current.FiveHourResetsAtUtc, snap.FiveHourResetsAtUtc)
+                || NotSameDateTime(current.SevenDayResetsAtUtc, snap.SevenDayResetsAtUtc);
+            if (!changed) { skipped++; continue; }
+
+            result.Add(snap);
+            latest[key] = new LatestState(snap.FiveHourPercent, snap.FiveHourResetsAtUtc,
+                snap.SevenDayPercent, snap.SevenDayResetsAtUtc, snap.WrittenAtUtc);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Delete rows that repeat an earlier row exactly (same account, model, time and
+    /// numbers), keeping the first. Cheap once the table is clean; the first run on a
+    /// table the old rule inflated removes nearly all of it — measured on a copy of a
+    /// real database: 3,716,606 of 3,717,787 rows, 660 MB → 64 MB after VACUUM.
+    /// Deleted in batches so the write lock is released between them (one statement
+    /// held it for 31 s, stalling every other writer of the shared database).
+    /// </summary>
+    internal static int CompactDuplicates(AppDbContext db, int batchSize = 100_000)
+    {
+        var table = db.Model.FindEntityType(typeof(TokenRemainingObservation))?.GetTableName()
+                    ?? "TokenRemainingObservations";
+        var started = DateTime.UtcNow;
+        var removed = 0;
+        try
+        {
+            // The keep-list lives in a TEMP table, which exists per connection — hold one open.
+            db.Database.OpenConnection();
+            db.Database.ExecuteSqlRaw("CREATE TEMP TABLE IF NOT EXISTS tr_keep (Id INTEGER PRIMARY KEY)");
+            db.Database.ExecuteSqlRaw("DELETE FROM tr_keep");
+            var fill = $"INSERT INTO tr_keep SELECT MIN(\"Id\") FROM \"{table}\" GROUP BY \"AccountKey\", \"Model\", " +
+                       "\"ObservedAtUtc\", \"FiveHourPercent\", \"SevenDayPercent\", \"FiveHourResetsAtUtc\", \"SevenDayResetsAtUtc\"";
+            db.Database.ExecuteSqlRaw(fill);
+
+            // Walk the primary key in ranges: each statement touches only its slice, so
+            // no batch rescans what the previous ones already cleared.
+            var bounds = db.TokenRemainingObservations
+                .GroupBy(_ => 1)
+                .Select(g => new { Min = g.Min(o => o.Id), Max = g.Max(o => o.Id) })
+                .FirstOrDefault();
+            var step = Math.Max(1, batchSize);
+            for (var lo = bounds?.Min ?? 1; bounds is not null && lo <= bounds.Max; lo += step)
+            {
+                var hi = lo + step - 1;
+                removed += db.Database.ExecuteSqlRaw(
+                    $"DELETE FROM \"{table}\" WHERE \"Id\" BETWEEN {lo} AND {hi} AND \"Id\" NOT IN (SELECT Id FROM tr_keep)");
+            }
+
+            db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS tr_keep");
+            if (removed >= 100_000) db.Database.ExecuteSqlRaw("VACUUM"); // give the space back once
+            if (removed > 0)
+                AppLogger.Log($"[TokenRemainingCollector] removed {removed} duplicate observation(s) in {(DateTime.UtcNow - started).TotalSeconds:N1}s");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError($"[TokenRemainingCollector] duplicate cleanup failed after {removed} row(s)", ex);
+        }
+        finally
+        {
+            try { db.Database.CloseConnection(); } catch { }
+        }
+        return removed;
+    }
+
+    internal sealed record SnapshotPayload(
         string AccountKey,
         string Model,
         int FiveHourPercent,
@@ -252,7 +360,9 @@ public sealed class TokenRemainingCollector
                 sdReset = ReadEpochSecondsUtc(sdEl, "resetsAt");
             }
 
-            DateTime writtenAt = DateTime.UtcNow;
+            // Without its own timestamp a snapshot is as old as its file — never "now",
+            // or a stale file would look new on every tick.
+            DateTime writtenAt = File.GetLastWriteTimeUtc(file);
             if (root.TryGetProperty("writtenAt", out var wEl) && wEl.ValueKind == JsonValueKind.String
                 && DateTime.TryParse(wEl.GetString(), null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
                 writtenAt = parsed.ToUniversalTime();
