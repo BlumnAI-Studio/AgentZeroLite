@@ -232,7 +232,8 @@ AI 모드의 MCP 서버, 사이드바 ACTIVE SESSIONS(에이전트 상태, 포�
 `version.txt`를 `0.25.4`로 올리고 `-Version` 없이 빌드(147 MB). 매니페스트에 `DeviceCapability microphone`이
 새로 들어갔고, 개인정보 처리방침을 같은 날 갱신(마이크·시스템 오디오, OpenAI 음성, MCP, 플러그인 설치·YouTube)한 뒤
 제출했다. 절차는 5차와 같다 — Start update(Submission 3) → Packages → Store listings(English)의 *What's new*와
-Product features 두 줄 → Submit for certification.
+Product features 두 줄 → Submit for certification. 인증은 제출 당일 통과(Ready to publish) — 공개된 앱의
+업데이트는 첫 제출과 달리 금방 끝났고, 공개는 **Publish now**를 눌러야 시작된다.
 
 이번에 확인한 것:
 
