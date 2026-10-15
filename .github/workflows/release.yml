@@ -93,15 +93,23 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path ./publish/* -DestinationPath "./AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip"
 
+      # Inno Setup writes to ./output. Move the installer next to the ZIP: an artifact keeps
+      # paths relative to the files' common folder, so with one file in ./output it came back
+      # as dist/output/… and the release step (which names dist/…) silently skipped it —
+      # v0.25.4 was first published with the ZIP only.
       - name: Create installer (Inno Setup)
-        run: iscc /DAppVersion="${{ needs.version.outputs.version }}" installer/AgentZeroLite.iss
+        shell: pwsh
+        run: |
+          iscc /DAppVersion="${{ needs.version.outputs.version }}" installer/AgentZeroLite.iss
+          if ($LASTEXITCODE -ne 0) { throw "iscc failed" }
+          Move-Item "./output/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe" .
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
             ./AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip
-            ./output/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
+            ./AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
           if-no-files-found: error
 
   macos:
@@ -165,6 +173,7 @@ jobs:
             macOS (Apple Silicon) is in testing and will be released once it has been checked on a Mac.
 
             The WPF host is kept as a reference build — build it from source, or ask for a WPF installer on a release.
+          fail_on_unmatched_files: true
           generate_release_notes: true
           make_latest: 'true'
           draft: false
