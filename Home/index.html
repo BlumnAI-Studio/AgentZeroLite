@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentZero Lite — AI 시대의 미니멀 멀티-CLI IDE</title>
-<meta name="description" content="Windows WPF 기반 멀티탭 ConPTY 터미널. Claude · Codex 어느 AI CLI든 나란히 띄우고, 명령을 쏘고, 모델 간 대화를 시키세요.">
+<meta name="description" content="Windows · macOS 멀티탭 AI CLI 터미널. Claude · Codex 어느 AI CLI든 나란히 띄우고, 명령을 쏘고, 모델 간 대화를 시키세요. Microsoft Store 에서도 받을 수 있습니다.">
 <meta property="og:title" content="AgentZero Lite">
 <meta property="og:description" content="AI 시대의 미니멀 멀티-CLI IDE. 서로 다른 모델을 탭으로 띄우고 대화시키세요.">
 <meta property="og:image" content="main.png">
@@ -257,8 +257,16 @@ footer a:hover{color:var(--mint)}
        data-az-asset="setup"
        href="https://github.com/psmon/AgentZeroLite/releases/latest"
        target="_blank" rel="noopener">
-      <span class="ko">⬇ 최신 버전 다운로드 <span data-az-version></span></span>
-      <span class="en">⬇ Download latest <span data-az-version></span></span>
+      <span class="ko">⬇ Windows 설치판 <span data-az-version></span></span>
+      <span class="en">⬇ Windows installer <span data-az-version></span></span>
+    </a>
+    <a class="btn primary" href="https://apps.microsoft.com/detail/9NRHDFMD38H7" target="_blank" rel="noopener">
+      <span class="ko">🛍 Microsoft Store</span>
+      <span class="en">🛍 Microsoft Store</span>
+    </a>
+    <a class="btn" data-az-asset="mac" href="https://github.com/psmon/AgentZeroLite/releases/latest" target="_blank" rel="noopener">
+      <span class="ko">⬇ macOS (Apple Silicon)</span>
+      <span class="en">⬇ macOS (Apple Silicon)</span>
     </a>
     <a class="btn" href="#live-demo"><span class="ko">▶ 웹에서 만져보기</span><span class="en">▶ Try the live demo</span></a>
     <a class="btn" href="#ai-talk"><span class="ko">🤝 AI ↔ AI 대화 보기</span><span class="en">🤝 See AI ↔ AI talk</span></a>
@@ -766,6 +774,12 @@ footer a:hover{color:var(--mint)}
   <p class="en" style="color:var(--text-soft);max-width:820px">
     The <strong>Wearable</strong> entry on the ActivityBar starts <code>AgentZeroWearable.exe</code>, which serves <strong>three watch apps at once</strong> over a single BLE link — <strong>AskBot</strong> as a real Akka remoting peer (PDUs tunnelled over BLE), <strong>Chat</strong> carrying audio both ways, and the <strong>Claude HUD</strong> showing session telemetry posted by Claude Code hooks to <code>:8765</code>. The watch is a <em>peer</em>, not a terminal.
   </p>
+  <p class="ko" style="max-width:820px;border-left:3px solid var(--yellow);padding:8px 12px;color:var(--text-soft)">
+    <strong style="color:var(--yellow)">설치판 전용.</strong> 웨어러블 호스트는 <a href="#install" style="color:var(--cyan)">Windows 설치판(Setup.exe / ZIP)</a>에만 들어 있습니다. Microsoft Store 판과 macOS 판에는 ⌚ 항목이 나타나지 않습니다 — BLE 와 직접 만든 시계가 필요한, 개인 개발 성격이 강한 기능이라서입니다.
+  </p>
+  <p class="en" style="max-width:820px;border-left:3px solid var(--yellow);padding:8px 12px;color:var(--text-soft)">
+    <strong style="color:var(--yellow)">Installer build only.</strong> The wearable host ships only in the <a href="#install" style="color:var(--cyan)">Windows installer / ZIP</a>. The Microsoft Store and macOS editions do not show the ⌚ entry — it needs BLE and a home-built watch, and is very much a personal-workbench feature.
+  </p>
 
   <img src="wearable/watch-apps.png" alt="The watch apps fed by one host over one BLE link: AskBot, Chat, the Claude HUD and the device-wide Settings" loading="lazy" style="width:100%;border-radius:8px;border:1px solid var(--border-dim);margin-top:18px">
 
@@ -979,16 +993,16 @@ footer a:hover{color:var(--mint)}
 <section class="section" id="install">
   <h2 class="ko">설치</h2>
   <h2 class="en">Install</h2>
-  <p class="ko" style="color:var(--text-soft)">Windows 10/11 x64. <strong>자가 포함(self-contained)</strong> 빌드라 .NET SDK를 따로 설치할 필요가 없습니다.</p>
-  <p class="en" style="color:var(--text-soft)">Windows 10/11 x64. The build is <strong>self-contained</strong>, so no separate .NET SDK is required.</p>
+  <p class="ko" style="color:var(--text-soft)">공식 배포판은 <strong>크로스 플랫폼(Avalonia) 판</strong>입니다 — Windows 10/11 x64 와 macOS(Apple Silicon). 모두 <strong>자가 포함(self-contained)</strong> 빌드라 .NET 을 따로 설치할 필요가 없습니다. 이전 WPF 판 설치본 위에 설치하면 그 자리에서 업그레이드되고, 워크스페이스·설정·모델은 그대로 남습니다.</p>
+  <p class="en" style="color:var(--text-soft)">The official build is the <strong>cross-platform (Avalonia) edition</strong> — Windows 10/11 x64 and macOS (Apple Silicon). Every build is <strong>self-contained</strong>, so there is no .NET to install. Installing over an earlier WPF install upgrades it in place; workspaces, settings and models are kept.</p>
 
   <div class="grid" style="margin-top:18px">
     <div class="card accent-cyan">
-      <span class="tag">INSTALLER</span>
-      <h4 class="ko">Inno Setup 인스톨러 (추천)</h4>
-      <h4 class="en">Inno Setup installer (recommended)</h4>
-      <p class="ko">더블클릭 → 다음 → 완료. 시작 메뉴/바탕화면 아이콘 등록, 언인스톨러 포함.</p>
-      <p class="en">Double-click → Next → Finish. Adds Start Menu / desktop icons and an uninstaller.</p>
+      <span class="tag">WINDOWS · INSTALLER</span>
+      <h4 class="ko">Windows 설치판 (추천)</h4>
+      <h4 class="en">Windows installer (recommended)</h4>
+      <p class="ko">더블클릭 → 다음 → 완료. 시작 메뉴/바탕화면 아이콘, 언인스톨러 포함. <strong>⌚ 웨어러블 호스트가 들어 있는 유일한 판</strong>입니다.</p>
+      <p class="en">Double-click → Next → Finish. Start Menu / desktop icons and an uninstaller. <strong>The only edition with the ⌚ wearable host.</strong></p>
       <p style="margin-top:10px">
         <a class="btn primary"
            data-az-asset="setup"
@@ -1004,12 +1018,49 @@ footer a:hover{color:var(--mint)}
       </p>
     </div>
 
+    <div class="card accent-magenta">
+      <span class="tag">WINDOWS · STORE</span>
+      <h4 class="ko">Microsoft Store</h4>
+      <h4 class="en">Microsoft Store</h4>
+      <p class="ko">Store 가 설치와 <strong>자동 업데이트</strong>를 맡습니다. 데이터(DB·설정)는 패키지 안에 따로 보관돼 설치판과 공유하지 않습니다. 웨어러블은 없습니다.</p>
+      <p class="en">The Store installs it and keeps it <strong>updated automatically</strong>. Its data (database, settings) stays inside the package, separate from the installer build. No wearable.</p>
+      <p style="margin-top:10px">
+        <a class="btn primary" href="https://apps.microsoft.com/detail/9NRHDFMD38H7" target="_blank" rel="noopener">
+          <span class="ko">🛍 Microsoft Store 에서 받기</span>
+          <span class="en">🛍 Get it from Microsoft Store</span>
+        </a>
+      </p>
+      <p style="margin-top:8px;color:var(--text-dim);font-size:12px">Store ID: <code>9NRHDFMD38H7</code></p>
+    </div>
+
     <div class="card">
-      <span class="tag">PORTABLE</span>
+      <span class="tag">MACOS</span>
+      <h4 class="ko">macOS (Apple Silicon)</h4>
+      <h4 class="en">macOS (Apple Silicon)</h4>
+      <p class="ko">압축을 풀고, ad-hoc 서명이라 처음 한 번 아래 명령으로 격리 표시를 지운 뒤 엽니다. 로컬 LLM 과 웨어러블은 없고, AI 모드는 외부(OpenAI 호환) 공급자를 씁니다.</p>
+      <p class="en">Unzip, clear the quarantine flag once (the bundle is ad-hoc signed), then open it. No local LLM and no wearable — AI mode uses an external (OpenAI-compatible) provider.</p>
+<pre style="margin-top:10px"><code>xattr -dr com.apple.quarantine AgentZeroLite.app</code></pre>
+      <p style="margin-top:10px">
+        <a class="btn"
+           data-az-asset="mac"
+           href="https://github.com/psmon/AgentZeroLite/releases/latest"
+           target="_blank" rel="noopener">
+          <span class="ko">⬇ macOS ZIP <span data-az-version>최신</span> 받기</span>
+          <span class="en">⬇ Download macOS ZIP <span data-az-version>(latest)</span></span>
+        </a>
+      </p>
+      <p style="margin-top:8px;color:var(--text-dim);font-size:12px">
+        <span class="ko">파일명: </span><span class="en">Filename: </span>
+        <code data-az-filename="mac">AgentZeroLite-v&lt;latest&gt;-osx-arm64.zip</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="tag">WINDOWS · PORTABLE</span>
       <h4 class="ko">ZIP 포터블 빌드</h4>
       <h4 class="en">Portable ZIP build</h4>
-      <p class="ko">압축만 풀면 끝. 레지스트리를 건드리지 않고, USB에서도 실행 가능합니다.</p>
-      <p class="en">Unzip and run. Nothing touches the registry — USB-friendly.</p>
+      <p class="ko">압축만 풀면 끝. 레지스트리를 건드리지 않고, USB 에서도 실행됩니다. 웨어러블 호스트 포함.</p>
+      <p class="en">Unzip and run. Nothing touches the registry — USB-friendly. Includes the wearable host.</p>
       <p style="margin-top:10px">
         <a class="btn"
            data-az-asset="zip"
@@ -1029,15 +1080,35 @@ footer a:hover{color:var(--mint)}
       <span class="tag">DEV</span>
       <h4 class="ko">소스 빌드</h4>
       <h4 class="en">Build from source</h4>
-      <p class="ko">기여하거나 수정하고 싶다면 저장소를 클론하세요.</p>
-      <p class="en">Clone the repo if you want to contribute or patch locally.</p>
+      <p class="ko">기여하거나 수정하고 싶다면 저장소를 클론하세요. 공식 판은 Avalonia 호스트입니다.</p>
+      <p class="en">Clone the repo to contribute or patch locally. The official edition is the Avalonia host.</p>
 <pre style="margin-top:10px"><code>git clone https://github.com/psmon/AgentZeroLite.git
 cd AgentZeroLite
-dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code></pre>
-      <p style="margin-top:6px;color:var(--text-dim);font-size:12px" class="ko">요구사항: <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener">.NET 10 SDK</a>.</p>
-      <p style="margin-top:6px;color:var(--text-dim);font-size:12px" class="en">Requires the <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener">.NET 10 SDK</a>.</p>
+dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release</code></pre>
+      <p style="margin-top:6px;color:var(--text-dim);font-size:12px" class="ko">요구사항: <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener">.NET 10 SDK</a>. 안내서: <a href="../README-Avalonia-KR.md">README-Avalonia-KR.md</a></p>
+      <p style="margin-top:6px;color:var(--text-dim);font-size:12px" class="en">Requires the <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener">.NET 10 SDK</a>. Guide: <a href="../README-Avalonia.md">README-Avalonia.md</a></p>
     </div>
   </div>
+
+  <h3 class="ko" style="margin-top:2em">어떤 판을 받을까</h3>
+  <h3 class="en" style="margin-top:2em">Which edition?</h3>
+  <table class="cmd-table">
+    <thead><tr><th></th><th class="ko">Windows 설치판 / ZIP</th><th class="en">Windows installer / ZIP</th><th>Microsoft Store</th><th>macOS</th></tr></thead>
+    <tbody>
+      <tr><td class="ko">터미널 · 워크스페이스 · AI 모드 · 플러그인</td><td class="en">Terminals · workspaces · AI mode · plugins</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td class="ko">⌚ 웨어러블 (스마트워치)</td><td class="en">⌚ Wearable (smartwatch)</td><td>✅</td><td>—</td><td>—</td></tr>
+      <tr><td class="ko">로컬 LLM</td><td class="en">Local LLM</td><td>✅</td><td>✅</td><td class="ko">— (외부 공급자)</td><td class="en">— (external provider)</td></tr>
+      <tr><td class="ko">업데이트</td><td class="en">Updates</td><td class="ko">새 Setup.exe 를 받아 덮어 설치</td><td class="en">Download the new Setup.exe and install over it</td><td class="ko">자동</td><td class="en">Automatic</td><td class="ko">새 ZIP</td><td class="en">New ZIP</td></tr>
+      <tr><td class="ko">데이터 위치</td><td class="en">Where data lives</td><td><code>%LOCALAPPDATA%\AgentZeroLite</code></td><td class="ko">패키지 전용 저장소</td><td class="en">The package's private store</td><td class="ko">사용자 프로필의 <code>AgentZeroLite</code> 폴더</td><td class="en">An <code>AgentZeroLite</code> folder in the user profile</td></tr>
+    </tbody>
+  </table>
+
+  <p class="ko" style="margin-top:14px;color:var(--text-dim);font-size:13px">
+    <strong>WPF 판</strong>은 이제 레퍼런스 빌드입니다 — 새 기능을 Windows 에서 먼저 빠르게 시험하는 실험실로 남고, 검증된 기능이 공식 판으로 옮겨집니다. 직접 빌드하려면 <code>dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code>. 공식 판과 같은 DB·설정을 쓰지만, 둘을 동시에 띄울 수는 없습니다.
+  </p>
+  <p class="en" style="margin-top:14px;color:var(--text-dim);font-size:13px">
+    <strong>The WPF edition</strong> is now the reference build — it stays the Windows-first lab where features are tried quickly, and what earns its keep moves to the official edition. To build it: <code>dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code>. It reads the same database and settings as the official build, but the two cannot run at the same time.
+  </p>
 
   <h3 class="ko" style="margin-top:2em">⚠️ IDE에서 디버깅할 때</h3>
   <h3 class="en" style="margin-top:2em">⚠️ When debugging in an IDE</h3>
@@ -1093,18 +1164,32 @@ dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code></pre>
   // to point straight at the binary (so users don't bounce through
   // the Releases page). Falls back silently to the /releases/latest
   // redirect if the API is unavailable or rate-limited.
+  // The repo also releases agent-one (agent-one-v* tags), so "/releases/latest" is not
+  // necessarily the app: list recent releases and take the newest v<digits> one.
   var OWNER='psmon', REPO='AgentZeroLite';
-  var API='https://api.github.com/repos/'+OWNER+'/'+REPO+'/releases/latest';
-  var CACHE_KEY='azl.release.v1';
+  var API='https://api.github.com/repos/'+OWNER+'/'+REPO+'/releases?per_page=30';
+  var CACHE_KEY='azl.release.v2';
   var CACHE_TTL_MS=30*60*1000; // 30 min — same tag rarely changes
+
+  function pickAppRelease(list){
+    if(!list || !list.length) return null;
+    for(var i=0;i<list.length;i++){
+      var r=list[i];
+      if(!r.draft && !r.prerelease && /^v\d/.test(r.tag_name||'')) return r;
+    }
+    return null;
+  }
+
+  var SUFFIX = { setup: '-Setup.exe', zip: '-win-x64.zip', mac: '-osx-arm64.zip' };
 
   function matchAsset(assets, kind){
     if(!assets) return null;
-    // exact suffix match — the CI always emits *-Setup.exe and *-win-x64.zip
-    var suffix = kind === 'setup' ? '-Setup.exe' : '-win-x64.zip';
+    // exact match on the official names (AgentZeroLite-v<ver><suffix>) — the WPF
+    // reference files are AgentZeroLite-WPF-v… and must not be picked up here
+    var suffix = SUFFIX[kind];
     for(var i=0;i<assets.length;i++){
       var n=assets[i].name||'';
-      if(n.indexOf('AgentZeroLite-')===0 && n.slice(-suffix.length)===suffix){
+      if(n.indexOf('AgentZeroLite-v')===0 && n.slice(-suffix.length)===suffix){
         return assets[i];
       }
     }
@@ -1118,7 +1203,8 @@ dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code></pre>
 
     var map = {
       setup: matchAsset(assets, 'setup'),
-      zip:   matchAsset(assets, 'zip')
+      zip:   matchAsset(assets, 'zip'),
+      mac:   matchAsset(assets, 'mac')
     };
 
     // Rewrite every [data-az-asset] link
@@ -1159,7 +1245,8 @@ dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release</code></pre>
   try{
     fetch(API, { headers: { 'Accept':'application/vnd.github+json' } })
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(release){
+      .then(function(list){
+        var release = pickAppRelease(list);
         if(!release) return;
         apply(release);
         try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), release:release})); }catch(e){}

@@ -1,5 +1,18 @@
 name: Build & Release
 
+# The official release: the Avalonia host (Project/AgentZeroAvalonia) for Windows and macOS.
+# Up to v0.25.3 this workflow shipped the WPF host; WPF is now the reference build and has
+# its own on-demand workflow (release-wpf.yml) that attaches to an existing release.
+#
+#   windows  → AgentZeroLite-v<ver>-Setup.exe (Inno Setup, installer/AgentZeroLite.iss)
+#              AgentZeroLite-v<ver>-win-x64.zip  (portable)
+#              both include the wearable host (wearable\) — the Microsoft Store edition does not
+#   macos    → AgentZeroLite-v<ver>-osx-arm64.zip (ad-hoc signed .app)
+#   release  → one GitHub release with the three files, marked Latest
+#
+# A manual run with publish=false builds and uploads the files as workflow artifacts only —
+# the way to check the installer before tagging.
+
 on:
   push:
     tags:
@@ -7,79 +20,149 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (without the leading v, e.g. 0.1.0). Used only for manual runs; tag push uses the tag.'
+        description: 'Version (without the leading v, e.g. 0.25.4). Manual runs only; a tag push uses the tag. Empty = version.txt.'
         required: false
         default: ''
+      publish:
+        description: 'Create the GitHub release (false = build artifacts only)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
 
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
 jobs:
-  build:
-    runs-on: windows-latest
-
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          ref="${{ github.ref }}"
+          if [[ "$ref" == refs/tags/v* ]]; then
+            ver="${ref#refs/tags/v}"
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            ver="${{ github.event.inputs.version }}"
+          else
+            ver="$(tr -d '[:space:]' < Project/AgentZeroWpf/version.txt)"
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "tag=v$ver" >> "$GITHUB_OUTPUT"
+          echo "Resolved version=$ver tag=v$ver"
 
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
-      - name: Resolve version
-        id: ver
+      # Both hosts read their version from this one file; stamp the release's version into it
+      # (in the runner only) so the binary, the installer and the tag agree.
+      - name: Stamp version
+        shell: pwsh
+        run: Set-Content -NoNewline Project/AgentZeroWpf/version.txt '${{ needs.version.outputs.version }}'
+
+      - name: Publish Avalonia (self-contained, win-x64, with the wearable host)
+        run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ./publish
+
+      - name: Check the published build
         shell: pwsh
         run: |
-          $ref = "${{ github.ref }}"
-          if ($ref.StartsWith("refs/tags/v")) {
-            $tag = $ref.Substring("refs/tags/".Length)
-            $ver = $tag.TrimStart('v')
-          } elseif ("${{ github.event.inputs.version }}" -ne "") {
-            $ver = "${{ github.event.inputs.version }}"
-            $tag = "v$ver"
-          } else {
-            $ver = (Get-Content Project/AgentZeroWpf/version.txt -Raw).Trim()
-            $tag = "v$ver"
-          }
-          echo "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          echo "tag=$tag"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "Resolved version=$ver  tag=$tag"
-
-      - name: Restore dependencies
-        run: dotnet restore Project/AgentZeroWpf/AgentZeroWpf.csproj
-
-      - name: Publish (self-contained, win-x64)
-        run: |
-          dotnet publish Project/AgentZeroWpf/AgentZeroWpf.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -p:PublishSingleFile=false `
-            -o ./publish
+          ./publish/AgentZeroLite.exe -cli version
+          ./publish/AgentZeroLite.exe -cli selftest all
+          if (-not (Test-Path ./publish/wearable/AgentZeroWearable.exe)) { throw "wearable host missing from the publish" }
 
       - name: Create ZIP
-        run: |
-          $zip = "./AgentZeroLite-${{ steps.ver.outputs.tag }}-win-x64.zip"
-          Compress-Archive -Path ./publish/* -DestinationPath $zip
+        shell: pwsh
+        run: Compress-Archive -Path ./publish/* -DestinationPath "./AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip"
 
-      # --- Inno Setup installer ---
       - name: Create installer (Inno Setup)
-        run: |
-          iscc /DAppVersion="${{ steps.ver.outputs.version }}" installer/AgentZeroLite.iss
+        run: iscc /DAppVersion="${{ needs.version.outputs.version }}" installer/AgentZeroLite.iss
 
-      - name: List artifacts (debug)
-        run: |
-          Get-ChildItem -Path . -Filter 'AgentZeroLite-*' -Recurse | Format-Table FullName,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            ./AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip
+            ./output/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
+          if-no-files-found: error
 
+  macos:
+    needs: version
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+      - name: Stamp version
+        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/AgentZeroWpf/version.txt
+      - name: Publish osx-arm64
+        run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r osx-arm64 --self-contained true -p:UseAppHost=true -o publish-avalonia/osx-arm64
+      - name: Check the published build (no display)
+        run: |
+          chmod +x publish-avalonia/osx-arm64/AgentZeroLite publish-avalonia/osx-arm64/AgentZeroLite.sh
+          publish-avalonia/osx-arm64/AgentZeroLite -cli version
+          publish-avalonia/osx-arm64/AgentZeroLite -cli selftest all
+      - name: Bundle .app (ad-hoc signed) and zip
+        run: |
+          v='${{ needs.version.outputs.version }}'
+          sh Project/AgentZeroAvalonia/macos/build-app.sh publish-avalonia/osx-arm64 publish-avalonia/AgentZeroLite.app "$v"
+          publish-avalonia/AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh version
+          cd publish-avalonia && ditto -c -k --keepParent AgentZeroLite.app "AgentZeroLite-v$v-osx-arm64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: publish-avalonia/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.zip
+          if-no-files-found: error
+
+  release:
+    needs: [version, windows, macos]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -la dist
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.ver.outputs.tag }}
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: AgentZero Lite ${{ needs.version.outputs.tag }}
           files: |
-            ./AgentZeroLite-${{ steps.ver.outputs.tag }}-win-x64.zip
-            ./output/AgentZeroLite-${{ steps.ver.outputs.tag }}-Setup.exe
+            dist/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
+            dist/AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip
+            dist/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.zip
+          body: |
+            **AgentZero Lite** — the official build is now the cross-platform (Avalonia) host.
+
+            | File | For |
+            |---|---|
+            | `AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe` | Windows 10/11 x64 installer (recommended). Includes the **wearable** host. Upgrades an earlier install in place; your workspaces and settings are kept. |
+            | `AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip` | Windows portable — unzip and run. Includes the wearable host. |
+            | `AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.zip` | macOS (Apple Silicon). Ad-hoc signed: run `xattr -dr com.apple.quarantine AgentZeroLite.app` once, then open it. No wearable, no local LLM (use an external provider). |
+
+            Also on the **Microsoft Store** (automatic updates, no wearable): https://apps.microsoft.com/detail/9NRHDFMD38H7
+
+            The WPF host is kept as a reference build — build it from source, or ask for a WPF installer on a release.
           generate_release_notes: true
+          make_latest: 'true'
           draft: false
           prerelease: false

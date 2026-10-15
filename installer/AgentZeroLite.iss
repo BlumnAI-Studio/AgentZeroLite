@@ -1,6 +1,12 @@
-; AgentZero Lite — Inno Setup script
+; AgentZero Lite — Inno Setup script for the OFFICIAL Windows build: the Avalonia host
+; (Project/AgentZeroAvalonia), with the wearable host under wearable\.
 ; Invoked from CI with: iscc /DAppVersion="x.y.z" installer/AgentZeroLite.iss
 ; (the workflow strips the leading "v" from the tag before passing /DAppVersion)
+;
+; The AppId is the one the WPF installer used up to v0.25.3, on purpose: installing this
+; over an existing WPF install upgrades it in place (same folder, same Start Menu entry,
+; one uninstaller). The WPF host is now a reference build with its own script and AppId —
+; installer/AgentZeroLite-WPF.iss.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -25,6 +31,8 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 WizardStyle=modern
+; Both GUIs hold this mutex while running; Setup asks the user to close the app first.
+AppMutex=Local\AgentZeroLite.SingleInstance
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -43,3 +51,32 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Run]
 Filename: "{app}\AgentZeroLite.exe"; Description: "Launch AgentZero Lite"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// Remove the previous install's files before copying the new ones. An upgrade from the
+// WPF build would otherwise leave the WPF host's assemblies beside the Avalonia ones
+// (harmless to .NET, which loads what deps.json names, but hundreds of MB of dead files).
+// The uninstaller removes only what it installed: the database, settings and models live
+// under %LOCALAPPDATA%\AgentZeroLite and are untouched, so both hosts keep reading them.
+const
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8E2D1B3C-9F7A-4D22-A9B6-AZLITE000001}_is1';
+
+function PreviousUninstaller(): String;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKCU, UninstallKey, 'UninstallString', Result) then
+    RegQueryStringValue(HKLM, UninstallKey, 'UninstallString', Result);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Cmd: String;
+  Code: Integer;
+begin
+  if CurStep = ssInstall then
+  begin
+    Cmd := RemoveQuotes(PreviousUninstaller());
+    if (Cmd <> '') and FileExists(Cmd) then
+      Exec(Cmd, '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  end;
+end;

@@ -167,6 +167,9 @@ jobs:
           name: agent-one v${{ needs.version.outputs.version }}
           files: dist/*
           generate_release_notes: true
+          # "Latest" belongs to the app's release (release.yml): the home page and
+          # /releases/latest point there. The npm installer pins its tag, so it does not care.
+          make_latest: 'false'
 
   npm:
     needs: [version, release]

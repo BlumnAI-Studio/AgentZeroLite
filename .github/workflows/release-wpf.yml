@@ -1,0 +1,60 @@
+name: WPF reference build (on demand)
+
+# The WPF host is the reference build since v0.25.4 — the official release is the Avalonia
+# host (release.yml). Run this by hand to build the WPF installer + ZIP and, optionally,
+# attach them to an existing release as AgentZeroLite-WPF-v<ver>-*.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to attach to (e.g. v0.25.4). Empty = artifacts only.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag }}"
+          $ver = if ($tag) { $tag.TrimStart('v') } else { (Get-Content Project/AgentZeroWpf/version.txt -Raw).Trim() }
+          Set-Content -NoNewline Project/AgentZeroWpf/version.txt $ver
+          echo "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      # The Release configuration bumps version.txt after the build; the assemblies are
+      # already compiled with the value stamped above, and the bump stays in the runner.
+      - name: Publish WPF (self-contained, win-x64)
+        run: dotnet publish Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ./publish-wpf
+
+      - name: Create ZIP
+        shell: pwsh
+        run: Compress-Archive -Path ./publish-wpf/* -DestinationPath "./AgentZeroLite-WPF-v${{ steps.ver.outputs.version }}-win-x64.zip"
+
+      - name: Create installer (Inno Setup)
+        run: iscc /DAppVersion="${{ steps.ver.outputs.version }}" installer/AgentZeroLite-WPF.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wpf-reference
+          path: |
+            ./AgentZeroLite-WPF-v${{ steps.ver.outputs.version }}-win-x64.zip
+            ./output/AgentZeroLite-WPF-v${{ steps.ver.outputs.version }}-Setup.exe
+
+      - name: Attach to the release
+        if: github.event.inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.inputs.tag }}" "./AgentZeroLite-WPF-v${{ steps.ver.outputs.version }}-win-x64.zip" "./output/AgentZeroLite-WPF-v${{ steps.ver.outputs.version }}-Setup.exe" --clobber

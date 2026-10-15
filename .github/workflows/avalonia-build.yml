@@ -1,8 +1,8 @@
 name: Avalonia host — build & self-test
 
-# The cross-platform host (Project/AgentZeroAvalonia). Separate from release.yml on
-# purpose: that workflow ships the WPF app and is not touched by the Avalonia work.
-# Job A proves the Windows build + the headless suites; job B proves the macOS build,
+# The cross-platform host (Project/AgentZeroAvalonia) — the official build since v0.25.4.
+# This is the per-push check (tests + self-test); release.yml builds the files a release
+# ships (installer, portable zip, macOS .app) from the same commands. Job A proves the Windows build + the headless suites; job B proves the macOS build,
 # the .app bundle, and everything a runner without a display can still exercise
 # (PTY spawn, named-pipe IPC, secret protection, the ZeroCommon suite on macOS).
 

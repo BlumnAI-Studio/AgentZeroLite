@@ -349,7 +349,15 @@ What differs from the WPF host, and why:
   above them. `-cli plugin list|open|call|capture` drives the page; `call` runs `window.zero.invoke` inside
   it, so it is an end-to-end check of shim + bridge + dispatcher.
 - **Local LLM is Windows-only** (LLamaSharp DLLs); macOS uses External providers. Gemma 4's native tool-call syntax is converted to the JSON envelope by `GemmaNativeToolCall` (ZeroCommon, benefits both hosts).
-- CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`); `release.yml` is untouched. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
+- CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`) is the per-push check. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
+- **Releases ship this host since v0.25.4** (`release.yml`, `v*` tag): `AgentZeroLite-v<ver>-Setup.exe`
+  (`installer/AgentZeroLite.iss`, with `wearable\`), `-win-x64.zip`, `-osx-arm64.zip`, marked Latest; a manual run
+  with `publish=false` builds them as artifacts only. The installer keeps the AppId the WPF installer used, so it
+  upgrades a WPF install in place, and runs the previous uninstaller first (only installed files go — the data under
+  `%LOCALAPPDATA%\AgentZeroLite` stays). WPF is the reference build: `release-wpf.yml` (on demand,
+  `installer/AgentZeroLite-WPF.iss`, own AppId and folder) attaches `AgentZeroLite-WPF-v<ver>-*` to a release.
+  agent-one's releases set `make_latest: false`, and the home page picks the newest `v<digit>` release from the API
+  rather than `/releases/latest` — an agent-one tag once held "Latest" and the download button led there.
 
 ### `Project/AgentOne` — a standalone CLI agent (`agent-one`), npm-bound
 
