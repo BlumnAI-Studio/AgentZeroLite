@@ -9,7 +9,7 @@ AgentZero Lite ships **two GUI hosts over one shared core**:
 | | WPF host (`Project/AgentZeroWpf`) | Avalonia host (`Project/AgentZeroAvalonia`) |
 |---|---|---|
 | Runs on | Windows | Windows **and macOS** (arm64 `.app`) |
-| Role | **Windows-first lab / reference build** — every feature is built and tried here first | **The official edition** (since v0.25.4) — Releases installer, Microsoft Store, macOS; takes in what proved its worth |
+| Role | **Windows-first lab / reference build** — every feature is built and tried here first | **The official edition** (since v0.25.4) — Releases installer, Microsoft Store; macOS once checked on a Mac; takes in what proved its worth |
 | Terminal | xterm.js in WebView2 + ConPTY | xterm.js in `NativeWebView` + ConPTY (Windows) / Porta.Pty (macOS) |
 | Shared | `Project/ZeroCommon`: actors, agent loop, tool catalog, stores, SQLite, CLI JSON contract | same |
 
@@ -68,10 +68,12 @@ GUIs share one single-instance mutex on Windows, so close one before starting th
 
 Releases (official, `release.yml` on a `v*` tag): `AgentZeroLite-v<ver>-Setup.exe` (Inno Setup, `installer/AgentZeroLite.iss` —
 it carries the AppId the WPF installer used, so it upgrades a WPF install in place, and it includes `wearable\`),
-`AgentZeroLite-v<ver>-win-x64.zip` and `AgentZeroLite-v<ver>-osx-arm64.zip`. The WPF reference installer is on demand:
+`AgentZeroLite-v<ver>-win-x64.zip`; the macOS zip is built by the same run but kept as the `macos` artifact
+until the [macOS smoke checklist](Docs/avalonia-v2/macos-smoke.md) has been run on a Mac. The WPF reference installer is on demand:
 `release-wpf.yml` (`installer/AgentZeroLite-WPF.iss`, its own AppId and folder) attaches `AgentZeroLite-WPF-v<ver>-*` to a release.
 
-macOS: download `AgentZeroLite-v<ver>-osx-arm64.zip` from Releases, then
+macOS (testers): download the `macos` artifact of a *Build & Release* run (or `AgentZeroLite-Avalonia-osx-arm64`
+of an *Avalonia host* run), unzip, then
 `xattr -dr com.apple.quarantine AgentZeroLite.app` (the bundle is ad-hoc signed) and open it. The CLI wrapper is
 `AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh`. Hand checklist: [Docs/avalonia-v2/macos-smoke.md](Docs/avalonia-v2/macos-smoke.md).
 

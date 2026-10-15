@@ -5,7 +5,9 @@ Mac에서 확인해야 한다. 결과는 아래 표에 날짜·기기·OS 버전
 
 ## 준비
 
-1. GitHub Actions의 `AgentZeroLite-Avalonia-osx-arm64` 아티팩트를 받아 푼다 (`publish-avalonia/AgentZeroLite.app`).
+1. GitHub Actions에서 *Build & Release* 실행의 `macos` 아티팩트(`AgentZeroLite-v<ver>-osx-arm64.zip`) 또는
+   *Avalonia host* 실행의 `AgentZeroLite-Avalonia-osx-arm64` 아티팩트를 받아 푼다 (`AgentZeroLite.app`).
+   이 체크리스트를 통과하면 `release.yml`의 release 잡에 macOS zip을 다시 붙이고 소개 페이지의 "준비 중"을 내린다.
 2. 격리 속성 해제(ad-hoc 서명이라 Gatekeeper가 막는다):
    ```sh
    xattr -dr com.apple.quarantine AgentZeroLite.app

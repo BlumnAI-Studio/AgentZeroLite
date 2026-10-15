@@ -32,8 +32,9 @@ macros to whichever terminal is in focus — nothing more, nothing less.
 
 ## Install
 
-The official build is the **cross-platform (Avalonia) edition** — Windows 10/11 x64 and macOS
-(Apple Silicon), self-contained, no .NET to install. Home page:
+The official build is the **cross-platform (Avalonia) edition** — released for Windows 10/11 x64
+(self-contained, no .NET to install); the macOS (Apple Silicon) edition is coming once it has been
+checked on a Mac. Home page:
 <https://psmon.github.io/AgentZeroLite/Home/#install>
 
 | Edition | Where | Notes |
@@ -41,7 +42,7 @@ The official build is the **cross-platform (Avalonia) edition** — Windows 10/1
 | **Windows installer** (recommended) | [Releases](https://github.com/psmon/AgentZeroLite/releases/latest) → `AgentZeroLite-v<ver>-Setup.exe` | The only edition with the ⌚ **wearable** host. Installing over an earlier (WPF) install upgrades it in place; workspaces and settings are kept. |
 | Windows portable | Releases → `AgentZeroLite-v<ver>-win-x64.zip` | Unzip and run; includes the wearable host. |
 | **Microsoft Store** | [apps.microsoft.com/detail/9NRHDFMD38H7](https://apps.microsoft.com/detail/9NRHDFMD38H7) | Automatic updates. Keeps its data inside the package. No wearable. |
-| macOS (Apple Silicon) | Releases → `AgentZeroLite-v<ver>-osx-arm64.zip` | Ad-hoc signed: `xattr -dr com.apple.quarantine AgentZeroLite.app` once. No local LLM, no wearable. |
+| macOS (Apple Silicon) | coming — testers: the `macos` artifact of a *Build & Release* run | Ad-hoc signed: `xattr -dr com.apple.quarantine AgentZeroLite.app` once. No local LLM, no wearable. |
 
 The **WPF host** (`Project/AgentZeroWpf`) is now the reference build: the Windows-first lab
 where features are tried before they move to the official edition. Most of this README

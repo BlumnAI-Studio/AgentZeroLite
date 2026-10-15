@@ -9,7 +9,7 @@ AgentZero Lite는 **하나의 공유 코어 위에 두 개의 GUI 호스트**를
 | | WPF 호스트 (`Project/AgentZeroWpf`) | Avalonia 호스트 (`Project/AgentZeroAvalonia`) |
 |---|---|---|
 | 실행 환경 | Windows | Windows **및 macOS** (arm64 `.app`) |
-| 역할 | **Windows 퍼스트 실험실 / 레퍼런스 빌드** — 모든 기능은 먼저 여기서 만들고 써 본다 | **공식 판**(v0.25.4부터) — Releases 설치판, Microsoft Store, macOS. 가치가 검증된 것을 영입한다 |
+| 역할 | **Windows 퍼스트 실험실 / 레퍼런스 빌드** — 모든 기능은 먼저 여기서 만들고 써 본다 | **공식 판**(v0.25.4부터) — Releases 설치판, Microsoft Store. macOS는 Mac에서 확인 후. 가치가 검증된 것을 영입한다 |
 | 터미널 | WebView2의 xterm.js + ConPTY | `NativeWebView`의 xterm.js + ConPTY(Windows) / Porta.Pty(macOS) |
 | 공유 | `Project/ZeroCommon`: 액터, 에이전트 루프, 툴 카탈로그, 설정 스토어, SQLite, CLI JSON 계약 | 동일 |
 
@@ -67,10 +67,11 @@ Rider/VS: `AgentZeroLite.slnx`를 열고 실행 프로필 **AgentZeroLite (Avalo
 
 Releases(공식, `v*` 태그에서 `release.yml`): `AgentZeroLite-v<ver>-Setup.exe`(Inno Setup, `installer/AgentZeroLite.iss` —
 WPF 설치판이 쓰던 AppId를 그대로 써서 WPF 설치본을 그 자리에서 업그레이드하고, `wearable\`을 포함한다),
-`AgentZeroLite-v<ver>-win-x64.zip`, `AgentZeroLite-v<ver>-osx-arm64.zip`. WPF 레퍼런스 설치판은 필요할 때만:
+`AgentZeroLite-v<ver>-win-x64.zip`. macOS zip은 같은 실행에서 만들어지지만 [macOS 스모크 체크리스트](Docs/avalonia-v2/macos-smoke.md)를
+Mac에서 돌릴 때까지 `macos` 아티팩트로만 남긴다. WPF 레퍼런스 설치판은 필요할 때만:
 `release-wpf.yml`(`installer/AgentZeroLite-WPF.iss`, 별도 AppId·폴더)이 릴리스에 `AgentZeroLite-WPF-v<ver>-*`을 붙인다.
 
-macOS: Releases에서 `AgentZeroLite-v<ver>-osx-arm64.zip`을 받고
+macOS(테스트용): *Build & Release* 실행의 `macos` 아티팩트(또는 *Avalonia host* 실행의 `AgentZeroLite-Avalonia-osx-arm64`)를 받아 풀고
 `xattr -dr com.apple.quarantine AgentZeroLite.app`(ad-hoc 서명) 후 실행. CLI 래퍼는
 `AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh`. 손 점검표: [Docs/avalonia-v2/macos-smoke.md](Docs/avalonia-v2/macos-smoke.md).
 

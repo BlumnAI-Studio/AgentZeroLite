@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentZero Lite — AI 시대의 미니멀 멀티-CLI IDE</title>
-<meta name="description" content="Windows · macOS 멀티탭 AI CLI 터미널. Claude · Codex 어느 AI CLI든 나란히 띄우고, 명령을 쏘고, 모델 간 대화를 시키세요. Microsoft Store 에서도 받을 수 있습니다.">
+<meta name="description" content="Windows 멀티탭 AI CLI 터미널(macOS 준비 중). Claude · Codex 어느 AI CLI든 나란히 띄우고, 명령을 쏘고, 모델 간 대화를 시키세요. Microsoft Store 에서도 받을 수 있습니다.">
 <meta property="og:title" content="AgentZero Lite">
 <meta property="og:description" content="AI 시대의 미니멀 멀티-CLI IDE. 서로 다른 모델을 탭으로 띄우고 대화시키세요.">
 <meta property="og:image" content="main.png">
@@ -263,10 +263,6 @@ footer a:hover{color:var(--mint)}
     <a class="btn primary" href="https://apps.microsoft.com/detail/9NRHDFMD38H7" target="_blank" rel="noopener">
       <span class="ko">🛍 Microsoft Store</span>
       <span class="en">🛍 Microsoft Store</span>
-    </a>
-    <a class="btn" data-az-asset="mac" href="https://github.com/psmon/AgentZeroLite/releases/latest" target="_blank" rel="noopener">
-      <span class="ko">⬇ macOS (Apple Silicon)</span>
-      <span class="en">⬇ macOS (Apple Silicon)</span>
     </a>
     <a class="btn" href="#live-demo"><span class="ko">▶ 웹에서 만져보기</span><span class="en">▶ Try the live demo</span></a>
     <a class="btn" href="#ai-talk"><span class="ko">🤝 AI ↔ AI 대화 보기</span><span class="en">🤝 See AI ↔ AI talk</span></a>
@@ -993,8 +989,8 @@ footer a:hover{color:var(--mint)}
 <section class="section" id="install">
   <h2 class="ko">설치</h2>
   <h2 class="en">Install</h2>
-  <p class="ko" style="color:var(--text-soft)">공식 배포판은 <strong>크로스 플랫폼(Avalonia) 판</strong>입니다 — Windows 10/11 x64 와 macOS(Apple Silicon). 모두 <strong>자가 포함(self-contained)</strong> 빌드라 .NET 을 따로 설치할 필요가 없습니다. 이전 WPF 판 설치본 위에 설치하면 그 자리에서 업그레이드되고, 워크스페이스·설정·모델은 그대로 남습니다.</p>
-  <p class="en" style="color:var(--text-soft)">The official build is the <strong>cross-platform (Avalonia) edition</strong> — Windows 10/11 x64 and macOS (Apple Silicon). Every build is <strong>self-contained</strong>, so there is no .NET to install. Installing over an earlier WPF install upgrades it in place; workspaces, settings and models are kept.</p>
+  <p class="ko" style="color:var(--text-soft)">공식 배포판은 <strong>크로스 플랫폼(Avalonia) 판</strong>입니다 — Windows 10/11 x64 용으로 배포 중이며 macOS(Apple Silicon) 판은 준비 중입니다. 모두 <strong>자가 포함(self-contained)</strong> 빌드라 .NET 을 따로 설치할 필요가 없습니다. 이전 WPF 판 설치본 위에 설치하면 그 자리에서 업그레이드되고, 워크스페이스·설정·모델은 그대로 남습니다.</p>
+  <p class="en" style="color:var(--text-soft)">The official build is the <strong>cross-platform (Avalonia) edition</strong> — released for Windows 10/11 x64, with macOS (Apple Silicon) coming. Every build is <strong>self-contained</strong>, so there is no .NET to install. Installing over an earlier WPF install upgrades it in place; workspaces, settings and models are kept.</p>
 
   <div class="grid" style="margin-top:18px">
     <div class="card accent-cyan">
@@ -1034,25 +1030,11 @@ footer a:hover{color:var(--mint)}
     </div>
 
     <div class="card">
-      <span class="tag">MACOS</span>
-      <h4 class="ko">macOS (Apple Silicon)</h4>
-      <h4 class="en">macOS (Apple Silicon)</h4>
-      <p class="ko">압축을 풀고, ad-hoc 서명이라 처음 한 번 아래 명령으로 격리 표시를 지운 뒤 엽니다. 로컬 LLM 과 웨어러블은 없고, AI 모드는 외부(OpenAI 호환) 공급자를 씁니다.</p>
-      <p class="en">Unzip, clear the quarantine flag once (the bundle is ad-hoc signed), then open it. No local LLM and no wearable — AI mode uses an external (OpenAI-compatible) provider.</p>
-<pre style="margin-top:10px"><code>xattr -dr com.apple.quarantine AgentZeroLite.app</code></pre>
-      <p style="margin-top:10px">
-        <a class="btn"
-           data-az-asset="mac"
-           href="https://github.com/psmon/AgentZeroLite/releases/latest"
-           target="_blank" rel="noopener">
-          <span class="ko">⬇ macOS ZIP <span data-az-version>최신</span> 받기</span>
-          <span class="en">⬇ Download macOS ZIP <span data-az-version>(latest)</span></span>
-        </a>
-      </p>
-      <p style="margin-top:8px;color:var(--text-dim);font-size:12px">
-        <span class="ko">파일명: </span><span class="en">Filename: </span>
-        <code data-az-filename="mac">AgentZeroLite-v&lt;latest&gt;-osx-arm64.zip</code>
-      </p>
+      <span class="tag">MACOS · SOON</span>
+      <h4 class="ko">macOS (Apple Silicon) — 준비 중</h4>
+      <h4 class="en">macOS (Apple Silicon) — coming</h4>
+      <p class="ko">같은 코드로 빌드는 되고 있고, 실제 Mac 에서 확인을 마치면 이 자리에 공개합니다. 로컬 LLM 과 웨어러블은 macOS 판에 들어가지 않으며, AI 모드는 외부(OpenAI 호환) 공급자를 씁니다.</p>
+      <p class="en">It builds from the same code already; it will be published here once it has been checked on a real Mac. The macOS edition has no local LLM and no wearable — AI mode uses an external (OpenAI-compatible) provider.</p>
     </div>
 
     <div class="card">
@@ -1093,13 +1075,13 @@ dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release</code
   <h3 class="ko" style="margin-top:2em">어떤 판을 받을까</h3>
   <h3 class="en" style="margin-top:2em">Which edition?</h3>
   <table class="cmd-table">
-    <thead><tr><th></th><th class="ko">Windows 설치판 / ZIP</th><th class="en">Windows installer / ZIP</th><th>Microsoft Store</th><th>macOS</th></tr></thead>
+    <thead><tr><th></th><th class="ko">Windows 설치판 / ZIP</th><th class="en">Windows installer / ZIP</th><th>Microsoft Store</th><th class="ko">macOS (준비 중)</th><th class="en">macOS (coming)</th></tr></thead>
     <tbody>
       <tr><td class="ko">터미널 · 워크스페이스 · AI 모드 · 플러그인</td><td class="en">Terminals · workspaces · AI mode · plugins</td><td>✅</td><td>✅</td><td>✅</td></tr>
       <tr><td class="ko">⌚ 웨어러블 (스마트워치)</td><td class="en">⌚ Wearable (smartwatch)</td><td>✅</td><td>—</td><td>—</td></tr>
       <tr><td class="ko">로컬 LLM</td><td class="en">Local LLM</td><td>✅</td><td>✅</td><td class="ko">— (외부 공급자)</td><td class="en">— (external provider)</td></tr>
-      <tr><td class="ko">업데이트</td><td class="en">Updates</td><td class="ko">새 Setup.exe 를 받아 덮어 설치</td><td class="en">Download the new Setup.exe and install over it</td><td class="ko">자동</td><td class="en">Automatic</td><td class="ko">새 ZIP</td><td class="en">New ZIP</td></tr>
-      <tr><td class="ko">데이터 위치</td><td class="en">Where data lives</td><td><code>%LOCALAPPDATA%\AgentZeroLite</code></td><td class="ko">패키지 전용 저장소</td><td class="en">The package's private store</td><td class="ko">사용자 프로필의 <code>AgentZeroLite</code> 폴더</td><td class="en">An <code>AgentZeroLite</code> folder in the user profile</td></tr>
+      <tr><td class="ko">업데이트</td><td class="en">Updates</td><td class="ko">새 Setup.exe 를 받아 덮어 설치</td><td class="en">Download the new Setup.exe and install over it</td><td class="ko">자동</td><td class="en">Automatic</td><td>—</td></tr>
+      <tr><td class="ko">데이터 위치</td><td class="en">Where data lives</td><td><code>%LOCALAPPDATA%\AgentZeroLite</code></td><td class="ko">패키지 전용 저장소</td><td class="en">The package's private store</td><td>—</td></tr>
     </tbody>
   </table>
 
