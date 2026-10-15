@@ -14,6 +14,7 @@
 //               { type: 'in',     data }        user keystrokes / paste
 //               { type: 'resize', cols, rows }  viewport reflowed
 //               { type: 'screen', data }        the visible viewport, debounced
+//               { type: 'title', data }         the terminal title the program set (OSC 0/2)
 //               { type: 'renderer', name, reason }  which renderer is live
 //               { type: 'fontstatus', family, loaded, cellWidth }
 //               { type: 'activate' }            the user clicked in here
@@ -238,6 +239,10 @@
 
   // Signal readiness + initial size so the host can flush any buffered output
   // and size the pseudo-console to match.
+  // The title the program sets (OSC 0/2). Agent CLIs animate it while busy (Claude Code
+  // puts a braille spinner there), the strongest "working" signal agent-state detection has.
+  try { term.onTitleChange(function (t) { post({ type: 'title', data: t || '' }); }); } catch (e) {}
+
   post({ type: 'renderer', name: renderer });
   post({ type: 'ready', cols: term.cols, rows: term.rows });
 })();

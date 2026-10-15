@@ -125,7 +125,8 @@ internal static class TerminalVerbs
     public static int Layout(CliClient client, string[] args)
     {
         var sub = args.Length > 0 ? args[0] : "status";
-        var reply = client.Send("{\"command\":\"layout\",\"sub\":\"" + CliIpcProtocol.Escape(sub) + "\"}");
+        var name = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "";
+        var reply = client.Send("{\"command\":\"layout\",\"sub\":\"" + CliIpcProtocol.Escape(sub) + "\",\"name\":\"" + CliIpcProtocol.Escape(name) + "\"}");
         if (reply is null) return client.NoWait ? 0 : 1;
         var root = CliClient.Parse(reply);
         if (!CliClient.Ok(root))

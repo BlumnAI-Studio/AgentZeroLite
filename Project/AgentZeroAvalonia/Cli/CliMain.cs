@@ -75,6 +75,7 @@ internal static class CliMain
             "web" => MoreVerbs.Web(client, rest),
             "mcp" => MoreVerbs.Mcp(client, rest),
             "plugin" => PluginVerbs.Run(client, rest),
+            "agent-state" => AgentState(client),
             _ => Unknown(command),
         };
     }
@@ -93,6 +94,35 @@ internal static class CliMain
         if (root.TryGetProperty("groups", out var groups)) Console.WriteLine($"  groups  : {groups}");
         if (root.TryGetProperty("terminals", out var terms)) Console.WriteLine($"  terminals: {terms}");
         return CliClient.Ok(root) ? 0 : 1;
+    }
+
+    /// <summary>The WPF host's output for the same reply: a rollup line, then one line per terminal.</summary>
+    private static int AgentState(CliClient client)
+    {
+        var reply = client.Send("{\"command\":\"agent-state\"}");
+        if (reply is null) return client.NoWait ? 0 : 1;
+        var root = CliClient.Parse(reply);
+        if (!CliClient.Ok(root))
+        {
+            Console.Error.WriteLine($"Error: {CliClient.Str(root, "error", "unknown")}");
+            return 1;
+        }
+        int attention = root.TryGetProperty("attention", out var ap) ? ap.GetInt32() : 0;
+        Console.WriteLine($"Agents needing attention: {attention}");
+        if (root.TryGetProperty("tabs", out var tabs) && tabs.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var t in tabs.EnumerateArray())
+            {
+                var g = t.GetProperty("group").GetInt32();
+                var tb = t.GetProperty("tab").GetInt32();
+                var title = t.GetProperty("title").GetString() ?? "";
+                var state = t.GetProperty("state").GetString() ?? "";
+                var seen = t.TryGetProperty("seen", out var sp) && sp.GetBoolean();
+                var flag = state == "blocked" || (state == "done" && !seen) ? " ←" : "";
+                Console.WriteLine($"  [{g}:{tb}] {state,-8} {(seen ? " " : "*")} {title}{flag}");
+            }
+        }
+        return 0;
     }
 
     private static int Simple(CliClient client, string request, string okLine)
@@ -176,6 +206,7 @@ internal static class CliMain
         Console.WriteLine("  web open|search|read|tabs ...        Web surface (headless in this host); 'web help' for options");
         Console.WriteLine("  mcp list|import|refresh|allow|deny|call ...   MCP servers for AI mode; 'mcp help' for options");
         Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
+        Console.WriteLine("  agent-state                          Detected agent state per terminal + attention rollup");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");
         Console.WriteLine("  bot-chat <message> [--from <name>]   Deliver a message to AgentBot (DONE(...) is the peer envelope)");
         Console.WriteLine("  bot-ask <text...>                    Ask AgentBot in AI mode (starts an agent-loop turn)");

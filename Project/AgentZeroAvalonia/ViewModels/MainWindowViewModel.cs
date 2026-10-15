@@ -555,6 +555,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasActiveTab));
         ActiveTerminalChanged?.Invoke();
+        // Move the ACTIVE SESSIONS highlight now rather than on the next detection tick
+        // (only once the monitor runs — construction and LoadState come first).
+        if (_agentTimer is not null) RefreshActiveSessions();
     }
 
     /// <summary>Points the bot at whichever terminal is now active — the WPF <c>RefreshSessionInfo</c>.</summary>

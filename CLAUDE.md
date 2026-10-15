@@ -260,6 +260,12 @@ Assets live in `Project/AgentZeroWpf/Wasm/xterm/` and are served offline through
 Two things that are easy to get wrong here:
 
 - **`GetConsoleText()` means "what is on the screen", not "everything the pipe produced."** The approval parser, the agent-state monitor and the bot's context all ask it that question. Only the emulator knows the answer, and the emulator is xterm.js in the renderer, so the renderer pushes a viewport snapshot back (`term.js` → `TerminalConsoleBuffer`). Returning the transcript instead re-matches prompts answered long ago and grows the model's context without bound.
+- **Never probe a user path with a bare `Directory.Exists` on a UI thread** — use
+  `Agent.Common.Platform.PathAvailability.DirectoryExistsFast` (pool thread, time budget, 4 s cache). A workspace
+  or scan folder on a disconnected mapped drive blocks the caller for the whole SMB timeout: measured, switching
+  to a workspace on an offline `\\192.168.0.3\…` share froze the Avalonia host 21–68 s inside
+  GetFileAttributesExW before its terminal started (now 2 s, then the terminal starts in the home folder and the
+  log says why). Both hosts' terminal start, the bots' work-folder pick and WPF's workspace restore use it.
 - **The child's environment is built, not inherited** (`TerminalEnvironment`). Handing a terminal child whatever launched the GUI is how a `NO_COLOR=1` picked up from an IDE terminal switched colour off in every tab. Same reason `CLAUDE_CODE_*` markers are dropped: a tab the user opened is not a nested agent session.
 
 ### Mermaid/Pencil rendering
@@ -284,7 +290,11 @@ What differs from the WPF host, and why:
 
 - **Terminal**: xterm.js inside `NativeWebView`, served by `LocalAssetServer` (loopback, token path) because the Avalonia WebView cannot map a folder; the PTY is `ConPtyHost` (a copy of `ManagedConPtyHost`) on Windows and `PortaPtyHost` (Porta.Pty) on macOS behind ZeroCommon's `IPtyHost`/`XtermTerminalSession`. Two ConPTY facts the WPF copy never hit: a parent whose stdio is a pipe hands its std handles to the child (blanked around `CreateProcess`), and pipe EOF is not the exit signal (a process-handle watcher is).
 - **Split panes**: `WorkspaceLayout<T>` + one Canvas that positions every renderer over its pane slot — no native re-parenting. The stored `CliGroup.LayoutJson` is byte-identical to what WPF writes.
-- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout`, `mcp` and `plugin`. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout`, `mcp` and `plugin`.
+- **ACTIVE SESSIONS** (sidebar): every started terminal across workspaces with its detected agent state —
+  `ZeroCommon/Agents/AgentActivityTracker` (moved down from WPF's `AgentStateMonitor`, which wraps it), run on a
+  1.5 s UI-thread timer in `MainWindowViewModel.ActiveSessions.cs`. Its record is `TerminalAgentState`, not
+  `AgentTabState` (that name is `AgentStateRollup`'s). Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it

@@ -4,6 +4,7 @@ using Agent.Common.Llm;
 using Agent.Common.Llm.Tools;
 using Agent.Common.Mcp;
 using Agent.Common.Module;
+using Agent.Common.Platform;
 
 namespace AgentZeroAvalonia.Services;
 
@@ -20,9 +21,9 @@ internal static class AgentLoopWiring
         string? WorkspaceRoot()
         {
             var active = activeDirectory();
-            if (!string.IsNullOrWhiteSpace(active) && Directory.Exists(active)) return active;
+            if (!string.IsNullOrWhiteSpace(active) && PathAvailability.DirectoryExistsFast(active)) return active;
             foreach (var g in groups())
-                if (!string.IsNullOrWhiteSpace(g.DirectoryPath) && Directory.Exists(g.DirectoryPath)) return g.DirectoryPath;
+                if (!string.IsNullOrWhiteSpace(g.DirectoryPath) && PathAvailability.DirectoryExistsFast(g.DirectoryPath)) return g.DirectoryPath;
             return null;
         }
 

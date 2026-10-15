@@ -34,6 +34,9 @@ internal sealed class CliCommandRouter
     /// <summary>Run a window command by id (the hotkey table's ids) — <c>-cli layout &lt;verb&gt;</c>.</summary>
     public Action<string>? ExecuteWindowCommand { get; set; }
 
+    /// <summary><c>layout workspace &lt;name|index&gt;</c>: show that workspace. Returns an error, or null.</summary>
+    public Func<string, string?>? ActivateWorkspace { get; set; }
+
     /// <summary>The active workspace's split layout as stored JSON (null while unsplit), plus its pane count.</summary>
     public Func<(string? Json, int Panes, string? Workspace)>? LayoutStatus { get; set; }
 
@@ -48,6 +51,9 @@ internal sealed class CliCommandRouter
 
     /// <summary>The web surface <c>web</c> drives; the headless one until a Browser page exists in this host.</summary>
     public IWebToolSurface? WebSurface { get; set; }
+
+    /// <summary>Detected agent state per running terminal (the WPF host's <c>agent-state</c> reply).</summary>
+    public Func<Task<string>>? AgentState { get; set; }
 
     /// <summary>The Plugins page's <c>plugin</c> verbs (see <see cref="PluginVerbs"/>); null in tests.</summary>
     public Func<JsonElement, Task<string>>? PluginCommand { get; set; }
@@ -119,6 +125,11 @@ internal sealed class CliCommandRouter
 
                     case "mcp":
                         return McpAsync(root.Clone());
+
+                    case "agent-state":
+                        return AgentState is null
+                            ? Task.FromResult(CliIpcProtocol.ErrorJson("agent-state is not available in this host"))
+                            : AgentState();
 
                     case "plugin":
                         return PluginCommand is null
@@ -357,6 +368,14 @@ internal sealed class CliCommandRouter
     private string Layout(JsonElement root)
     {
         var sub = Str(root, "sub").ToLowerInvariant();
+        if (sub == "workspace")
+        {
+            if (ActivateWorkspace is null) return CliIpcProtocol.ErrorJson("workspace switching is not wired");
+            if (ActivateWorkspace(Str(root, "name")) is { } error) return CliIpcProtocol.ErrorJson(error);
+            var (j, p, w) = LayoutStatus?.Invoke() ?? (null, 0, null);
+            return "{\"ok\":true,\"sub\":\"workspace\",\"workspace\":" + (w is null ? "null" : "\"" + CliIpcProtocol.Escape(w) + "\"")
+                   + ",\"panes\":" + p + ",\"layout\":" + (j ?? "null") + "}";
+        }
         var id = sub switch
         {
             "split-right" => WindowCommandIds.SplitRight,
@@ -377,7 +396,7 @@ internal sealed class CliCommandRouter
             _ => sub.Contains('.') ? sub : "?",
         };
         if (id == "?")
-            return CliIpcProtocol.ErrorJson($"Unknown layout verb '{sub}'. Use: status, split-right, split-down, close-tab, close-pane, add, next-tab, prev-tab, move-tab, focus-left|right|up|down, bot-toggle, bot-embed");
+            return CliIpcProtocol.ErrorJson($"Unknown layout verb '{sub}'. Use: status, workspace <name|index>, split-right, split-down, close-tab, close-pane, add, next-tab, prev-tab, move-tab, focus-left|right|up|down, bot-toggle, bot-embed");
         if (id is not null)
         {
             if (ExecuteWindowCommand is null) return CliIpcProtocol.ErrorJson("layout commands are not wired");

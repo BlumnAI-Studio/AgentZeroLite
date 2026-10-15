@@ -1,3 +1,5 @@
+using Agent.Common;
+using Agent.Common.Platform;
 using Agent.Common.Services;
 
 namespace AgentZeroAvalonia.Services;
@@ -19,7 +21,7 @@ internal static class PtyHostFactory
     /// <summary>Spawn <paramref name="spec"/> at <paramref name="cols"/>×<paramref name="rows"/>. Throws on failure — the caller logs and shows the reason.</summary>
     public static IPtyHost Start(TerminalLaunchSpec spec, int cols, int rows)
     {
-        var cwd = !string.IsNullOrEmpty(spec.Cwd) && Directory.Exists(spec.Cwd) ? spec.Cwd : null;
+        var cwd = UsableCwd(spec.Cwd);
         if (OperatingSystem.IsWindows())
         {
             var host = new ConPtyHost();
@@ -33,6 +35,22 @@ internal static class PtyHostFactory
             return host;
         }
         throw new PlatformNotSupportedException($"No PTY backend for {Environment.OSVersion}");
+    }
+
+    /// <summary>Budget for the working-folder check, which runs on the UI thread.</summary>
+    internal const int CwdProbeMs = 2000;
+
+    /// <summary>
+    /// The folder the terminal starts in, or null for the home folder. Bounded: a workspace on a
+    /// disconnected network drive (<c>Y:</c> → <c>\\host\share</c>) made a bare Directory.Exists
+    /// block the UI thread for the SMB timeout — measured 21–30 s per workspace switch.
+    /// </summary>
+    internal static string? UsableCwd(string? cwd)
+    {
+        if (string.IsNullOrEmpty(cwd)) return null;
+        if (PathAvailability.DirectoryExistsFast(cwd, CwdProbeMs)) return cwd;
+        AppLogger.Log($"[Terminals] working folder '{cwd}' is missing or did not answer within {CwdProbeMs} ms (offline network drive?) — starting in the home folder");
+        return null;
     }
 
     /// <summary>

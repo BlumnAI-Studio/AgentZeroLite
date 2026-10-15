@@ -98,6 +98,16 @@ public partial class App : Application
                     vm.Bot.ReceiveExternalChat(from, message);
                 },
                 PluginCommand = root => PluginVerbs.HandleAsync(root, vm),
+                ActivateWorkspace = name =>
+                {
+                    var ws = vm.Workspaces.FirstOrDefault(w => string.Equals(w.DisplayName, name, StringComparison.OrdinalIgnoreCase))
+                             ?? (int.TryParse(name, out var i) && i >= 0 && i < vm.Workspaces.Count ? vm.Workspaces[i] : null);
+                    if (ws is null) return $"no workspace '{name}'";
+                    vm.Page = AppPage.Terminals;
+                    vm.ActiveWorkspace = ws;
+                    return null;
+                },
+                AgentState = () => Dispatcher.UIThread.InvokeAsync(vm.AgentStateJson).GetTask(),
                 LayoutStatus = () => (vm.ActiveWorkspace?.DockLayoutJson, vm.ActiveWorkspace?.Layout.PaneCount ?? 0, vm.ActiveWorkspace?.DisplayName),
             };
             _cliServer = CliServer.Start(router);
@@ -108,9 +118,11 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             desktop.MainWindow = new MainWindow { DataContext = vm };
             vm.Wearable?.AutoStart();
+            vm.StartAgentStateMonitor();
 
             desktop.ShutdownRequested += (_, _) =>
             {
+                try { vm.StopAgentStateMonitor(); } catch { }
                 try { vm.FlushPersist(); } catch { }
                 try { vm.Bot.Detach(); } catch { }
                 try { vm.Wearable?.Shutdown(); } catch { }

@@ -302,6 +302,10 @@ public partial class XtermWebViewTerminalControl : UserControl
                     ApplyResizeFromMessage(root);
                     _host?.Resize(_cols, _rows);
                     break;
+                case "title":
+                    // OSC 0/2 — agent-state detection's strongest "working" signal.
+                    Session?.SetWindowTitle(XtermMessages.Str(root, "data"));
+                    break;
                 case "screen":
                     var screen = XtermMessages.Str(root, "data");
                     Session?.SetScreenSnapshot(screen);

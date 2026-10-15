@@ -7,7 +7,7 @@
         Width="1180" Height="760" MinWidth="820" MinHeight="520"
         Background="{DynamicResource CyberBgDeep}"
         Icon="avares://AgentZeroLite/Assets/agentzero.ico"
-        Title="AgentZero Lite">
+        Title="{Binding WindowTitle}">
 
     <Window.Styles>
         <Style Selector="Border.ws">
@@ -29,6 +29,24 @@
         </Style>
         <Style Selector="Border.ws.selected Button.side">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <!-- The focused terminal: an accent bar, a tint and the name in the accent colour, so a
+             workspace switch or a jump from ACTIVE SESSIONS shows at a glance where you landed. -->
+        <Style Selector="Border.ws.session">
+            <Setter Property="BorderThickness" Value="3,0,0,0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.ws.session.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="Background" Value="#263794FF" />
+        </Style>
+        <Style Selector="Border.ws.session.selected Button.side">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.ws.session.selected TextBlock.title">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="Button.sidex">
             <Setter Property="Background" Value="Transparent" />
@@ -132,13 +150,50 @@
                     <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding ActiveWorkspace.Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TerminalTabViewModel">
-                                <Border Classes="ws" Classes.selected="{Binding IsActive}">
+                                <Border Classes="ws session" Classes.selected="{Binding IsActive}">
                                     <Button Classes="side" Content="{Binding Title}" ToolTip.Tip="{Binding HealthText}"
                                             Command="{Binding ActivateCommand}" />
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- ACTIVE SESSIONS: every running terminal of every workspace, with the agent
+                         state detected on its screen (the WPF SESSIONS panel). Click = go there. -->
+                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding ActiveSessionsHeader}" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource TextDim}" Margin="12,4" />
+                    <TextBlock DockPanel.Dock="Top" IsVisible="{Binding HasNoActiveSessions}"
+                               Text="No terminal is running yet." FontSize="11"
+                               Foreground="{DynamicResource TextDim}" Margin="12,2" />
+                    <ScrollViewer DockPanel.Dock="Top" MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding ActiveSessions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ActiveSessionItem">
+                                    <Border Classes="ws session" Classes.selected="{Binding IsActive}">
+                                        <Button Classes="side" Command="{Binding GoCommand}" ToolTip.Tip="{Binding Tip}"
+                                                HorizontalContentAlignment="Stretch">
+                                            <StackPanel Spacing="1">
+                                                <DockPanel>
+                                                    <Ellipse DockPanel.Dock="Left" Width="7" Height="7" Margin="0,0,7,0"
+                                                             VerticalAlignment="Center" Fill="{Binding StateBrush}" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding StateLabel}" FontSize="9"
+                                                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace"
+                                                               Foreground="{Binding StateBrush}" VerticalAlignment="Center"
+                                                               Margin="6,0,0,0" IsVisible="{Binding HasStateLabel}"
+                                                               FontWeight="{Binding NeedsAttention, Converter={x:Static vm:AttentionWeight.Instance}}" />
+                                                    <TextBlock Classes="title" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Workspace}" FontSize="9" Opacity="0.7" Margin="14,0,0,0"
+                                                           Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                     <Panel />
                 </DockPanel>
             </Border>
