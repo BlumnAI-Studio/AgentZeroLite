@@ -205,7 +205,7 @@ public partial class ZeroBrowserCore
                 {
                     lb = platform.OpenLoopback(opts.LoopbackDeviceId);
                     lb.FrameAvailable += buffer.Process;
-                    lb.Start();
+                    await StartOffCallerAsync(lb);
                 }
                 catch (Exception ex)
                 {
@@ -246,7 +246,7 @@ public partial class ZeroBrowserCore
             {
                 mic = platform.OpenMicrophone(v.InputDeviceId);
                 mic.FrameAvailable += vad.Process;
-                mic.Start();
+                await StartOffCallerAsync(mic);
             }
             catch (Exception ex)
             {
@@ -267,6 +267,13 @@ public partial class ZeroBrowserCore
         }
         finally { _noteLock.Release(); }
     }
+
+    /// <summary>
+    /// Open the device on a pool thread. In a packaged (Store) build the first microphone open
+    /// waits for Windows' "Allow access to your microphone?" prompt; done on the caller — the UI
+    /// thread, where bridge requests run — the whole window froze until the user answered.
+    /// </summary>
+    internal static Task StartOffCallerAsync(IAudioFrameSource source) => Task.Run(source.Start);
 
     public async Task StopNoteCaptureAsync()
     {

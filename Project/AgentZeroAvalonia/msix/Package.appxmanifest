@@ -74,5 +74,8 @@
   <Capabilities>
     <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />
+    <!-- Voice Note / Agent Band plugins capture the microphone (Plugins page). A packaged app
+         needs the declaration to appear under Settings -> Privacy -> Microphone and be granted. -->
+    <DeviceCapability Name="microphone" />
   </Capabilities>
 </Package>

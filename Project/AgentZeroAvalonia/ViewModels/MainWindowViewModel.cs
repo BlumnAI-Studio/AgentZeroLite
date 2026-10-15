@@ -137,14 +137,16 @@ public partial class MainWindowViewModel : ObservableObject
         try { _botDocked = CliWorkspacePersistence.LoadWindowState()?.IsBotDocked ?? true; }
         catch (Exception ex) { AppLogger.LogError("[Bot] dock state load failed", ex); }
 
-        if (WearableHostLauncher.Supported)
-        {
 #if DEBUG
-            Wearable = new WearableViewModel("Debug");
+        const string configuration = "Debug";
 #else
-            Wearable = new WearableViewModel("Release");
+        const string configuration = "Release";
 #endif
-        }
+        // Only where the host can actually start: the Store MSIX leaves AgentZeroWearable.exe out
+        // (build-msix.ps1 -p:IncludeWearableHost=false), and a page whose Start can only fail
+        // is a broken feature to a reviewer.
+        if (WearableHostLauncher.Supported && new WearableHostLauncher(configuration).ResolveHostPath() is not null)
+            Wearable = new WearableViewModel(configuration);
 
         Plugins = new PluginsViewModel();
 
@@ -179,8 +181,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>The Plugins page (the WPF host's WebDev page) — web plugins over the shared JS bridge.</summary>
     public PluginsViewModel Plugins { get; }
 
-    /// <summary>The watch's host process exists on Windows only (WinRT BLE), so the page does too.</summary>
-    public bool WearableSupported => WearableHostLauncher.Supported;
+    /// <summary>The page exists where the watch's host can run: Windows (WinRT BLE) and a build that ships it (not the Store MSIX).</summary>
+    public bool WearableSupported => Wearable is not null;
 
     /// <summary>The Wearable page; null where the host cannot run.</summary>
     public WearableViewModel? Wearable { get; }

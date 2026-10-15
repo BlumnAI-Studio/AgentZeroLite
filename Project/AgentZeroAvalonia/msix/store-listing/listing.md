@@ -24,12 +24,24 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
+## What's new in this version (1.25.4.0 — submission 6)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Plugins page: run web plugins inside the app. Install from the official list, a GitHub folder or a .zip — Voice Note (speech-to-text with speaker labels), Agent Band (live music recognition with a YouTube/MP3 stage), Token Monitor and Token Remaining.
+- Settings → Models: download the on-device music classifier, vision model and speaker-diarization models.
+- Settings → Voice: pick text-to-speech and speech recognition (local Whisper or OpenAI) and test them without a microphone.
+- MCP servers for the assistant's AI mode: add stdio or HTTP servers and allow their tools one by one.
+- Active sessions in the sidebar: every running terminal of every workspace with its agent state (working, waiting for you, done) — one click to jump there; the focused session is highlighted.
+- Fixes: no more freeze when a workspace folder is on an offline network drive; OpenAI reasoning models (gpt-5 family) work with the token limit; token telemetry is faster.
+
 ## Features (one per line, ≤ 200 chars each)
 - Real terminal tabs (ConPTY + xterm.js) for Claude Code, Codex, agent-one and any shell
 - Split panes and per-project workspaces, remembered between sessions
 - Agent CLI check and one-click install for Claude Code, Codex, agent-one and netclaw
 - Built-in assistant that can read and drive your terminals, on a local model or any OpenAI-compatible API
 - Scriptable from any shell: AgentZeroLite.exe -cli
+- Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
+- Active-sessions sidebar showing which agent is working, waiting for you or done
 - No account, no telemetry — settings and history stay on your PC
 - Open source
 
@@ -81,6 +93,13 @@ an optional note — and sends the report, with the answer quoted, as a pre-fill
 the support contact or as a pre-filled GitHub issue; the user reviews and sends it. To see
 it without configuring a model, any message delivered to the assistant shows the button,
 e.g. from a terminal: AgentZeroLite.exe -cli bot-chat "sample answer" --from AgentBot
+
+About the microphone (new in 1.25.4.0): the package declares the microphone device
+capability for the Plugins page. Capture starts only when the user presses Start in the
+Voice Note or Agent Band plugin (microphone source) and stops with Stop; the audio is turned
+into text or labels on the device and no recording is kept. To try it: Plugins (puzzle icon
+in the left bar) → Install official plugin → Voice Note → open it → Start. The same plugins
+can listen to system audio instead (WASAPI loopback), which needs no capability.
 
 About write virtualization: this package does not declare unvirtualizedResources. The
 app's own new files under AppData stay in the package's private store. Terminal tabs and

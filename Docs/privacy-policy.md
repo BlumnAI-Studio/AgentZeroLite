@@ -1,6 +1,6 @@
 # AgentZero Lite — Privacy Policy
 
-_Last updated: 2026-10-03._
+_Last updated: 2026-10-15._
 
 Published page: <https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html>
 (this Markdown file is its source — keep the two in step).
@@ -35,10 +35,23 @@ Only for features you use, and only to the service involved:
 | Model downloads (local LLM, voice, music) | huggingface.co, github.com | A standard download request |
 | Web tools of the assistant | html.duckduckgo.com, the pages it opens, wttr.in (weather) | The search query or page address |
 | Agent CLI install (Settings → CLI Definitions) | The npm registry (`npm install -g`), or releases.netclaw.dev for netclaw's installer | A standard package or download request |
+| Voice with the OpenAI provider (Settings → Voice) | api.openai.com, with **your** API key | The text to speak, or the recorded speech to transcribe |
+| MCP servers (Settings → MCP) | The servers **you** add | The tool calls the assistant makes and their arguments |
+| Plugins page — official list and install | api.github.com, raw.githubusercontent.com, github.com (or the address you paste) | A standard download request |
+| Plugins that play or describe YouTube videos | youtube.com | The video address (to embed the player and read its title) |
 
 Programs you run inside the app's terminal tabs (for example Claude Code, Codex,
 agent-one or netclaw) are separate software with their own privacy policies; the app
 does not see or forward their traffic.
+
+## Microphone and system audio
+
+Only when you start them in a plugin (for example Voice Note or Agent Band): the app
+listens to the microphone or to what your speakers play, turns it into text or labels
+**on your computer** (Whisper, the AudioSet classifier, speaker labels), and shows the
+result in that plugin. No recording is kept. If you chose the OpenAI provider for speech
+recognition, the speech is sent to OpenAI to be transcribed. Stopping the plugin stops
+the capture.
 
 ## Children
 

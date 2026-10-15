@@ -30,7 +30,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
 <body>
 <main>
   <h1>AgentZero Lite — Privacy Policy</h1>
-  <p class="updated">Last updated: 2026-10-03</p>
+  <p class="updated">Last updated: 2026-10-15</p>
 
   <p>AgentZero Lite (“the app”) is a desktop shell for command-line AI tools. It is open source:
     <a href="https://github.com/psmon/AgentZeroLite">github.com/psmon/AgentZeroLite</a>.</p>
@@ -60,11 +60,22 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
       <tr><td>Model downloads (local LLM, voice, music)</td><td>huggingface.co, github.com</td><td>A standard download request</td></tr>
       <tr><td>Web tools of the assistant</td><td>html.duckduckgo.com, the pages it opens, wttr.in (weather)</td><td>The search query or page address</td></tr>
       <tr><td>Agent CLI install (Settings → CLI Definitions)</td><td>The npm registry (<code>npm install -g</code>), or releases.netclaw.dev for netclaw’s installer</td><td>A standard package or download request</td></tr>
+      <tr><td>Voice with the OpenAI provider (Settings → Voice)</td><td>api.openai.com, with <strong>your</strong> API key</td><td>The text to speak, or the recorded speech to transcribe</td></tr>
+      <tr><td>MCP servers (Settings → MCP)</td><td>The servers <strong>you</strong> add</td><td>The tool calls the assistant makes and their arguments</td></tr>
+      <tr><td>Plugins page — official list and install</td><td>api.github.com, raw.githubusercontent.com, github.com (or the address you paste)</td><td>A standard download request</td></tr>
+      <tr><td>Plugins that play or describe YouTube videos</td><td>youtube.com</td><td>The video address (to embed the player and read its title)</td></tr>
     </tbody>
   </table>
   </div>
   <p>Programs you run inside the app’s terminal tabs (for example Claude Code, Codex, agent-one or netclaw) are
     separate software with their own privacy policies; the app does not see or forward their traffic.</p>
+
+  <h2>Microphone and system audio</h2>
+  <p>Only when you start them in a plugin (for example Voice Note or Agent Band): the app listens to the microphone or
+    to what your speakers play, turns it into text or labels <strong>on your computer</strong> (Whisper, the AudioSet
+    classifier, speaker labels), and shows the result in that plugin. No recording is kept. If you chose the OpenAI
+    provider for speech recognition, the speech is sent to OpenAI to be transcribed. Stopping the plugin stops the
+    capture.</p>
 
   <h2>Children</h2>
   <p>The app is a developer tool and is not directed at children.</p>

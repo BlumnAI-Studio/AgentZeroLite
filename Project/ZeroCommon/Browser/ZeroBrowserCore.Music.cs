@@ -118,7 +118,7 @@ public partial class ZeroBrowserCore
                     ? platform.OpenLoopback(deviceId)
                     : platform.OpenMicrophone(deviceId);
                 s.FrameAvailable += capture.Process;
-                s.Start();
+                await StartOffCallerAsync(s);
             }
             catch (Exception ex)
             {
