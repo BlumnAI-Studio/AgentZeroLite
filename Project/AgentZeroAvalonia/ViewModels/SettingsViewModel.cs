@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentZeroAvalonia.ViewModels;
 
-public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice }
+public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models }
 
 /// <summary>A catalog model for the local-LLM combo.</summary>
 public sealed record ModelChoice(LlmModelCatalogEntry Entry)
@@ -108,6 +108,7 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsTerminal => Section == SettingsSection.Terminal;
     public bool IsVoice => Section == SettingsSection.Voice;
     public bool IsMcp => Section == SettingsSection.Mcp;
+    public bool IsModels => Section == SettingsSection.Models;
 
     /// <summary>Settings → MCP: the servers (and per-tool permissions) the bot's AI mode may use — mcp-settings.json.</summary>
     public McpSettingsViewModel Mcp { get; } = new();
@@ -115,12 +116,17 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Settings → Voice: its own view-model, the same voice-settings.json the WPF host and the wearable host read.</summary>
     public VoiceSettingsViewModel Voice { get; } = new();
 
+    /// <summary>Settings → Models: the plugins' on-device models (AST, Florence-2, Sherpa).</summary>
+    public OnDeviceModelsViewModel OnDeviceModels { get; } = new();
+
     partial void OnSectionChanged(SettingsSection value)
     {
         OnPropertyChanged(nameof(IsLlm));
         OnPropertyChanged(nameof(IsCli));
         OnPropertyChanged(nameof(IsTerminal));
         OnPropertyChanged(nameof(IsVoice));
+        OnPropertyChanged(nameof(IsModels));
+        if (value == SettingsSection.Models) OnDeviceModels.RefreshCommand.Execute(null);
         OnPropertyChanged(nameof(IsMcp));
     }
 
@@ -129,6 +135,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand] private void ShowTerminal() => Section = SettingsSection.Terminal;
     [RelayCommand] private void ShowVoice() => Section = SettingsSection.Voice;
     [RelayCommand] private void ShowMcp() => Section = SettingsSection.Mcp;
+    [RelayCommand] private void ShowModels() => Section = SettingsSection.Models;
 
     /// <summary>The definitions changed — the shell reloads its new-tab menu.</summary>
     public event Action? CliDefinitionsChanged;

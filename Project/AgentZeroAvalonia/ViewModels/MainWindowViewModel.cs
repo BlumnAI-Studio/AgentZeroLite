@@ -23,6 +23,7 @@ public enum AppPage
     Terminals,
     Settings,
     Wearable,
+    Plugins,
 }
 
 /// <summary>
@@ -145,6 +146,8 @@ public partial class MainWindowViewModel : ObservableObject
 #endif
         }
 
+        Plugins = new PluginsViewModel();
+
         Settings = new SettingsViewModel();
         Settings.CliDefinitionsChanged += ReloadCliDefinitions;
         Settings.AppearanceChanged += () => TerminalAppearanceChanged?.Invoke();
@@ -171,6 +174,10 @@ public partial class MainWindowViewModel : ObservableObject
     public bool IsTerminalsPage => Page == AppPage.Terminals;
     public bool IsSettingsPage => Page == AppPage.Settings;
     public bool IsWearablePage => Page == AppPage.Wearable;
+    public bool IsPluginsPage => Page == AppPage.Plugins;
+
+    /// <summary>The Plugins page (the WPF host's WebDev page) — web plugins over the shared JS bridge.</summary>
+    public PluginsViewModel Plugins { get; }
 
     /// <summary>The watch's host process exists on Windows only (WinRT BLE), so the page does too.</summary>
     public bool WearableSupported => WearableHostLauncher.Supported;
@@ -194,6 +201,8 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsTerminalsPage));
         OnPropertyChanged(nameof(IsSettingsPage));
         OnPropertyChanged(nameof(IsWearablePage));
+        OnPropertyChanged(nameof(IsPluginsPage));
+        if (value == AppPage.Plugins) Plugins.NotifyShown();
     }
 
     partial void OnActiveWorkspaceChanged(WorkspaceViewModel? oldValue, WorkspaceViewModel? newValue)
@@ -208,6 +217,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand] private void ShowTerminals() => Page = AppPage.Terminals;
     [RelayCommand] private void ShowSettings() => Page = Page == AppPage.Settings ? AppPage.Terminals : AppPage.Settings;
     [RelayCommand] private void ShowWearable() => Page = Page == AppPage.Wearable ? AppPage.Terminals : AppPage.Wearable;
+    [RelayCommand] private void ShowPlugins() => Page = Page == AppPage.Plugins ? AppPage.Terminals : AppPage.Plugins;
     [RelayCommand] private void ToggleSidebar() => SidebarExpanded = !SidebarExpanded;
     [RelayCommand] private void ToggleBot()
     {

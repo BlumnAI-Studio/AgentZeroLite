@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+             xmlns:br="using:Agent.Common.Browser"
+             x:Class="AgentZeroAvalonia.Views.PluginsView"
+             x:DataType="vm:PluginsViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.h2">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+            <Setter Property="Margin" Value="0,12,0,6" />
+        </Style>
+        <Style Selector="TextBlock.note">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Everything sits beside the web views, never over them: on macOS an Avalonia
+         surface drawn over a NativeWebView is invisible. -->
+    <Grid ColumnDefinitions="260,*" Background="{DynamicResource CyberBgDeep}">
+
+        <!-- Left: plugin list + install -->
+        <Border Grid.Column="0" Background="{DynamicResource CyberBgPanel}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="10,10,10,10">
+                <DockPanel DockPanel.Dock="Top">
+                    <Button DockPanel.Dock="Right" Content="⟳" ToolTip.Tip="Reload the list"
+                            Command="{Binding ReloadListCommand}" />
+                    <TextBlock Text="PLUGINS" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextDim}" />
+                </DockPanel>
+                <TextBlock DockPanel.Dock="Top" Classes="note" Text="{Binding Counts}" Margin="0,4,0,6" />
+
+                <!-- Install -->
+                <StackPanel DockPanel.Dock="Bottom" Spacing="6">
+                    <TextBlock Classes="h2" Text="INSTALL" />
+                    <ComboBox ItemsSource="{Binding OfficialPlugins}" SelectedItem="{Binding SelectedOfficial}"
+                              HorizontalAlignment="Stretch" IsEnabled="{Binding !IsInstalling}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="br:OfficialPluginEntry">
+                                <!-- Run.Text binds TwoWay by default: without Mode=OneWay the
+                                     formatted " v{0}" was written back into the record, re-formatted,
+                                     written again… a StackOverflow the moment the list arrived. -->
+                                <TextBlock>
+                                    <Run Text="{Binding Icon, Mode=OneWay}" />
+                                    <Run Text="{Binding Name, Mode=OneWay}" />
+                                    <Run Text="{Binding Version, Mode=OneWay, StringFormat=' v{0}'}" Foreground="{DynamicResource TextDim}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Classes="note" Text="{Binding OfficialStatus}" />
+                    <Button Content="Install official plugin" Command="{Binding InstallOfficialCommand}"
+                            HorizontalAlignment="Stretch" IsEnabled="{Binding !IsInstalling}" />
+                    <TextBox Text="{Binding GitUrl}" Watermark="https://github.com/owner/repo/tree/main/path"
+                             IsEnabled="{Binding !IsInstalling}" />
+                    <Grid ColumnDefinitions="*,6,*">
+                        <Button Grid.Column="0" Content="From URL" Command="{Binding InstallFromUrlCommand}"
+                                HorizontalAlignment="Stretch" IsEnabled="{Binding !IsInstalling}" />
+                        <Button Grid.Column="2" Content=".zip…" Command="{Binding InstallZipCommand}"
+                                HorizontalAlignment="Stretch" IsEnabled="{Binding !IsInstalling}" />
+                    </Grid>
+                    <StackPanel Spacing="4" IsVisible="{Binding IsInstalling}">
+                        <TextBlock Classes="note" Text="{Binding InstallCaption}" Foreground="{DynamicResource CyberCyanBrush}" />
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding InstallPercent}"
+                                     IsIndeterminate="{Binding InstallIndeterminate}" Height="4" />
+                        <TextBlock Classes="note" Text="{Binding InstallDetail}" />
+                        <Button Content="Cancel" Command="{Binding CancelInstallCommand}" HorizontalAlignment="Left" />
+                    </StackPanel>
+                    <TextBlock Classes="note" Text="{Binding Status}" />
+                </StackPanel>
+
+                <ListBox ItemsSource="{Binding Samples}" SelectedItem="{Binding Selected}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="br:WebDevSample">
+                            <StackPanel Spacing="1" Margin="0,2">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="built-in" FontSize="9"
+                                               Foreground="{DynamicResource TextDim}" VerticalAlignment="Center"
+                                               IsVisible="{Binding IsBuiltIn}" />
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding Description}" FontSize="10" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextDim}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Right: toolbar + one web view per opened plugin -->
+        <DockPanel Grid.Column="1">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgPanel}"
+                    BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="10,6">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <Button x:Name="ReloadButton" Content="⟳ Reload" ToolTip.Tip="Reload this plugin (developer tools: right-click → Inspect, or F12)" />
+                        <Button Content="Uninstall" IsEnabled="{Binding CanUninstall}">
+                            <Button.Flyout>
+                                <Flyout>
+                                    <StackPanel Spacing="8" MaxWidth="320">
+                                        <TextBlock TextWrapping="Wrap" FontSize="12"
+                                                   Text="{Binding Selected.DisplayName, StringFormat='Uninstall {0}? Its folder under Wasm/plugins is deleted.'}" />
+                                        <Button Content="Uninstall" Classes="accent" Command="{Binding UninstallCommand}" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Selected.DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="LoadingLabel" Text="loading…" FontSize="11" IsVisible="False"
+                                   Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <TextBlock DockPanel.Dock="Bottom" Classes="note" Text="{Binding OriginNote}" Margin="10,4" />
+            <Panel x:Name="ViewHost" Background="#0A0A14" />
+        </DockPanel>
+    </Grid>
+</UserControl>

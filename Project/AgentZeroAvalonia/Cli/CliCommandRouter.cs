@@ -49,6 +49,9 @@ internal sealed class CliCommandRouter
     /// <summary>The web surface <c>web</c> drives; the headless one until a Browser page exists in this host.</summary>
     public IWebToolSurface? WebSurface { get; set; }
 
+    /// <summary>The Plugins page's <c>plugin</c> verbs (see <see cref="PluginVerbs"/>); null in tests.</summary>
+    public Func<JsonElement, Task<string>>? PluginCommand { get; set; }
+
     public CliCommandRouter(IClassicDesktopStyleApplicationLifetime? desktop) => _desktop = desktop;
 
     public Task<string> HandleAsync(string json, CancellationToken ct)
@@ -116,6 +119,11 @@ internal sealed class CliCommandRouter
 
                     case "mcp":
                         return McpAsync(root.Clone());
+
+                    case "plugin":
+                        return PluginCommand is null
+                            ? Task.FromResult(CliIpcProtocol.ErrorJson("the Plugins page is not available in this host"))
+                            : PluginCommand(root.Clone());
 
                     default:
                         return Task.FromResult(CliIpcProtocol.ErrorJson($"unknown command '{command}' (not ported to the Avalonia host yet)"));

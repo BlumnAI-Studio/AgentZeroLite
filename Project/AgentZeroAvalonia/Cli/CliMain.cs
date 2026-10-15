@@ -74,6 +74,7 @@ internal static class CliMain
             "terminal-alias" => MoreVerbs.TerminalAlias(client, rest),
             "web" => MoreVerbs.Web(client, rest),
             "mcp" => MoreVerbs.Mcp(client, rest),
+            "plugin" => PluginVerbs.Run(client, rest),
             _ => Unknown(command),
         };
     }
@@ -174,6 +175,7 @@ internal static class CliMain
         Console.WriteLine("  terminal-alias list | set <g> <t> <name> | rm <name>   Name a terminal; then use --alias <name> as the target");
         Console.WriteLine("  web open|search|read|tabs ...        Web surface (headless in this host); 'web help' for options");
         Console.WriteLine("  mcp list|import|refresh|allow|deny|call ...   MCP servers for AI mode; 'mcp help' for options");
+        Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");
         Console.WriteLine("  bot-chat <message> [--from <name>]   Deliver a message to AgentBot (DONE(...) is the peer envelope)");
         Console.WriteLine("  bot-ask <text...>                    Ask AgentBot in AI mode (starts an agent-loop turn)");

@@ -284,7 +284,7 @@ What differs from the WPF host, and why:
 
 - **Terminal**: xterm.js inside `NativeWebView`, served by `LocalAssetServer` (loopback, token path) because the Avalonia WebView cannot map a folder; the PTY is `ConPtyHost` (a copy of `ManagedConPtyHost`) on Windows and `PortaPtyHost` (Porta.Pty) on macOS behind ZeroCommon's `IPtyHost`/`XtermTerminalSession`. Two ConPTY facts the WPF copy never hit: a parent whose stdio is a pipe hands its std handles to the child (blanked around `CreateProcess`), and pipe EOF is not the exit signal (a process-handle watcher is).
 - **Split panes**: `WorkspaceLayout<T>` + one Canvas that positions every renderer over its pane slot — no native re-parenting. The stored `CliGroup.LayoutJson` is byte-identical to what WPF writes.
-- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout` and `mcp`. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout`, `mcp` and `plugin`. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it
@@ -321,6 +321,23 @@ What differs from the WPF host, and why:
   the local grammar emits only strings, integers and booleans. On Windows a stdio command that resolves to a
   `.cmd`/`.bat` (npx, uvx) runs through `cmd.exe /d /s /c` — same no-shell trap as the npm installer.
   `McpLiveTests` runs against a real server when `AGENTZERO_MCP_LIVE_FILE` names an `mcpServers` file.
+- **Web plugins (WPF's WebDev page → the Plugins page, 🧩)** run unchanged on both hosts because
+  there is one op table: `ZeroCommon/Browser/ZeroBridgeDispatcher` (WPF `WebDevBridge` and Avalonia
+  `Services/Plugins/PluginBridge` are only transports + an `IZeroBridgeHost`), over `ZeroBrowserCore`
+  (WPF `WebDevHost` derives from it and adds the NAudio note/music capture). `zero-bridge.js` is linked
+  byte-identical; NativeWebView has neither folder mapping nor `chrome.webview` on macOS, so
+  `PluginAssetServer` serves `zero.local` / `plugin.local` / `mp3.local` over loopback, rewrites those
+  origins in text responses, injects `Wasm/common/zero-webview-shim.js` as each page's first script, and
+  reuses its remembered port (`plugin-host.json`) because the page's origin — and so its `localStorage` —
+  includes the port. A new op goes in the dispatcher; a host-only one must be answered by **both** hosts'
+  `TryDispatchHostOp`. **OS seams are interfaces**: audio is ZeroCommon `Audio/IAudioCapturePlatform`
+  (`AudioCapture.Platform` — `WindowsAudioCapture` over NAudio, which WPF's `VoiceCaptureService` /
+  `LoopbackCaptureService` now wrap; elsewhere `UnsupportedAudioCapture`, so note/music answer
+  `ok:false, unsupported-host`), the VAD is `Audio/VoiceActivitySegmenter`, and vision's frame is Avalonia
+  `Services/Plugins/IWebViewFrameCapture` (`WebView2FrameCapture`: `ICoreWebView2::CapturePreview`, vtable
+  slot 30, via `IWindowsWebView2PlatformHandle`). A macOS port implements those two interfaces and nothing
+  above them. `-cli plugin list|open|call|capture` drives the page; `call` runs `window.zero.invoke` inside
+  it, so it is an end-to-end check of shim + bridge + dispatcher.
 - **Local LLM is Windows-only** (LLamaSharp DLLs); macOS uses External providers. Gemma 4's native tool-call syntax is converted to the JSON envelope by `GemmaNativeToolCall` (ZeroCommon, benefits both hosts).
 - CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`); `release.yml` is untouched. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
 

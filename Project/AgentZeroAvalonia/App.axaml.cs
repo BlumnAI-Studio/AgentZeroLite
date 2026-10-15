@@ -1,3 +1,4 @@
+using Agent.Common.Telemetry;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -58,6 +59,7 @@ public partial class App : Application
             if (SynchronizationContext.Current is null)
                 SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
             ActorSystemManager.Initialize();
+            StartTelemetryCollectors();
 
             var vm = new MainWindowViewModel();
             vm.LoadState();
@@ -95,6 +97,7 @@ public partial class App : Application
                     vm.Bot.AttachActors();
                     vm.Bot.ReceiveExternalChat(from, message);
                 },
+                PluginCommand = root => PluginVerbs.HandleAsync(root, vm),
                 LayoutStatus = () => (vm.ActiveWorkspace?.DockLayoutJson, vm.ActiveWorkspace?.Layout.PaneCount ?? 0, vm.ActiveWorkspace?.DisplayName),
             };
             _cliServer = CliServer.Start(router);
@@ -112,6 +115,7 @@ public partial class App : Application
                 try { vm.Bot.Detach(); } catch { }
                 try { vm.Wearable?.Shutdown(); } catch { }
                 try { _cliServer?.Dispose(); } catch { }
+                StopTelemetryCollectors();
                 // stdio MCP servers are child processes; end them with the app. Off the UI
                 // thread: waiting here on continuations that post back to it would deadlock
                 // (the same trap ActorSystemManager.Shutdown documents).
@@ -121,5 +125,30 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// The three telemetry collectors the WPF host starts in <c>App.OnStartup</c>. The Plugins
+    /// page's token-monitor / token-remaining widgets read what they store; without them the
+    /// widgets showed only what a manual Refresh collected. Each start is independent, as in WPF.
+    /// </summary>
+    private static void StartTelemetryCollectors()
+    {
+        try { TokenUsageCollector.Instance.Start(); }
+        catch (Exception ex) { AppLogger.LogError("[TokenCollector] start failed", ex); }
+        // Keep the statusLine wrapper script in step with this build (idempotent overwrite).
+        try { StatusLineWrapperInstaller.EnsureWrapperOnDisk(); }
+        catch (Exception ex) { AppLogger.LogError("[StatusLineWrapper] EnsureWrapperOnDisk failed", ex); }
+        try { TokenRemainingCollector.Instance.Start(); }
+        catch (Exception ex) { AppLogger.LogError("[TokenRemainingCollector] start failed", ex); }
+        try { SessionHeartbeatCollector.Instance.Start(); }
+        catch (Exception ex) { AppLogger.LogError("[SessionHeartbeatCollector] start failed", ex); }
+    }
+
+    private static void StopTelemetryCollectors()
+    {
+        try { TokenUsageCollector.Instance.Stop(); } catch { }
+        try { TokenRemainingCollector.Instance.Stop(); } catch { }
+        try { SessionHeartbeatCollector.Instance.Stop(); } catch { }
     }
 }
