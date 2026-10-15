@@ -18,7 +18,7 @@ namespace AgentZeroWpf.Services;
 /// the shape the rest of the app already expects. VT sequences come from the shared
 /// <see cref="TerminalControlSequences"/> table.
 /// </summary>
-public sealed class WebViewXtermTerminalSession : ITerminalSession, IDisposable
+public sealed class WebViewXtermTerminalSession : ITerminalSession, ITerminalTitleSource, IDisposable
 {
     private readonly ManagedConPtyHost _host;
     private readonly string _sessionId;
@@ -66,6 +66,11 @@ public sealed class WebViewXtermTerminalSession : ITerminalSession, IDisposable
     /// back to the tail of the stream.
     /// </summary>
     public void SetScreenSnapshot(string? screen) => _console.SetScreenSnapshot(screen);
+
+    /// <summary>The title the program set (OSC 0/2), pushed by the renderer — agent-state detection reads it.</summary>
+    public string? WindowTitle { get; private set; }
+
+    public void SetWindowTitle(string? title) => WindowTitle = string.IsNullOrEmpty(title) ? null : title;
 
     public int OutputLength
     {

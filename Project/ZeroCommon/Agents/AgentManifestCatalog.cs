@@ -30,8 +30,16 @@ public static class AgentManifestCatalog
             }) { BottomLines = 6 },
         new("blocked_proceed", AgentActivity.Blocked, 975, ScreenRegion.BottomLines,
             C("do you want to proceed?")) { BottomLines = 6 },
-        // Actively generating — interrupt hint, or the "✻ Gerund…" spinner with
-        // its live token counter (as opposed to the "✻ Cooked for 7s" done line).
+        // Actively generating — interrupt hint, the "✻ Gerund…" spinner, or its live counter
+        // (as opposed to the "✻ Cooked for 7s" done line, which has no ellipsis and no counter).
+        // Reported 2026-10-15 (Claude and Codex): a working agent read as idle within seconds.
+        // What the rules had wrong:
+        //  • the spinner glyph cycles ·✢✳✶✻✽ and only ✻ matched — most 1.5 s samples missed it;
+        //  • the counter now reads "(12s · ↓ 1.2k tokens · esc to interrupt)", so "tokens\)"
+        //    no longer closed the match;
+        //  • with a statusline (claude-hud) and a todo list the spinner sits well above the
+        //    bottom 8 lines, and the always-visible "> " input line then won idle_prompt.
+        // The spinner line exists only while working, so the whole viewport is safe to scan.
         new("working_interrupt", AgentActivity.Working, 900, ScreenRegion.BottomLines,
             new MatchGroup
             {
@@ -39,10 +47,10 @@ public static class AgentManifestCatalog
                 {
                     C("esc to interrupt"),
                     C("esc to stop"),
-                    Rx(@"✻\s+\w+…"),          // spinner: "✻ Gallivanting…"
-                    Rx(@"\(\d+s\b.*tokens\)"), // live token counter while streaming
+                    Rx(@"^\s*[·✢✳✶✻✽*]\s+\S[^()]*…"),   // spinner: "✶ Gallivanting…"
+                    Rx(@"\(\s*\d+[smh]\b[^)]*(tokens|interrupt)"), // live counter while streaming
                 },
-            }) { BottomLines = 8 },
+            }) { BottomLines = 40 },
         // Empty prompt caret with no blocker markers → idle.
         new("idle_prompt", AgentActivity.Idle, 800, ScreenRegion.BottomLines,
             new MatchGroup
@@ -62,8 +70,19 @@ public static class AgentManifestCatalog
             {
                 Any = new[] { C("allow command"), C("approve"), C("[y/n]"), C("(y/n)"), C("press enter to run") },
             }) { BottomLines = 6 },
+        // "• Working (12s • esc to interrupt)" above the composer. Bare "working"/"thinking"
+        // matched the model's own output; the status line's shape (bullet + word, or the
+        // interrupt hint) does not. Wide window — the composer and its hint lines sit below.
         new("working_interrupt", AgentActivity.Working, 900, ScreenRegion.BottomLines,
-            new MatchGroup { Any = new[] { C("esc to interrupt"), C("working"), C("thinking") } }) { BottomLines = 6 },
+            new MatchGroup
+            {
+                Any = new[]
+                {
+                    C("esc to interrupt"),
+                    Rx(@"^\s*[•◦·]\s*(Working|Thinking)\b"),
+                    Rx(@"\b(Working|Thinking)\s*\(\s*\d+[smh]\b"),
+                },
+            }) { BottomLines = 40 },
     });
 
     /// <summary>

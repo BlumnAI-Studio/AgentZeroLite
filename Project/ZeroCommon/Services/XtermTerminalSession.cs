@@ -16,7 +16,7 @@ namespace Agent.Common.Services;
 /// pushes a viewport snapshot (<see cref="SetScreenSnapshot"/>) and this class serves
 /// the last one.</para>
 /// </summary>
-public sealed class XtermTerminalSession : ITerminalSession, IDisposable
+public sealed class XtermTerminalSession : ITerminalSession, ITerminalTitleSource, IDisposable
 {
     private readonly IPtyHost _host;
     private readonly string _sessionId;
@@ -67,6 +67,11 @@ public sealed class XtermTerminalSession : ITerminalSession, IDisposable
 
     /// <summary>The renderer's viewport, pushed whenever the screen settles.</summary>
     public void SetScreenSnapshot(string? screen) => _console.SetScreenSnapshot(screen);
+
+    /// <summary>The title the program set (OSC 0/2), pushed by the renderer — agent-state detection reads it.</summary>
+    public string? WindowTitle { get; private set; }
+
+    public void SetWindowTitle(string? title) => WindowTitle = string.IsNullOrEmpty(title) ? null : title;
 
     public int OutputLength => _console.Length;
 

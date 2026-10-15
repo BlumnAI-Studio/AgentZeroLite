@@ -1,21 +1,22 @@
-namespace Agent.Common.Mp3;
+namespace Agent.Common.Platform;
 
 /// <summary>
-/// Timeout-bounded existence checks for the MP3 scan root, which is very often
-/// a mapped NETWORK drive.
+/// Timeout-bounded existence checks for paths that are very often on a mapped
+/// NETWORK drive — the MP3 scan root, a workspace folder a terminal starts in.
 ///
 /// A bare <see cref="Directory.Exists"/> against a <em>disconnected</em> mapped
 /// drive does not fail fast — it blocks the calling thread for the full SMB /
-/// redirector timeout (tens of seconds). The Agent Band plugin probes the scan
-/// folder on load (mp3.status → mp3.list) and those bridge handlers run on the
-/// WPF UI thread, so a laptop carried to a different location (drive no longer
-/// reachable) makes the whole app appear to hang on launch.
+/// redirector timeout (tens of seconds). On a UI thread that is a frozen app:
+/// measured 2026-10-15, switching to a workspace on an unreachable
+/// <c>\\192.168.0.3\…</c> drive froze the Avalonia host for 21–30 s inside
+/// GetFileAttributesExW, before the terminal even started; the Agent Band plugin's
+/// scan-folder probe did the same on load.
 ///
 /// We run the probe on a pool thread, give up after a short budget, and briefly
-/// cache the verdict so the burst of load-time calls pays the cost at most once.
-/// A live-but-slow drive still answers well within the budget; a dead one is
-/// simply treated as "not available" (Available=false, no scan) instead of
-/// freezing the UI.
+/// cache the verdict so a burst of calls pays the cost at most once. A live-but-slow
+/// drive still answers well within the budget; a dead one is simply treated as
+/// "not available" instead of freezing the UI. Moved here from <c>Agent.Common.Mp3</c>
+/// when the terminals needed it too.
 /// </summary>
 public static class PathAvailability
 {

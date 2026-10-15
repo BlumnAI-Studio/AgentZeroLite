@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Agent.Common;
 using Agent.Common.Browser;
 using Agent.Common.Mp3;
+using Agent.Common.Platform;
 using Microsoft.Web.WebView2.Core;
 
 namespace AgentZeroWpf.Services.Browser;

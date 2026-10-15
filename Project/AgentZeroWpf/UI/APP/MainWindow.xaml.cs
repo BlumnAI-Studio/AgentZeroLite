@@ -1253,7 +1253,7 @@ public partial class MainWindow : Window
 
     private void HandleAgentState()
     {
-        var snap = _agentStateMonitor?.Snapshot() ?? System.Array.Empty<Services.AgentStateMonitor.TabState>();
+        var snap = _agentStateMonitor?.Snapshot() ?? System.Array.Empty<Agent.Common.Agents.TerminalAgentState>();
         int attention = _agentStateMonitor?.AttentionCount() ?? 0;
         var sb = new StringBuilder();
         sb.Append("{\"ok\":true,\"attention\":").Append(attention).Append(",\"tabs\":[");
@@ -1899,7 +1899,7 @@ public partial class MainWindow : Window
 
         foreach (var grp in groups)
         {
-            if (!System.IO.Directory.Exists(grp.DirectoryPath)) continue;
+            if (!Agent.Common.Platform.PathAvailability.DirectoryExistsFast(grp.DirectoryPath)) continue;
 
             AddCliGroup(grp.DirectoryPath, autoCreateTab: false);
             var restoredGroup = _cliGroups[^1];
@@ -2854,7 +2854,7 @@ public partial class MainWindow : Window
     {
         if (_activeGroupIndex < 0 || _activeGroupIndex >= _cliGroups.Count) return;
         var dirPath = _cliGroups[_activeGroupIndex].DirectoryPath;
-        if (string.IsNullOrEmpty(dirPath) || !System.IO.Directory.Exists(dirPath)) return;
+        if (string.IsNullOrEmpty(dirPath) || !Agent.Common.Platform.PathAvailability.DirectoryExistsFast(dirPath)) return;
 
         // Rebuild note if the active workspace has changed
         if (_noteWindow is not null && _noteEmbeddedDir != dirPath)
@@ -3086,7 +3086,7 @@ public partial class MainWindow : Window
         // and the *last* quote as the /c boundary.
         string appDir = AppContext.BaseDirectory.TrimEnd('\\', '/');
         string injectPath = $"set \"PATH={appDir};%PATH%\"";
-        string cmdLine = !string.IsNullOrEmpty(workDir) && System.IO.Directory.Exists(workDir)
+        string cmdLine = !string.IsNullOrEmpty(workDir) && Agent.Common.Platform.PathAvailability.DirectoryExistsFast(workDir, 2000)
             ? $"cmd /c \"{injectPath}&&pushd \"{workDir}\"&&{rawCmd}\""
             : $"cmd /c \"{injectPath}&&{rawCmd}\"";
 
@@ -3149,7 +3149,7 @@ public partial class MainWindow : Window
         control.Loaded += (_, _) =>
         {
             if (tab.IsTerminalStarted) return;
-            var cwd = !string.IsNullOrEmpty(workDir) && System.IO.Directory.Exists(workDir) ? workDir : null;
+            var cwd = !string.IsNullOrEmpty(workDir) && Agent.Common.Platform.PathAvailability.DirectoryExistsFast(workDir, 2000) ? workDir : null;
             var host = control.StartPty(cmdLine, cwd);
             tab.IsTerminalStarted = true;
 
@@ -4592,10 +4592,10 @@ public partial class MainWindow : Window
         try
         {
             var active = GetActiveDirectoryPath();
-            if (!string.IsNullOrWhiteSpace(active) && System.IO.Directory.Exists(active))
+            if (!string.IsNullOrWhiteSpace(active) && Agent.Common.Platform.PathAvailability.DirectoryExistsFast(active))
                 return active;
             foreach (var g in _cliGroups)
-                if (!string.IsNullOrWhiteSpace(g.DirectoryPath) && System.IO.Directory.Exists(g.DirectoryPath))
+                if (!string.IsNullOrWhiteSpace(g.DirectoryPath) && Agent.Common.Platform.PathAvailability.DirectoryExistsFast(g.DirectoryPath))
                     return g.DirectoryPath;
         }
         catch { /* fall through */ }
@@ -4932,7 +4932,7 @@ public partial class MainWindow : Window
     /// tooltip (herdr H2 UI). Blocked/unseen-done are the attention colors.
     /// </summary>
     private (System.Windows.Media.Brush Brush, string Label, string Tip) AgentStateVisual(
-        Services.AgentStateMonitor.TabState? s, bool isActive)
+        Agent.Common.Agents.TerminalAgentState? s, bool isActive)
     {
         System.Windows.Media.Brush B(byte r, byte g, byte b)
             => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));

@@ -117,3 +117,15 @@ public enum TerminalControl
     RightArrow,   // ESC[C
     ClearScreen,  // ESC[2J ESC[H
 }
+
+/// <summary>
+/// A session whose renderer reports the terminal title the program set (OSC 0/2). Agent CLIs
+/// animate it while busy — Claude Code puts a braille spinner there — which makes it the most
+/// reliable "working" signal <see cref="Agents.AgentStateDetector"/> has (its OscTitle rules).
+/// Optional: a session without a renderer simply does not implement it.
+/// </summary>
+public interface ITerminalTitleSource
+{
+    /// <summary>The last title the program set, or null when it never set one.</summary>
+    string? WindowTitle { get; }
+}

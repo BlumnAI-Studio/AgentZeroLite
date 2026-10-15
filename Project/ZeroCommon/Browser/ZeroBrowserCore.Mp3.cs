@@ -5,6 +5,7 @@ using Agent.Common.Data;
 using Agent.Common.Data.Entities;
 using Agent.Common.Llm;
 using Agent.Common.Mp3;
+using Agent.Common.Platform;
 using Agent.Common.Vision;
 
 namespace Agent.Common.Browser;

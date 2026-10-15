@@ -216,6 +216,10 @@ public partial class XtermTerminalControl : UserControl
                     ApplyResizeFromMessage(root);
                     _host?.Resize(_cols, _rows);
                     break;
+                case "title":
+                    // OSC 0/2 — agent-state detection's strongest "working" signal.
+                    Session?.SetWindowTitle(root.TryGetProperty("data", out var ttl) ? ttl.GetString() : null);
+                    break;
                 case "screen":
                     // The renderer is the terminal emulator, so it is the only thing
                     // that knows what is on screen. See TerminalConsoleBuffer for why

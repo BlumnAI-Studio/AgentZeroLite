@@ -9,6 +9,7 @@ namespace ZeroCommon.Tests;
 /// (herdr-adoption H1 data-driven rules).
 /// </summary>
 [Trait("Category", "AgentManifestJson")]
+[Collection(AgentManifestCatalogCollection.Name)]
 public sealed class AgentManifestJsonTests : IDisposable
 {
     private readonly string _dir;

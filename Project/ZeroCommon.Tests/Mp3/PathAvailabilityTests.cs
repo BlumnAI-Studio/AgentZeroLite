@@ -1,4 +1,4 @@
-using Agent.Common.Mp3;
+using Agent.Common.Platform;
 using Xunit;
 
 namespace ZeroCommon.Tests.Mp3;
