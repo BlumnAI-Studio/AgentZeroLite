@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Agent.Common;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Telemetry;
 
 /// <summary>
 /// Installs an AgentZero statusLine wrapper into per-account

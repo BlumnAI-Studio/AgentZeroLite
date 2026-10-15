@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
 using Agent.Common;
+using Agent.Common.Browser;
 using AgentZeroWpf.Services.Browser;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;

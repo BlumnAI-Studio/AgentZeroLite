@@ -90,22 +90,14 @@ internal static class VoiceRuntimeFactory
     /// Strict / Loose tokens always win over the mode hint.
     /// </summary>
     public static VadConfig BuildVadConfig(VoiceSettings v, bool isAgentMode)
-    {
-        var level = VoiceSensitivityProfile.ResolveAuto(v.SensitivityProfile, isAgentMode);
-        var sensitivityPercent = Math.Clamp(100.0 - v.VadThreshold, 0.0, 100.0);
-        return VoiceSensitivityProfile.BuildVadConfig(level, sensitivityPercent);
-    }
+        => VoiceVadSettings.BuildVadConfig(v, isAgentMode);
 
     /// <summary>
     /// Mode-aware threshold scalar. Mirrors
-    /// <see cref="SensitivityToThreshold(double, VoiceSettings)"/> but
-    /// honours the <c>"Auto"</c> token by routing through
-    /// <see cref="VoiceSensitivityProfile.ResolveAuto"/>.
+    /// <see cref="SensitivityToThreshold(double, VoiceSettings)"/> but honours the
+    /// <c>"Auto"</c> token — the rule lives in ZeroCommon's <see cref="VoiceVadSettings"/>.
     /// </summary>
     public static float SensitivityToThreshold(
         double sensitivityPercent, VoiceSettings v, bool isAgentMode)
-    {
-        var level = VoiceSensitivityProfile.ResolveAuto(v.SensitivityProfile, isAgentMode);
-        return VoiceSensitivityProfile.BuildVadConfig(level, sensitivityPercent).VadThreshold;
-    }
+        => VoiceVadSettings.SensitivityToThreshold(sensitivityPercent, v, isAgentMode);
 }

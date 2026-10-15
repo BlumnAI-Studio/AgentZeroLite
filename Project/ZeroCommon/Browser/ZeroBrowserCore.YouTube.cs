@@ -5,7 +5,7 @@ using Agent.Common.Data;
 using Agent.Common.Data.Entities;
 using Agent.Common.Music;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>One YouTube playlist row as the plugin sees it (field names match agent-band.js).</summary>
 public sealed record YouTubePlaylistDto(
@@ -18,7 +18,7 @@ public sealed record YouTubePlaylistDto(
 /// Every op runs off the UI thread against a scoped <see cref="AppDbContext"/>;
 /// <c>VideoId</c> is the unique upsert key.
 /// </summary>
-public partial class WebDevHost
+public partial class ZeroBrowserCore
 {
     private static YouTubePlaylistDto ToYtDto(YouTubePlaylistItem r)
         => new(r.Id, r.VideoId, r.Title, r.Author, r.Thumbnail, r.Category, r.CategoryBy, r.Url);

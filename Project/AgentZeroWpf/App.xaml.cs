@@ -123,7 +123,7 @@ public partial class App : Application
             // Existing v2 installs auto-upgrade to v3 the next time the
             // app launches; settings.json statusLine command is the same
             // shape so we don't need to retouch each profile.
-            AgentZeroWpf.Services.Browser.StatusLineWrapperInstaller.EnsureWrapperOnDisk();
+            Agent.Common.Telemetry.StatusLineWrapperInstaller.EnsureWrapperOnDisk();
         }
         catch (Exception ex)
         {

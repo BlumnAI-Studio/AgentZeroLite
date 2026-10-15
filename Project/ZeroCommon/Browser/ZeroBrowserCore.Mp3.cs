@@ -7,7 +7,7 @@ using Agent.Common.Llm;
 using Agent.Common.Mp3;
 using Agent.Common.Vision;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>Live scan-job progress (M0029). <c>Phase</c> = "enumerate" | "scan" | "done".</summary>
 public sealed record Mp3ScanProgressInfo(string Phase, int Done, int Total, string Current, int Added, int Updated, int Classified);
@@ -39,12 +39,13 @@ public sealed record Mp3CardDto(int Id, string Title, string Description, string
 /// + folder hint → one category, same throwaway-session pattern as
 /// <see cref="ClassifyAsync"/>).
 ///
-/// Playback itself never crosses the bridge: the WebDev panel's bridge maps
-/// the scan root to <c>https://mp3.local/</c> (virtual host), and the
-/// plugin's &lt;audio&gt; element streams straight from disk. The band hears
+/// Playback itself never crosses the bridge: each host serves the scan root
+/// as <c>https://mp3.local/</c> (WPF: a WebView2 resource handler; Avalonia:
+/// the loopback plugin server), and the plugin's &lt;audio&gt; element streams
+/// straight from disk. The band hears
 /// it through the existing SystemLoopback capture — no new audio wiring.
 /// </summary>
-public sealed partial class WebDevHost
+public partial class ZeroBrowserCore
 {
     private CancellationTokenSource? _mp3ScanCts;
     private int _mp3ScanRunning;                    // 0/1 — single-flight scan job
@@ -450,7 +451,7 @@ public sealed partial class WebDevHost
         return ("", persons);
     }
 
-    internal void DisposeMp3()
+    protected void DisposeMp3()
     {
         try { _mp3ScanCts?.Cancel(); } catch { }
         _mp3ScanCts = null;

@@ -5,12 +5,12 @@ using Agent.Common.Vision;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-// WinForms is enabled project-wide, so bare `Image` / `Rectangle` collide with
-// System.Drawing. Alias the ImageSharp types we use.
+// Aliased because a WinForms-enabled host (the WPF app) sees System.Drawing's
+// `Image` / `Rectangle` too; the aliases keep this file unambiguous anywhere.
 using ISImage = SixLabors.ImageSharp.Image;
 using ISRect = SixLabors.ImageSharp.Rectangle;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>
 /// On-device vision surface for the WebDev plugin sandbox (M0028 — Agent Band
@@ -20,11 +20,11 @@ namespace AgentZeroWpf.Services.Browser;
 ///   • read instruments visible in the frame → vision-first instrument summon,
 ///   • get a cheap frame-diff motion energy → dance idle↔action sync.
 ///
-/// The frame is captured host-side in <see cref="WebDevBridge"/> (the plugin's
-/// cross-origin YouTube iframe can't be read from JS); this class only decodes,
-/// crops, and runs the model. Mirrors <see cref="WebDevHost"/>'s music surface.
+/// The frame is captured by the host (<see cref="IZeroBridgeHost.CaptureFramePngAsync"/> —
+/// the plugin's cross-origin YouTube iframe can't be read from JS); this class only
+/// decodes, crops, and runs the model.
 /// </summary>
-public sealed partial class WebDevHost
+public partial class ZeroBrowserCore
 {
     private Florence2VisionInterpreter? _visionInterpreter;
     private int _visionInFlight;               // 0/1 single-flight for the slow analyze
@@ -119,7 +119,7 @@ public sealed partial class WebDevHost
     /// <summary>Drop the motion baseline (on video change / test stop).</summary>
     public void ResetVision() => _visionLastMotionGray = null;
 
-    internal void DisposeVision()
+    protected void DisposeVision()
     {
         try { _visionInterpreter?.DisposeAsync().AsTask().Wait(1000); } catch { }
         _visionInterpreter = null;

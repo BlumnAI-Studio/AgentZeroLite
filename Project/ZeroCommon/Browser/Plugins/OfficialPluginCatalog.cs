@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Agent.Common;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>
 /// One entry in the "Official plugins" list shown at the top of the install

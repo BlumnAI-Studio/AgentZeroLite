@@ -61,11 +61,18 @@ rejected Promise with the host's exception message.
 
 ## Adding a new operation
 
-1. Add a method to `IZeroBrowser` in `Project/ZeroCommon/Browser/IZeroBrowser.cs`.
-2. Implement it in `Project/AgentZeroWpf/Services/Browser/WebDevHost.cs`.
-3. Add the dispatch case in `WebDevBridge.DispatchAsync` (op string + args).
-4. Add the JS wrapper in `common/zero-bridge.js`.
-5. Use it from any sandbox app.
+1. Implement it where it can run: portable logic in `ZeroCommon/Browser/ZeroBrowserCore*.cs`
+   (shared by the WPF and Avalonia hosts); something that needs NAudio or WebView2 in
+   `Project/AgentZeroWpf/Services/Browser/WebDevHost*.cs`.
+2. Add the dispatch case — portable ops in `ZeroCommon/Browser/ZeroBridgeDispatcher.DispatchAsync`
+   (op string + args); a host-only op in that host's `IZeroBridgeHost.TryDispatchHostOp`
+   (WPF: `WebDevBridge`, Avalonia: `Services/Plugins/PluginBridge`, which must then answer
+   the op too, even if only with `ok:false`).
+3. Add the JS wrapper in `common/zero-bridge.js` — one file, linked byte-identical into the
+   Avalonia host.
+4. Use it from any sandbox app.
 
-The contract intentionally lives in `ZeroCommon` (WPF-free) so future WASM
-plugins can compile against it without dragging in `PresentationFramework`.
+The Avalonia host serves these pages over loopback and injects `zero-webview-shim.js`
+(its own `Wasm/common/`) in front of `zero-bridge.js`, so `chrome.webview` and the
+`https://zero.local` / `plugin.local` / `mp3.local` URLs work unchanged there. Keep plugins
+on `window.zero` and those three origins and they run on both hosts.

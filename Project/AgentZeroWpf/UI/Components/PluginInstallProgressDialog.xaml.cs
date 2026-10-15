@@ -1,5 +1,5 @@
 using System.Windows;
-using AgentZeroWpf.Services.Browser;
+using Agent.Common.Browser;
 
 namespace AgentZeroWpf.UI.Components;
 

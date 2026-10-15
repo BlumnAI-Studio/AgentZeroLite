@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>
 /// Manifest for a WebDev plugin packaged as a .zip. Authored by plugin

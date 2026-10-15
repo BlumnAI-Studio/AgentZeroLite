@@ -1,7 +1,7 @@
 using System.IO;
 using Agent.Common;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 /// <summary>
 /// One sample shown in the WebDev menu sample list. Built-in samples ship
@@ -34,15 +34,19 @@ public static class WebDevSampleCatalog
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "AgentZeroLite", "Wasm", "plugins");
 
-    public static IReadOnlyList<WebDevSample> Discover()
+    /// <param name="hiddenBuiltIns">
+    /// Folders under <c>Wasm/</c> that are not samples in this host (the Avalonia host's
+    /// <c>xterm</c> renderer lives there too). <c>common/</c> is always skipped.
+    /// </param>
+    public static IReadOnlyList<WebDevSample> Discover(IReadOnlyCollection<string>? hiddenBuiltIns = null)
     {
         var list = new List<WebDevSample>();
-        AddBuiltIns(list);
+        AddBuiltIns(list, hiddenBuiltIns);
         AddPlugins(list);
         return list;
     }
 
-    private static void AddBuiltIns(List<WebDevSample> list)
+    private static void AddBuiltIns(List<WebDevSample> list, IReadOnlyCollection<string>? hidden)
     {
         var root = BuiltInRoot;
         if (!Directory.Exists(root)) return;
@@ -51,6 +55,7 @@ public static class WebDevSampleCatalog
         {
             var name = Path.GetFileName(dir);
             if (string.Equals(name, "common", StringComparison.OrdinalIgnoreCase)) continue;
+            if (hidden is not null && hidden.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
             var indexHtml = Path.Combine(dir, "index.html");
             if (!File.Exists(indexHtml)) continue;
             list.Add(new WebDevSample(

@@ -129,3 +129,32 @@ public static class VoiceSensitivityProfile
         return Parse(token);
     }
 }
+
+/// <summary>
+/// The saved-settings side of <see cref="VoiceSensitivityProfile"/>: slider value and VAD
+/// shape from a <see cref="VoiceSettings"/>, with the mode-aware <c>"Auto"</c> resolution.
+/// Moved down from the WPF host's <c>VoiceRuntimeFactory</c> (which now forwards here) so the
+/// voice-note pipeline in ZeroCommon picks the same threshold in both hosts.
+/// </summary>
+public static class VoiceVadSettings
+{
+    /// <summary>
+    /// Build a <see cref="VadConfig"/> from saved settings. The slider value comes from
+    /// <c>100 - VadThreshold</c> (the stored field is the inverse); when the profile is
+    /// <c>"Auto"</c>, agent-mode callers get Loose and the rest Strict. Explicit Strict /
+    /// Loose tokens always win over the mode hint.
+    /// </summary>
+    public static VadConfig BuildVadConfig(VoiceSettings v, bool isAgentMode)
+    {
+        var level = VoiceSensitivityProfile.ResolveAuto(v.SensitivityProfile, isAgentMode);
+        var sensitivityPercent = Math.Clamp(100.0 - v.VadThreshold, 0.0, 100.0);
+        return VoiceSensitivityProfile.BuildVadConfig(level, sensitivityPercent);
+    }
+
+    /// <summary>A UI sensitivity (0–100, higher = more sensitive) as the RMS threshold of the active profile.</summary>
+    public static float SensitivityToThreshold(double sensitivityPercent, VoiceSettings v, bool isAgentMode)
+    {
+        var level = VoiceSensitivityProfile.ResolveAuto(v.SensitivityProfile, isAgentMode);
+        return VoiceSensitivityProfile.BuildVadConfig(level, sensitivityPercent).VadThreshold;
+    }
+}

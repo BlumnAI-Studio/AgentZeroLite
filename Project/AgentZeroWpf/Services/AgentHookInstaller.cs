@@ -14,7 +14,7 @@ namespace AgentZeroWpf.Services;
 /// <c>AgentZeroLite.exe -cli agent-hook --event &lt;Event&gt;</c> so the GUI learns
 /// the hosted agent CLI's real state instead of scraping terminal output.
 ///
-/// Modeled on <see cref="Browser.StatusLineWrapperInstaller"/>: discover
+/// Modeled on <see cref="Agent.Common.Telemetry.StatusLineWrapperInstaller"/>: discover
 /// profiles → backup → JSON-subtree patch via the pure
 /// <see cref="AgentHookSettingsMerger"/> → atomic write (.tmp + Move). Uninstall
 /// removes only AgentZero's own entries (marker-matched), leaving foreign hooks

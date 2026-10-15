@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using AgentZeroWpf.Services.Browser;
+using Agent.Common.Browser;
 
 namespace AgentZeroWpf.UI.Components;
 

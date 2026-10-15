@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Agent.Common;
 
-namespace AgentZeroWpf.Services.Browser;
+namespace Agent.Common.Browser;
 
 public sealed record InstallResult(bool Ok, string? PluginId, string? Name, string? Error);
 

@@ -85,6 +85,15 @@
          scan job (title/artist/album/genre/duration). Managed-only, MIT,
          netstandard2.0 — safe for the headless ZeroCommon target. -->
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <!-- Audio capture (Agent.Common.Audio) — the Windows implementation of
+         IAudioCapturePlatform: WaveInEvent for the microphone, WASAPI loopback for
+         "what the speakers play". The netstandard2.0 sub-packages only (no WinForms
+         dependency), the same 2.2.1 the WPF host's NAudio meta-package pulls in, so the
+         two resolve to one set of assemblies. Loaded only behind OperatingSystem.IsWindows();
+         a macOS implementation of the same interface is separate work. -->
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
   </ItemGroup>
 
   <!-- Self-built llama.cpp natives: CPU baseline + Vulkan GPU variant.
