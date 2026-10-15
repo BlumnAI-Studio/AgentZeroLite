@@ -16,9 +16,15 @@ namespace AgentZeroAvalonia.Services;
 /// </summary>
 internal sealed class PortaPtyHost : IPtyHost
 {
-    public event Action<string>? Output;
+    // Output raised before the caller subscribes (it subscribes after Start) is replayed to it.
+    public event Action<string>? Output
+    {
+        add => _output.Subscribe(value);
+        remove => _output.Unsubscribe(value);
+    }
     public event Action? Exited;
 
+    private readonly PtyOutputRelay _output = new();
     private readonly object _writeSync = new();
     private IPtyConnection? _conn;
     private Thread? _readThread;
@@ -81,7 +87,7 @@ internal sealed class PortaPtyHost : IPtyHost
                 if (charCount > 0)
                 {
                     var text = new string(chars, 0, charCount);
-                    try { Output?.Invoke(text); } catch { }
+                    _output.Raise(text);
                 }
             }
         }

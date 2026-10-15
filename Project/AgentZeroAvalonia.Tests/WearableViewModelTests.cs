@@ -39,7 +39,10 @@ public class WearableViewModelTests
     [Fact]
     public void A_new_folder_alias_is_its_name_made_unique()
     {
-        Assert.Equal("music-2", WearableDiagnostics.UniqueAlias(@"C:\Users\me\Music\", ["music"]));
-        Assert.Equal("music-3", WearableDiagnostics.UniqueAlias(@"D:\music", ["music", "music-2"]));
+        // A folder the picker returned on this OS — backslash is not a separator off Windows.
+        var music = OperatingSystem.IsWindows() ? @"C:\Users\me\Music\" : "/Users/me/Music/";
+        var other = OperatingSystem.IsWindows() ? @"D:\music" : "/Volumes/D/music";
+        Assert.Equal("music-2", WearableDiagnostics.UniqueAlias(music, ["music"]));
+        Assert.Equal("music-3", WearableDiagnostics.UniqueAlias(other, ["music", "music-2"]));
     }
 }

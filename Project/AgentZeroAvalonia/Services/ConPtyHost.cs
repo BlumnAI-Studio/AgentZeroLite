@@ -20,8 +20,17 @@ namespace AgentZeroAvalonia.Services;
 [SupportedOSPlatform("windows")]
 internal sealed class ConPtyHost : IPtyHost
 {
-    /// <summary>Raised on a background thread with each decoded output chunk (VT preserved).</summary>
-    public event Action<string>? Output;
+    /// <summary>
+    /// Raised on a background thread with each decoded output chunk (VT preserved). Output
+    /// produced before the caller subscribes (it subscribes after Start) is replayed to it.
+    /// </summary>
+    public event Action<string>? Output
+    {
+        add => _output.Subscribe(value);
+        remove => _output.Unsubscribe(value);
+    }
+
+    private readonly PtyOutputRelay _output = new();
 
     /// <summary>Raised on a background thread when the child's output pipe reaches EOF (process exit).</summary>
     public event Action? Exited;
@@ -217,7 +226,7 @@ internal sealed class ConPtyHost : IPtyHost
                 if (charCount > 0)
                 {
                     var text = new string(chars, 0, charCount);
-                    try { Output?.Invoke(text); } catch { /* subscriber bug, not load-bearing */ }
+                    _output.Raise(text);
                 }
             }
         }

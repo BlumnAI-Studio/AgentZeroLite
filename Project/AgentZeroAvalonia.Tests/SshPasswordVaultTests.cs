@@ -12,6 +12,11 @@ public class SshPasswordVaultTests
     [Fact]
     public void Round_trips_a_password_in_the_format_the_other_host_reads()
     {
+        // "The other host" is the WPF one and the format is its DPAPI blob — Windows only.
+        // Off Windows the vault seals through SecretProtection (AES-GCM once Program installs
+        // it; a passthrough in a test process), which this format check does not describe.
+        if (!OperatingSystem.IsWindows()) return;
+
         var sealedPw = SshPasswordVault.Protect("hunter2");
         Assert.NotEqual("hunter2", sealedPw);
         // The settings-file markers belong to the other vault; this one is bare base64.
