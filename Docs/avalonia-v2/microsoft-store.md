@@ -248,6 +248,24 @@ Product features 두 줄 → Submit for certification. 인증은 제출 당일 �
   안내만 남았고, 노트는 제품 단위 페이지(`suppinfo/additionaltestinginfo`, 저장 버튼은 **Save description**)에 있다.
   기존 노트 끝에 마이크 안내 한 단락을 붙였다(`store-listing/listing.md`의 "About the microphone").
 
+### 7차 제출 — 세 번째 업데이트 (1.25.5.0, 2026-10-16)
+
+내용: 터미널을 별도 창으로 분리하고 다시 도킹(WPF의 Float / Dock — 탭 메뉴, 페인의 ⤢/⤡, Ctrl+Alt+F / D),
+새 터미널의 첫 출력이 사라질 수 있던 문제 수정(`PtyOutputRelay`). 새 권한·데이터 흐름이 없어 인증 노트와
+개인정보 처리방침은 그대로 두었다. Submission 4. 절차는 6차와 같고 이번에는 막힌 곳이 없었다 — 슬래시 경로로
+넣기 전에 빈 `input[type=file]`로 크기를 먼저 확인했고(154,418,979바이트), 업로드 45초 후 표에 v1.25.5.0이
+1순위로 올라왔고 Save가 바로 열렸다("Analyzing package"에서 멈추지 않음).
+
+이번에 확인한 것:
+
+- **로그인 탭이 하나 남아 있으면 탭 고르기가 틀어진다.** 만료된 로그인 페이지 URL에도
+  `redirect_uri=…partner.microsoft.com…`이 들어 있어서, `url.includes('partner.microsoft.com')`가 로그인 탭을
+  골랐다. `url.startsWith('https://partner.microsoft.com/')`로 고른다. 같은 이유로 "로그인 탭이 없어질 때까지"
+  기다리는 감시는 남은 로그인 탭 때문에 끝나지 않았다.
+- **"Sign in required" 문구가 DOM에 있다고 세션이 끊긴 것은 아니다.** 그 대화상자는 숨겨진 채 늘 들어 있다.
+  세션은 개요 화면의 Submission 데이터가 읽히는지로 판단한다. 첫 Submit 클릭이 반영되지 않았던 것은 세션이
+  아니라 클릭 직후 상태를 너무 일찍 읽은 것으로 보이며, 다시 눌러 In certification이 됐다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>

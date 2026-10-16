@@ -24,7 +24,13 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.4.0 — submission 6)
+## What's new in this version (1.25.5.0 — submission 7)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Detach a terminal into its own window and dock it back: right-click a tab → Detach to window, the ⤢ button on a pane, or Ctrl+Alt+F (Ctrl+Alt+D to dock). The terminal keeps running and keeps its screen; closing the window puts it back in its pane.
+- Fix: the first output of a newly opened terminal (the start of its prompt) could be lost.
+
+## What's new in version 1.25.4.0 (submission 6)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Plugins page: run web plugins inside the app. Install from the official list, a GitHub folder or a .zip — Voice Note (speech-to-text with speaker labels), Agent Band (live music recognition with a YouTube/MP3 stage), Token Monitor and Token Remaining.
