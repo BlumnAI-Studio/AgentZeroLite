@@ -22,7 +22,9 @@ using Pane = PaneNode<TerminalTabViewModel>;
 /// <see cref="WorkspaceLayout{T}"/>), and the surface host — one Canvas that holds every
 /// tab's <see cref="XtermWebViewTerminalControl"/> and positions the active one of each
 /// pane over that pane's content slot. Splitting, moving a tab or switching workspaces
-/// never re-parents a renderer, so the native WebView and its scrollback survive.
+/// never re-parents a renderer, so the native WebView and its scrollback survive. The one
+/// move is detaching a tab into its own <see cref="TerminalWindow"/> and docking it back,
+/// done in a single dispatcher turn so the native view is handed over, not rebuilt.
 ///
 /// This class also owns the PTY lifecycle: a tab's process starts the first time its
 /// pane shows it, keeps running while hidden, and dies when the tab closes.
@@ -34,6 +36,8 @@ public partial class TerminalsView : UserControl
     private readonly Dictionary<TerminalTabViewModel, SshPasswordWatcher> _sshAutofill = new();
     private readonly Dictionary<Pane, Border> _slots = new();
     private readonly Dictionary<XtermWebViewTerminalControl, Rect> _placed = new();
+    /// <summary>Tabs detached into their own window; their renderer lives there, not on the canvas.</summary>
+    private readonly Dictionary<TerminalTabViewModel, TerminalWindow> _floating = new();
     private MainWindowViewModel? _vm;
     private WorkspaceViewModel? _builtFor;
 
@@ -56,9 +60,11 @@ public partial class TerminalsView : UserControl
             _vm.FocusPaneRequested -= OnFocusPane;
             _vm.RestartRequested -= Restart;
             _vm.TerminalAppearanceChanged -= OnAppearanceChanged;
+            _vm.FloatRequested -= OnFloatRequested;
         }
         _vm = vm;
         if (_vm is null) return;
+        _vm.FloatRequested += OnFloatRequested;
         _vm.ActiveTerminalChanged += OnActiveTerminalChanged;
         _vm.TabClosed += OnTabClosed;
         _vm.WorkspaceRemoved += OnWorkspaceRemoved;
@@ -113,7 +119,11 @@ public partial class TerminalsView : UserControl
         TerminalActorBinder.SetActive(ws, tab);
         RefreshStatusText();
         if (tab is not null && _controls.TryGetValue(tab, out var active))
+        {
+            // Selecting a detached tab (its chip, ACTIVE SESSIONS) brings its window forward.
+            if (_floating.TryGetValue(tab, out var window) && !window.IsActive) window.Activate();
             Dispatcher.UIThread.Post(active.FocusTerminal, DispatcherPriority.Background);
+        }
     }
 
     /// <summary>The status bar line for the active terminal — cheap, no layout work.</summary>
@@ -189,6 +199,22 @@ public partial class TerminalsView : UserControl
         ToolTip.SetTip(add, "New terminal in this pane (choose the CLI)");
         DockPanel.SetDock(add, Dock.Right);
         stripDock.Children.Add(add);
+        // The WPF pane's detach / rejoin button: ⤢ pulls the shown tab into its own window,
+        // ⤡ brings it back when the shown tab is already detached.
+        if (pane.ActiveTab is { } shownTab)
+        {
+            var detached = shownTab.IsFloating;
+            var floatButton = new Button { Classes = { "strip" }, Content = detached ? "⤡" : "⤢", FontSize = 12 };
+            ToolTip.SetTip(floatButton, detached ? "Dock this terminal back into the pane (Ctrl+Alt+D)"
+                                                 : "Detach this terminal into its own window (Ctrl+Alt+F)");
+            floatButton.Click += (_, _) =>
+            {
+                if (shownTab.IsFloating) _vm?.DockTab(shownTab);
+                else _vm?.FloatTab(shownTab);
+            };
+            DockPanel.SetDock(floatButton, Dock.Right);
+            stripDock.Children.Add(floatButton);
+        }
         var tabs = new StackPanel { Orientation = Orientation.Horizontal };
         foreach (var tab in pane.Tabs) tabs.Children.Add(BuildTabChip(ws, pane, tab));
         stripDock.Children.Add(new ScrollViewer
@@ -207,6 +233,7 @@ public partial class TerminalsView : UserControl
         {
             if (pane.ActiveTab is { } t) _vm?.SelectTab(t);
         };
+        if (pane.ActiveTab is { IsFloating: true } floatingTab) slot.Child = BuildFloatingPlaceholder(floatingTab);
         Grid.SetRow(slot, 1);
         grid.Children.Add(slot);
         _slots[pane] = slot;
@@ -215,13 +242,35 @@ public partial class TerminalsView : UserControl
         return frame;
     }
 
+    /// <summary>What a pane shows while its selected tab is in its own window.</summary>
+    private Control BuildFloatingPlaceholder(TerminalTabViewModel tab)
+    {
+        var show = new Button { Content = "Show window" };
+        show.Click += (_, _) => _vm?.SelectTab(tab);
+        var dock = new Button { Content = "↩ Dock back" };
+        dock.Click += (_, _) => _vm?.DockTab(tab);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
+        buttons.Children.Add(show);
+        buttons.Children.Add(dock);
+        var panel = new StackPanel { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"'{tab.Title}' is in its own window",
+            Foreground = this.FindResource("TextDim") as Avalonia.Media.IBrush,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        });
+        panel.Children.Add(buttons);
+        return panel;
+    }
+
     private Control BuildTabChip(WorkspaceViewModel ws, Pane pane, TerminalTabViewModel tab)
     {
         var chip = new Border { Classes = { "tab" } };
         chip.Classes.Set("selected", ReferenceEquals(pane.ActiveTab, tab));
         var row = new StackPanel { Orientation = Orientation.Horizontal };
-        var title = new Button { Classes = { "tabtitle" }, Content = tab.Title };
+        var title = new Button { Classes = { "tabtitle" }, Content = tab.IsFloating ? "⧉ " + tab.Title : tab.Title };
         if (tab.HealthText.Length > 0) ToolTip.SetTip(title, tab.HealthText);
+        else if (tab.IsFloating) ToolTip.SetTip(title, "In its own window — click to bring it forward");
         title.Click += (_, _) => _vm?.SelectTab(tab);
         title.ContextFlyout = BuildTabMenu(ws, tab);
         var close = new Button { Classes = { "tabclose" }, Content = "✕" };
@@ -241,8 +290,15 @@ public partial class TerminalsView : UserControl
         splitRight.Click += (_, _) => { _vm?.SelectTab(tab); _vm?.Split(false); };
         var splitDown = new MenuItem { Header = "Split down" };
         splitDown.Click += (_, _) => { _vm?.SelectTab(tab); _vm?.Split(true); };
-        var move = new MenuItem { Header = "Move to next pane", IsEnabled = ws.Layout.PaneCount > 1 };
+        var move = new MenuItem { Header = "Move to next pane", IsEnabled = ws.Layout.PaneCount > 1 && !tab.IsFloating };
         move.Click += (_, _) => { _vm?.SelectTab(tab); _vm?.MoveActiveTabToNextPane(); };
+        splitRight.IsEnabled = splitDown.IsEnabled = !tab.IsFloating;
+        var floatItem = new MenuItem { Header = tab.IsFloating ? "Dock back" : "Detach to window" };
+        floatItem.Click += (_, _) =>
+        {
+            if (tab.IsFloating) _vm?.DockTab(tab);
+            else _vm?.FloatTab(tab);
+        };
         var restart = new MenuItem { Header = "Restart" };
         restart.Click += (_, _) => Restart(ws, tab);
         var close = new MenuItem { Header = "Close" };
@@ -252,6 +308,7 @@ public partial class TerminalsView : UserControl
         menu.Items.Add(splitRight);
         menu.Items.Add(splitDown);
         menu.Items.Add(move);
+        menu.Items.Add(floatItem);
         menu.Items.Add(new Separator());
         menu.Items.Add(restart);
         menu.Items.Add(close);
@@ -290,7 +347,8 @@ public partial class TerminalsView : UserControl
         {
             foreach (var (pane, slot) in _slots)
             {
-                if (pane.ActiveTab is null || !_controls.TryGetValue(pane.ActiveTab, out var control)) continue;
+                if (pane.ActiveTab is null || pane.ActiveTab.IsFloating) continue;
+                if (!_controls.TryGetValue(pane.ActiveTab, out var control)) continue;
                 if (slot.Bounds.Width <= 0 || slot.Bounds.Height <= 0) continue;
                 var origin = slot.TranslatePoint(new Point(0, 0), SurfaceHost);
                 if (origin is null) continue;
@@ -305,8 +363,8 @@ public partial class TerminalsView : UserControl
                 control.IsVisible = true;
             }
         }
-        foreach (var control in _controls.Values)
-            if (!visible.Contains(control) && control.IsVisible) control.IsVisible = false;
+        foreach (var (tab, control) in _controls)
+            if (!visible.Contains(control) && control.IsVisible && !_floating.ContainsKey(tab)) control.IsVisible = false;
     }
 
     private IReadOnlyDictionary<Pane, (double X, double Y, double W, double H)> PaneRects()
@@ -327,6 +385,83 @@ public partial class TerminalsView : UserControl
         if (ws is null || ws.Layout.PaneCount < 2) return;
         var target = WorkspaceLayout<TerminalTabViewModel>.Neighbour(ws.ActivePane, dir, PaneRects());
         if (target?.ActiveTab is { } tab) _vm!.SelectTab(tab);
+    }
+
+    // ── detach / dock (the WPF host's Float / Dock) ──────────────────────────
+
+    private void OnFloatRequested(WorkspaceViewModel ws, TerminalTabViewModel tab, bool floating)
+    {
+        if (floating) Detach(ws, tab);
+        else Redock(tab);
+    }
+
+    /// <summary>
+    /// Move the tab's renderer — the same control, not a new one — off the canvas and into a
+    /// window of its own. Removing it and adding it to the window happen in one dispatcher
+    /// turn, so the native web view is handed to the new window rather than torn down: the
+    /// scrollback and the PTY carry on. Measured on Windows: output written before the
+    /// detach, while floating and after docking back all read back from one screen.
+    /// </summary>
+    private void Detach(WorkspaceViewModel ws, TerminalTabViewModel tab)
+    {
+        if (_floating.ContainsKey(tab)) return;
+        EnsureStarted(ws, tab);
+        if (!_controls.TryGetValue(tab, out var control)) return;
+
+        // Open it the size it had in its pane (plus the strip), or a sensible default.
+        var width = 960.0;
+        var height = 600.0;
+        if (_placed.TryGetValue(control, out var rect) && rect.Width >= 360 && rect.Height >= 160)
+        {
+            width = rect.Width;
+            height = rect.Height + 28;
+        }
+        _placed.Remove(control);
+        SurfaceHost.Children.Remove(control);
+        control.Width = double.NaN;
+        control.Height = double.NaN;
+        control.IsVisible = true;
+
+        var window = new TerminalWindow { Width = width, Height = height };
+        window.SetCaption($"{ws.DisplayName}/{tab.Title}");
+        window.Hold(control);
+        window.DockRequested += () => _vm?.DockTab(tab);
+        // Chords pressed while focus is in the window's strip rather than the renderer.
+        window.AddHandler(KeyDownEvent, (_, e) =>
+        {
+            if (_vm is null || e.KeyModifiers == KeyModifiers.None) return;
+            if (HotkeyTable.Match(_vm.Hotkeys, e) is not { } name) return;
+            e.Handled = true;
+            _vm.SelectTab(tab);
+            _vm.HandleHotkey(name);
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        void OnTitle(object? s, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(TerminalTabViewModel.Title)) window.SetCaption($"{ws.DisplayName}/{tab.Title}");
+        }
+        tab.PropertyChanged += OnTitle;
+        window.Closed += (_, _) => tab.PropertyChanged -= OnTitle;
+
+        _floating[tab] = window;
+        tab.IsFloating = true;
+        if (TopLevel.GetTopLevel(this) is Window owner) window.Show(owner);
+        else window.Show();
+        AppLogger.Log($"[Layout] detached '{ws.DisplayName}/{tab.Title}' into its own window | floating={_floating.Count}");
+
+        OnActiveTerminalChanged(); // the pane now shows the placeholder (or its next tab)
+    }
+
+    /// <summary>Hand the renderer back to the canvas (same turn), close the window, re-lay out.</summary>
+    private void Redock(TerminalTabViewModel tab)
+    {
+        tab.IsFloating = false;
+        if (!_floating.Remove(tab, out var window)) return;
+        if (window.Release() is { } control) SurfaceHost.Children.Add(control);
+        window.ClosingProgrammatically = true;
+        window.Close();
+        AppLogger.Log($"[Layout] docked '{tab.Title}' back into its pane | floating={_floating.Count}");
+        _vm?.SelectTab(tab);
+        OnActiveTerminalChanged();
     }
 
     // ── PTY lifecycle ────────────────────────────────────────────────────────
@@ -398,6 +533,13 @@ public partial class TerminalsView : UserControl
     private void Teardown(WorkspaceViewModel ws, TerminalTabViewModel tab)
     {
         if (_sshAutofill.Remove(tab, out var autofill)) autofill.Dispose();
+        if (_floating.Remove(tab, out var window))
+        {
+            window.Release();
+            window.ClosingProgrammatically = true;
+            window.Close();
+        }
+        tab.IsFloating = false;
         if (_controls.Remove(tab, out var control))
         {
             try { control.Shutdown(); } catch { }

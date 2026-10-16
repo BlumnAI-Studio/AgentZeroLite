@@ -84,7 +84,8 @@
 
         <!-- Split tree (tab strips, pane frames, splitters) with the terminal surface host
              on top: every tab's renderer lives on the canvas and is positioned over the
-             pane whose active tab it is. No renderer is ever re-parented. -->
+             pane whose active tab it is. A renderer leaves the canvas only while its tab
+             is detached into a TerminalWindow. -->
         <Panel Grid.Row="1">
             <Grid x:Name="LayoutRoot" Background="{DynamicResource CyberBgDeep}" />
             <Canvas x:Name="SurfaceHost" Background="{x:Null}" />

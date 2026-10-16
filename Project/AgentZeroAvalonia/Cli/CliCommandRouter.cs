@@ -40,6 +40,9 @@ internal sealed class CliCommandRouter
     /// <summary>The active workspace's split layout as stored JSON (null while unsplit), plus its pane count.</summary>
     public Func<(string? Json, int Panes, string? Workspace)>? LayoutStatus { get; set; }
 
+    /// <summary>Terminal tabs detached into their own windows (WPF's <c>floatingWindows</c>).</summary>
+    public Func<int>? FloatingCount { get; set; }
+
     /// <summary><c>bot-chat</c>: (from, message) into the AgentBot pane and on to the bot actor.</summary>
     public Action<string, string>? BotChat { get; set; }
 
@@ -382,6 +385,8 @@ internal sealed class CliCommandRouter
             "split-down" => WindowCommandIds.SplitDown,
             "close-tab" => WindowCommandIds.CloseTab,
             "add" or "new-tab" => WindowCommandIds.TerminalAdd,
+            "float" or "detach" => WindowCommandIds.Float,
+            "dock" => WindowCommandIds.Dock,
             "close-pane" => HotkeyTable.ClosePane,
             "next-tab" => HotkeyTable.NextTab,
             "prev-tab" => HotkeyTable.PrevTab,
@@ -396,7 +401,7 @@ internal sealed class CliCommandRouter
             _ => sub.Contains('.') ? sub : "?",
         };
         if (id == "?")
-            return CliIpcProtocol.ErrorJson($"Unknown layout verb '{sub}'. Use: status, workspace <name|index>, split-right, split-down, close-tab, close-pane, add, next-tab, prev-tab, move-tab, focus-left|right|up|down, bot-toggle, bot-embed");
+            return CliIpcProtocol.ErrorJson($"Unknown layout verb '{sub}'. Use: status, workspace <name|index>, split-right, split-down, float, dock, close-tab, close-pane, add, next-tab, prev-tab, move-tab, focus-left|right|up|down, bot-toggle, bot-embed");
         if (id is not null)
         {
             if (ExecuteWindowCommand is null) return CliIpcProtocol.ErrorJson("layout commands are not wired");
@@ -407,6 +412,7 @@ internal sealed class CliCommandRouter
         return "{\"ok\":true,\"sub\":\"" + CliIpcProtocol.Escape(sub.Length == 0 ? "status" : sub) + "\""
                + ",\"workspace\":" + wsJson
                + ",\"panes\":" + panes
+               + ",\"floatingWindows\":" + (FloatingCount?.Invoke() ?? 0)
                + ",\"layout\":" + (json ?? "null") + "}";
     }
 

@@ -50,6 +50,7 @@ public static class HotkeyTable
     {
         WindowCommandIds.SplitRight, WindowCommandIds.SplitDown, WindowCommandIds.CloseTab,
         WindowCommandIds.TerminalAdd, WindowCommandIds.PanelToggle,
+        WindowCommandIds.Float, WindowCommandIds.Dock,
         NextTab, PrevTab, MoveTabNextPane, ClosePane, FocusLeft, FocusRight, FocusUp, FocusDown, BotToggle,
         BotEmbedToggle,
     };

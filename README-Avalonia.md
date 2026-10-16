@@ -93,6 +93,7 @@ Procedure, local checks and paste-ready listing text (in Korean):
 | Workspaces + terminal tabs, persisted in the shared DB | ✅ | same `CliGroups/CliTabs` rows as WPF |
 | Terminal: xterm.js renderer, appearance, IME, links, health banner | ✅ | ConPTY copy on Windows, Porta.Pty on macOS |
 | Split panes (right/down, close, move tab, focus by direction), layout restore | ✅ | `WorkspaceLayout<T>`; `CliGroup.LayoutJson` byte-identical to WPF |
+| Detach a terminal into its own window and dock it back (WPF's Float / Dock): tab menu, the pane's ⤢/⤡, Ctrl+Alt+F / Ctrl+Alt+D, `-cli layout float\|dock` | ✅ Windows · ⏳ macOS check | the tab's own renderer is moved into a `TerminalWindow` in one dispatcher turn, so the web view, its scrollback and the PTY carry on (measured on Windows); the tab stays in its pane's layout, which is where docking returns it, and the saved layout is unchanged — a restart brings every tab back docked. Closing the window docks it; split/move refuse a detached tab, as in WPF |
 | Hotkeys, incl. while the renderer has focus | ✅ | one table; Ctrl→Cmd on macOS |
 | AgentBot: CHT / KEY / AI modes, progress + tool cards, handshake | ✅ | same actor topology (`/user/stage/bot/loop`) |
 | AgentBot UX: approval toast + auto-approve, URL bubbles, session header, clipboard attachment, key chords, selectable text | ✅ | `AgentEventStream` per active terminal; rules shared in `ZeroCommon/Agents` |

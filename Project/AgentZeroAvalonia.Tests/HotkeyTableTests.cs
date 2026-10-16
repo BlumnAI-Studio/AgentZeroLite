@@ -16,7 +16,9 @@ public class HotkeyTableTests
 
         Assert.Contains(table, h => h.Name == HotkeyTable.FocusLeft && h.Alt && !h.Ctrl && h.Key == "Left");
         Assert.Contains(table, h => h.Name == HotkeyTable.NextTab && string.Equals(h.Key, "PageDown", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(table, h => h.Name == WindowCommandIds.Float); // not implemented here
+        // Detach / dock: the WPF suggested chords, now that this host has floating terminals.
+        Assert.Contains(table, h => h.Name == WindowCommandIds.Float && h.Ctrl && h.Alt && h.Key == "F");
+        Assert.Contains(table, h => h.Name == WindowCommandIds.Dock && h.Ctrl && h.Alt && h.Key == "D");
     }
 
     [Fact]
@@ -38,7 +40,8 @@ public class HotkeyTableTests
             {
                 [WindowCommandIds.SplitRight] = "Ctrl+Shift+E",
                 [WindowCommandIds.SplitDown] = "Ctrl+Shift+E",   // duplicate: the first keeps it
-                [WindowCommandIds.Float] = "Ctrl+Shift+F",       // unsupported here: ignored
+                [WindowCommandIds.Float] = "Ctrl+Shift+F",
+                ["layout.teleport"] = "Ctrl+Shift+T",            // unknown to this host: ignored
             },
         };
         var table = HotkeyTable.Build(settings, isMac: false);
@@ -47,7 +50,9 @@ public class HotkeyTableTests
         Assert.True(right.Ctrl && right.Shift);
         var down = Assert.Single(table, h => h.Name == WindowCommandIds.SplitDown);
         Assert.Equal("Down", down.Key); // fell back to the suggested table, not the clashing gesture
-        Assert.DoesNotContain(table, h => h.Name == WindowCommandIds.Float);
+        var floatChord = Assert.Single(table, h => h.Name == WindowCommandIds.Float);
+        Assert.True(floatChord.Ctrl && floatChord.Shift && floatChord.Key == "F");
+        Assert.DoesNotContain(table, h => h.Name == "layout.teleport");
         Assert.Equal(table.Count, table.Select(h => (h.Key.ToLowerInvariant(), h.Ctrl, h.Alt, h.Shift, h.Meta)).Distinct().Count());
     }
 }

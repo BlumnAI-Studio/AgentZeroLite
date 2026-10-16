@@ -19,6 +19,13 @@ public partial class TerminalTabViewModel : ObservableObject, IConsoleTabInfo
     [ObservableProperty] private string _healthText = "";
     [ObservableProperty] private XtermTerminalSession? _session;
 
+    /// <summary>
+    /// Shown in its own window rather than its pane. The tab stays in the pane's layout (so
+    /// docking returns it there, and the saved layout does not change); not persisted — a
+    /// restart brings every tab back docked.
+    /// </summary>
+    [ObservableProperty] private bool _isFloating;
+
     public int CliDefinitionId { get; }
 
     /// <summary>The definition this tab launches; null when it was persisted with an id that no longer exists.</summary>

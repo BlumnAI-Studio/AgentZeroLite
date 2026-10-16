@@ -11,6 +11,7 @@ public class CliCommandRouterTests : IDisposable
 {
     private readonly string _aliasFile = Path.Combine(Path.GetTempPath(), "az-alias-" + Guid.NewGuid().ToString("N") + ".json");
     private readonly FakeSession _session = new("infra/CMD");
+    private readonly List<string> _executed = new();
     private readonly CliCommandRouter _router;
 
     public CliCommandRouterTests()
@@ -25,7 +26,8 @@ public class CliCommandRouterTests : IDisposable
             Groups = () => groups,
             AliasRegistryPath = _aliasFile,
             LayoutStatus = () => ("{\"Tabs\":[0]}", 1, "infra"),
-            ExecuteWindowCommand = _ => { },
+            ExecuteWindowCommand = _executed.Add,
+            FloatingCount = () => _executed.Count(id => id == WindowCommandIds.Float) - _executed.Count(id => id == WindowCommandIds.Dock),
         };
     }
 
@@ -113,6 +115,20 @@ public class CliCommandRouterTests : IDisposable
         var rm = Send("{\"command\":\"terminal-alias\",\"sub\":\"rm\",\"name\":\"builder\"}");
         Assert.True(rm.GetProperty("ok").GetBoolean());
         Assert.Empty(Send("{\"command\":\"terminal-alias\",\"sub\":\"list\"}").GetProperty("aliases").EnumerateArray());
+    }
+
+    [Fact]
+    public void Layout_float_and_dock_run_the_wpf_window_commands_and_report_the_windows()
+    {
+        var floated = Send("{\"command\":\"layout\",\"sub\":\"float\"}");
+        Assert.True(floated.GetProperty("ok").GetBoolean());
+        Assert.Equal(1, floated.GetProperty("floatingWindows").GetInt32());
+
+        var docked = Send("{\"command\":\"layout\",\"sub\":\"dock\"}");
+        Assert.Equal(0, docked.GetProperty("floatingWindows").GetInt32());
+
+        Send("{\"command\":\"layout\",\"sub\":\"detach\"}"); // alias of float
+        Assert.Equal(new[] { WindowCommandIds.Float, WindowCommandIds.Dock, WindowCommandIds.Float }, _executed);
     }
 
     [Fact]

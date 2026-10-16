@@ -90,6 +90,7 @@ Microsoft Store(Windows): `Project/AgentZeroAvalonia/msix/build-msix.ps1` 가 MS
 | 워크스페이스 + 터미널 탭, 공유 DB 영속 | ✅ | WPF와 같은 `CliGroups/CliTabs` 행 |
 | 터미널: xterm.js 렌더러, 외관, IME, 링크, 헬스 배너 | ✅ | Windows는 ConPTY 사본, macOS는 Porta.Pty |
 | 분할창(오른쪽/아래, 페인 닫기, 탭 이동, 방향 포커스), 레이아웃 복원 | ✅ | `WorkspaceLayout<T>`; `CliGroup.LayoutJson`이 WPF와 바이트 동일 |
+| 터미널을 별도 창으로 분리하고 다시 도킹(WPF의 Float / Dock): 탭 메뉴, 페인의 ⤢/⤡, Ctrl+Alt+F / Ctrl+Alt+D, `-cli layout float\|dock` | ✅ Windows · ⏳ macOS 확인 | 탭의 렌더러 자체를 한 디스패처 턴 안에 `TerminalWindow`로 옮기므로 웹뷰·스크롤백·PTY가 그대로 이어진다(Windows에서 측정). 탭은 원래 페인의 레이아웃에 남아 있어 도킹하면 그 자리로 돌아가고, 저장되는 레이아웃은 바뀌지 않는다 — 재시작하면 모든 탭이 도킹된 상태로 돌아온다. 창을 닫으면 도킹되며, 분리된 탭의 분할/이동은 WPF처럼 거부한다 |
 | 단축키(렌더러가 포커스를 가진 상태 포함) | ✅ | 표 하나; macOS는 Ctrl→Cmd |
 | AgentBot: CHT / KEY / AI 모드, 진행·툴 카드, 핸드셰이크 | ✅ | 같은 액터 토폴로지(`/user/stage/bot/loop`) |
 | AgentBot UX: 승인 토스트+자동승인, URL 버블, 세션 헤더, 클립보드 첨부, 키 체인, 선택 가능 텍스트 | ✅ | 활성 터미널마다 `AgentEventStream`; 규칙은 `ZeroCommon/Agents` 공유 |

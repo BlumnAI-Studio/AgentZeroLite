@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AgentZeroAvalonia.Views.TerminalWindow"
+        Title="Terminal"
+        Icon="avares://AgentZeroLite/Assets/agentzero.ico"
+        Width="960" Height="600" MinWidth="360" MinHeight="200"
+        Background="{DynamicResource CyberBgDeep}">
+
+    <!-- A detached terminal tab. Native decorations, like the floating bot: the WPF host
+         strips the OS title bar and drags by its REDOCK strip, which does not carry over to
+         macOS. The strip here is only the way back. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <Button x:Name="DockBackButton" DockPanel.Dock="Right" Content="↩ Dock back"
+                        Background="Transparent" BorderThickness="0" Padding="10,3" FontSize="12"
+                        Foreground="{DynamicResource CyberCyanBrush}"
+                        ToolTip.Tip="Return this terminal to its pane in the main window (Ctrl+Alt+D)" />
+                <TextBlock x:Name="TitleText" FontSize="11" Foreground="{DynamicResource TextDim}"
+                           VerticalAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+        <Border x:Name="Host" />
+    </DockPanel>
+</Window>

@@ -90,6 +90,9 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Relaunch one tab's process (context menu / CLI).</summary>
     public event Action<WorkspaceViewModel, TerminalTabViewModel>? RestartRequested;
 
+    /// <summary>Detach a tab into its own window (true) or dock it back (false) — the view owns the windows.</summary>
+    public event Action<WorkspaceViewModel, TerminalTabViewModel, bool>? FloatRequested;
+
     private readonly DispatcherTimer _persistTimer;
     private bool _persistPending;
 
@@ -481,6 +484,7 @@ public partial class MainWindowViewModel : ObservableObject
         var ws = ActiveWorkspace;
         var tab = ws?.ActiveTab;
         if (ws is null || tab is null) return;
+        if (RefuseFloating(tab, "split")) return;
         var fresh = ws.Layout.SplitOut(tab, vertical);
         if (fresh is not null)
         {
@@ -522,9 +526,68 @@ public partial class MainWindowViewModel : ObservableObject
         var ws = ActiveWorkspace;
         var tab = ws?.ActiveTab;
         if (ws is null || tab is null || ws.Layout.PaneCount < 2) return;
+        if (RefuseFloating(tab, "move")) return;
         var target = ws.Layout.NextPane(ws.ActivePane);
         ws.Layout.MoveTab(tab, target);
         SelectTab(tab);
+    }
+
+    // ── detach / dock (the WPF host's Float / Dock) ──────────────────────────
+
+    /// <summary>Tabs currently in their own window, across every workspace.</summary>
+    public int FloatingCount => Workspaces.Sum(w => w.Tabs.Count(t => t.IsFloating));
+
+    /// <summary>Detach <paramref name="tab"/> into its own window; it keeps running.</summary>
+    public void FloatTab(TerminalTabViewModel tab)
+    {
+        var ws = Workspaces.FirstOrDefault(w => w.Tabs.Contains(tab));
+        if (ws is null || tab.IsFloating) return;
+        FloatRequested?.Invoke(ws, tab, true);
+    }
+
+    /// <summary>Put a detached tab back in its pane.</summary>
+    public void DockTab(TerminalTabViewModel tab)
+    {
+        var ws = Workspaces.FirstOrDefault(w => w.Tabs.Contains(tab));
+        if (ws is null || !tab.IsFloating) return;
+        FloatRequested?.Invoke(ws, tab, false);
+    }
+
+    /// <summary>The active tab if it is docked, for <see cref="WindowCommandIds.Float"/>.</summary>
+    public void FloatActive()
+    {
+        var tab = ActiveWorkspace?.ActiveTab;
+        if (tab is null) { StatusText = "No terminal to detach."; return; }
+        if (tab.IsFloating) { StatusText = $"'{tab.Title}' is already in its own window."; return; }
+        FloatTab(tab);
+    }
+
+    /// <summary>
+    /// <see cref="WindowCommandIds.Dock"/>: the active tab if it is detached, else the active
+    /// workspace's detached tab when there is exactly one (so the chord works from the main window).
+    /// </summary>
+    public void DockActive()
+    {
+        var ws = ActiveWorkspace;
+        if (ws is null) return;
+        var tab = ws.ActiveTab is { IsFloating: true } active ? active
+                : ws.Tabs.Count(t => t.IsFloating) == 1 ? ws.Tabs.First(t => t.IsFloating) : null;
+        if (tab is null)
+        {
+            StatusText = ws.Tabs.Any(t => t.IsFloating)
+                ? "Several terminals are detached — select the one to dock, or use its ↩ Dock back."
+                : "No detached terminal in this workspace.";
+            return;
+        }
+        DockTab(tab);
+    }
+
+    /// <summary>Split and move act on the main window's panes; a detached tab is not in one on screen.</summary>
+    private bool RefuseFloating(TerminalTabViewModel tab, string verb)
+    {
+        if (!tab.IsFloating) return false;
+        StatusText = $"Cannot {verb} '{tab.Title}' while it is in its own window — dock it back first.";
+        return true;
     }
 
     /// <summary>A chord, from the renderer (<c>hotkey</c> message) or the window.</summary>
@@ -540,6 +603,8 @@ public partial class MainWindowViewModel : ObservableObject
                 if (ActiveWorkspace?.ActiveTab is { } t) CloseTab(ActiveWorkspace, t);
                 break;
             case WindowCommandIds.PanelToggle: ToggleBot(); break;
+            case WindowCommandIds.Float: FloatActive(); break;
+            case WindowCommandIds.Dock: DockActive(); break;
             case HotkeyTable.BotToggle: ToggleBot(); break;
             case HotkeyTable.BotEmbedToggle: ToggleBotEmbedded(); break;
             case HotkeyTable.NextTab: CycleTab(+1); break;
