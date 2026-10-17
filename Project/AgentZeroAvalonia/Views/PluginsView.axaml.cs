@@ -30,6 +30,8 @@ public partial class PluginsView : UserControl
     internal static PluginsView? Current { get; private set; }
 
     private readonly Dictionary<string, Slot> _slots = new();
+    /// <summary>Plugins detached into their own window, by id; their view lives there, not in <c>ViewHost</c>.</summary>
+    private readonly Dictionary<string, PluginWindow> _floating = new(StringComparer.OrdinalIgnoreCase);
     private PluginsViewModel? _vm;
     private PluginBrowserCore? _core;
     private Slot? _active;
@@ -40,6 +42,17 @@ public partial class PluginsView : UserControl
     {
         InitializeComponent();
         ReloadButton.Click += (_, _) => ReloadActive();
+        DetachButton.Click += (_, _) =>
+        {
+            if (_vm?.Selected is not { } s) return;
+            if (_floating.ContainsKey(s.Id)) Dock(s.Id);
+            else Detach(s.Id);
+        };
+        ShowWindowButton.Click += (_, _) =>
+        {
+            if (_vm?.Selected is { } s && _floating.TryGetValue(s.Id, out var w)) w.Activate();
+        };
+        DockBackButton.Click += (_, _) => { if (_vm?.Selected is { } s) Dock(s.Id); };
         DataContextChanged += (_, _) => Bind(DataContext as PluginsViewModel);
         Current = this;
     }
@@ -87,8 +100,81 @@ public partial class PluginsView : UserControl
             slot = Mount(sample);
             if (slot is null) return;
         }
-        foreach (var s in _slots.Values) s.View.IsVisible = ReferenceEquals(s, slot);
+        // A detached plugin's view is in its own window: leave it shown there.
+        foreach (var (id, s) in _slots)
+            if (!_floating.ContainsKey(id)) s.View.IsVisible = ReferenceEquals(s, slot);
         _active = slot;
+
+        var detached = _floating.TryGetValue(sample.Id, out var window);
+        DetachedNote.IsVisible = detached;
+        DetachedText.Text = $"{sample.DisplayName} is in its own window";
+        DetachButton.Content = detached ? "↩ Dock back" : "⧉ Detach";
+        if (detached && !window!.IsActive) window.Activate();
+    }
+
+    // ── detach / dock (the WPF host's FloatingWebDevWindow) ──
+
+    /// <summary>
+    /// Move the plugin's web view — the same one, so its page keeps running — out of the page
+    /// and into a <see cref="PluginWindow"/>. Removing and adding happen in one dispatcher turn,
+    /// which hands the native view to the new window instead of tearing it down (the move the
+    /// detached terminals make).
+    /// </summary>
+    internal bool Detach(string id)
+    {
+        if (_vm is null || _floating.ContainsKey(id)) return false;
+        var sample = _vm.Samples.FirstOrDefault(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (sample is null) return false;
+        if (!_slots.TryGetValue(sample.Id, out var slot))
+        {
+            slot = Mount(sample);
+            if (slot is null) return false;
+        }
+
+        ViewHost.Children.Remove(slot.View);
+        slot.View.IsVisible = true;
+        var window = new PluginWindow(sample.Id, sample.DisplayName);
+        window.Hold(slot.View);
+        window.DockRequested += () => Dock(sample.Id);
+        window.ReloadRequested += () =>
+        {
+            try { slot.View.Refresh(); } catch (Exception ex) { AppLogger.Log($"[Plugins] reload failed: {ex.Message}"); }
+        };
+        window.PlaceNear(_window);
+        _floating[sample.Id] = window;
+        // No owner: a side window should stay up when the main window is minimized. Pin
+        // (always on top) is the strip's 📌; the main window's Closed closes it (TearDown).
+        window.Show();
+        AppLogger.Log($"[Plugins] detached '{sample.Id}' into its own window | floating={_floating.Count}");
+        if (ReferenceEquals(_vm.Selected, sample)) ShowSelected();
+        return true;
+    }
+
+    /// <summary>Hand the view back to the page (same turn), close the window.</summary>
+    internal bool Dock(string id)
+    {
+        if (!_floating.Remove(id, out var window)) return false;
+        if (window.Release() is { } view)
+        {
+            ViewHost.Children.Add(view);
+            view.IsVisible = _vm?.Selected is { } s && string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase);
+        }
+        window.ClosingProgrammatically = true;
+        window.Close();
+        AppLogger.Log($"[Plugins] docked '{id}' back into the page | floating={_floating.Count}");
+        if (_vm?.Selected is not null) ShowSelected();
+        return true;
+    }
+
+    internal IEnumerable<string> DetachedIds => _floating.Keys;
+
+    /// <summary>Close a detached plugin's window without docking (uninstall, shutdown).</summary>
+    private void CloseFloating(string id)
+    {
+        if (!_floating.Remove(id, out var window)) return;
+        window.Release();
+        window.ClosingProgrammatically = true;
+        try { window.Close(); } catch { }
     }
 
     private Slot? Mount(WebDevSample sample)
@@ -171,6 +257,7 @@ public partial class PluginsView : UserControl
     /// <summary>Drop a plugin's view (before uninstall / after reinstall) so its files are let go.</summary>
     private void Release(string sampleId)
     {
+        CloseFloating(sampleId);
         if (!_slots.Remove(sampleId, out var slot)) return;
         try { slot.Bridge.Dispose(); } catch { }
         try { ViewHost.Children.Remove(slot.View); } catch { }

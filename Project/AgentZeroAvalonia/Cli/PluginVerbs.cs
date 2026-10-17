@@ -32,6 +32,7 @@ internal static class PluginVerbs
             case "list":
             {
                 var open = PluginsView.Current?.OpenIds.ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>();
+                var detached = PluginsView.Current?.DetachedIds.ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>();
                 var arr = new JsonArray(vm.Plugins.Samples.Select(s => (JsonNode)new JsonObject
                 {
                     ["id"] = s.Id,
@@ -39,8 +40,23 @@ internal static class PluginVerbs
                     ["builtIn"] = s.IsBuiltIn,
                     ["url"] = s.Url,
                     ["open"] = open.Contains(s.Id),
+                    ["detached"] = detached.Contains(s.Id),
                 }).ToArray());
                 return new JsonObject { ["ok"] = true, ["plugins"] = arr }.ToJsonString(Opts);
+            }
+            case "detach":
+            case "dock":
+            {
+                if (id.Length == 0) return Fail("plugin id is required");
+                vm.Page = AppPage.Plugins;
+                var page = PluginsView.Current;
+                if (page is null) return Fail("the Plugins page is not created");
+                var resolved = ResolveId(vm, id);
+                var done = verb == "detach" ? page.Detach(resolved) : page.Dock(resolved);
+                var nowDetached = page.DetachedIds.Contains(resolved, StringComparer.OrdinalIgnoreCase);
+                if (!done && nowDetached != (verb == "detach"))
+                    return Fail(verb == "detach" ? $"could not detach '{id}' (see plugin list)" : $"'{id}' is not detached");
+                return new JsonObject { ["ok"] = true, ["id"] = resolved, ["detached"] = nowDetached }.ToJsonString(Opts);
             }
             case "open":
             {
@@ -153,7 +169,9 @@ internal static class PluginVerbs
             case "list":
                 break;
             case "open":
-                if (args.Length < 2) { Console.Error.WriteLine("Usage: plugin open <id>"); return 1; }
+            case "detach":
+            case "dock":
+                if (args.Length < 2) { Console.Error.WriteLine($"Usage: plugin {verb} <id>"); return 1; }
                 payload["id"] = args[1];
                 break;
             case "call":
@@ -190,6 +208,8 @@ internal static class PluginVerbs
         Console.WriteLine("  call <id> <op> [json-args]    window.zero.invoke(op, args) inside the plugin's page — e.g.");
         Console.WriteLine("                                plugin call voice-test version   |   plugin call agent-band vision.status");
         Console.WriteLine("  capture <id> [out.png]        The plugin's rendered frame, as vision.* sees it");
+        Console.WriteLine("  detach <id>                   Move the plugin into its own window (it keeps running)");
+        Console.WriteLine("  dock <id>                     Put a detached plugin back on the Plugins page");
         Console.WriteLine();
         Console.WriteLine("Output is one JSON object; exit code 0 when ok is true. Default --timeout is 90000 ms.");
     }

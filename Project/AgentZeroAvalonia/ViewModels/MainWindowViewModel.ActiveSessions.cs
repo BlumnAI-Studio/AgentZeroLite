@@ -20,13 +20,20 @@ public sealed partial class ActiveSessionItem : ObservableObject
         Tab = tab;
         Workspace = workspace;
         _go = go;
+        _title = tab.Title;
     }
 
     private readonly Action<TerminalTabViewModel> _go;
 
     public TerminalTabViewModel Tab { get; }
     public string Workspace { get; }
-    public string Title => Tab.Title;
+
+    /// <summary>
+    /// The tab's title, re-read on every <see cref="Apply"/>. It used to be a plain pass-through
+    /// with no change notification: a rename left the row (kept in place, since the set of rows
+    /// had not changed) showing the old name while the workspace's own tab strip had the new one.
+    /// </summary>
+    [ObservableProperty] private string _title = "";
 
     [ObservableProperty] private bool _isActive;
     [ObservableProperty] private string _stateLabel = "";
@@ -42,6 +49,7 @@ public sealed partial class ActiveSessionItem : ObservableObject
     /// <summary>Dot colour, chip and tooltip for a detected state — the WPF host's AgentStateVisual.</summary>
     public void Apply(TerminalAgentState? s, bool isActive)
     {
+        Title = Tab.Title;
         IsActive = isActive;
         NeedsAttention = s?.NeedsAttention == true;
         var (brush, label, tip) = Visual(s, isActive);

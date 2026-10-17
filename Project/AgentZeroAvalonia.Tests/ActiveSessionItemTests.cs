@@ -34,6 +34,23 @@ public class ActiveSessionItemTests
     }
 
     [Fact]
+    public void A_renamed_tab_shows_its_new_name_on_the_next_refresh()
+    {
+        // The row is kept in place across refreshes (same set of rows), so the title has to be
+        // re-read and announced — it used to stay at the old name until the app restarted.
+        var row = Row(out _);
+        var changed = new List<string?>();
+        row.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        row.Tab.Title = "Claude-review";
+        row.Apply(null, isActive: false);
+
+        Assert.Equal("Claude-review", row.Title);
+        Assert.Contains(nameof(ActiveSessionItem.Title), changed);
+        Assert.Contains("AgentZeroLite / Claude-review", row.Tip);
+    }
+
+    [Fact]
     public void Undetected_rows_show_only_a_running_dot_and_click_goes_to_the_tab()
     {
         var row = Row(out var went);

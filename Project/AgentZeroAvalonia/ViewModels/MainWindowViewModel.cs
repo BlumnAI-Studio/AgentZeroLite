@@ -468,6 +468,8 @@ public partial class MainWindowViewModel : ObservableObject
         tab.Title = newTitle;
         AppLogger.Log($"[Workspaces] renamed '{ws.DisplayName}/{old}' -> '{newTitle}'");
         Persist();
+        // ACTIVE SESSIONS shows the new name now, not on the next detection tick.
+        if (_agentTimer is not null) RefreshActiveSessions();
     }
 
     public void RestartTab(WorkspaceViewModel ws, TerminalTabViewModel tab) => RestartRequested?.Invoke(ws, tab);

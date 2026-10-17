@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AgentZeroAvalonia.Views.PluginWindow"
+        Title="Plugin"
+        Icon="avares://AgentZeroLite/Assets/agentzero.ico"
+        Width="480" Height="720" MinWidth="240" MinHeight="160"
+        WindowStartupLocation="Manual"
+        Background="#0A0A14">
+
+    <!-- A plugin detached from the Plugins page — the WPF host's FloatingWebDevWindow. Native
+         decorations (as the floating bot and terminals): the WPF compact chrome hid its own
+         recovery controls behind the web view's airspace, and drawing over a NativeWebView is
+         invisible on macOS. Everything sits in the strip above the view, never over it. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="6,2">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <ToggleButton x:Name="PinButton" Content="📌" Padding="6,2" FontSize="11"
+                                  ToolTip.Tip="Always on top — keep it beside your other windows" />
+                    <Slider x:Name="OpacitySlider" Minimum="0.5" Maximum="1" Width="80" VerticalAlignment="Center"
+                            ToolTip.Tip="Window opacity" />
+                    <TextBlock x:Name="OpacityText" FontSize="10" Width="30" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextDim}" />
+                    <Button x:Name="ReloadButton" Content="⟳" Padding="6,2" FontSize="11" ToolTip.Tip="Reload the plugin" />
+                    <Button x:Name="DockBackButton" Content="↩ Dock back" Padding="8,2" FontSize="11"
+                            Foreground="{DynamicResource CyberCyanBrush}"
+                            ToolTip.Tip="Return the plugin to the Plugins page" />
+                </StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Margin="4,0" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+        <Border x:Name="Host" />
+    </DockPanel>
+</Window>
