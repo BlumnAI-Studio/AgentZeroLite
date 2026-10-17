@@ -1,6 +1,6 @@
 # AgentZero Lite — Privacy Policy
 
-_Last updated: 2026-10-15._
+_Last updated: 2026-10-17._
 
 Published page: <https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html>
 (this Markdown file is its source — keep the two in step).
@@ -39,6 +39,7 @@ Only for features you use, and only to the service involved:
 | MCP servers (Settings → MCP) | The servers **you** add | The tool calls the assistant makes and their arguments |
 | Plugins page — official list and install | api.github.com, raw.githubusercontent.com, github.com (or the address you paste) | A standard download request |
 | Plugins that play or describe YouTube videos | youtube.com | The video address (to embed the player and read its title) |
+| Code view — a Markdown file shown rendered | The web addresses of pictures written in that file (for example a badge in a README) | A standard image request; the file's text itself stays on your computer |
 
 Programs you run inside the app's terminal tabs (for example Claude Code, Codex,
 agent-one or netclaw) are separate software with their own privacy policies; the app

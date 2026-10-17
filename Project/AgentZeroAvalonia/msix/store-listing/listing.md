@@ -24,7 +24,14 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.5.0 — submission 7)
+## What's new in this version (1.25.6.0 — submission 8)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Code view: browse the workspace's files in a new CODE tab of the bottom panel, next to the bot (📄 on the left bar or Ctrl+Alt+E). Syntax highlighting with VS Code's grammars, images, and Markdown shown rendered — with Mermaid diagrams — or as source. It can float in its own window too.
+- Plugins can be detached into their own window: pin it on top and set its opacity to keep a plugin beside your terminals. The spot is remembered per plugin.
+- Fix: renaming a terminal tab now updates the tab strip and the session lists at once.
+
+## What's new in version 1.25.5.0 (submission 7)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Detach a terminal into its own window and dock it back: right-click a tab → Detach to window, the ⤢ button on a pane, or Ctrl+Alt+F (Ctrl+Alt+D to dock). The terminal keeps running and keeps its screen; closing the window puts it back in its pane.
@@ -48,6 +55,7 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
 - Active-sessions sidebar showing which agent is working, waiting for you or done
+- Code view: the workspace's files with VS Code syntax highlighting, Markdown rendered with Mermaid diagrams
 - No account, no telemetry — settings and history stay on your PC
 - Open source
 
