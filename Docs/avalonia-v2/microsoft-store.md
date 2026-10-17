@@ -266,6 +266,14 @@ Product features 두 줄 → Submit for certification. 인증은 제출 당일 �
   세션은 개요 화면의 Submission 데이터가 읽히는지로 판단한다. 첫 Submit 클릭이 반영되지 않았던 것은 세션이
   아니라 클릭 직후 상태를 너무 일찍 읽은 것으로 보이며, 다시 눌러 In certification이 됐다.
 
+### 8차 제출 — 네 번째 업데이트 (1.25.6.0, 2026-10-17)
+
+내용: 코드 뷰(하단 패널 CODE 탭 — 워크스페이스 파일, VS Code TextMate 문법, 마크다운 렌더링 + Mermaid,
+별도 창), 플러그인 별도 창 분리(항상 위·투명도·위치 기억), 탭 이름 변경 즉시 반영. Submission 5. 새 권한은 없지만
+마크다운 미리보기가 문서에 적힌 https 이미지를 불러오므로 개인정보 처리방침에 행을 하나 더하고(`doc-v1.43.0`) 배포가
+끝난 것을 확인한 뒤 제출했다. 같은 날 GitHub 릴리스 `v0.25.6`도 찍어 버전을 맞췄다. 패키지 157 MB(에디터·TextMate
+문법·`libonigwrap`·Markdig 약 8 MB 증가). 업로드 45초, Save 바로 열림, 첫 Submit 클릭에 In certification.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
