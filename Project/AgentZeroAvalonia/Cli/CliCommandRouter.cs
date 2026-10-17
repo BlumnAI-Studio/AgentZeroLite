@@ -61,6 +61,9 @@ internal sealed class CliCommandRouter
     /// <summary>The Plugins page's <c>plugin</c> verbs (see <see cref="PluginVerbs"/>); null in tests.</summary>
     public Func<JsonElement, Task<string>>? PluginCommand { get; set; }
 
+    /// <summary>The code view's <c>code open|close|status</c> (verb, path) → reply; null in tests.</summary>
+    public Func<string, string, Task<string>>? CodeCommand { get; set; }
+
     public CliCommandRouter(IClassicDesktopStyleApplicationLifetime? desktop) => _desktop = desktop;
 
     public Task<string> HandleAsync(string json, CancellationToken ct)
@@ -138,6 +141,11 @@ internal sealed class CliCommandRouter
                         return PluginCommand is null
                             ? Task.FromResult(CliIpcProtocol.ErrorJson("the Plugins page is not available in this host"))
                             : PluginCommand(root.Clone());
+
+                    case "code":
+                        return CodeCommand is null
+                            ? Task.FromResult(CliIpcProtocol.ErrorJson("the code view is not available in this host"))
+                            : CodeCommand(Str(root, "verb").ToLowerInvariant(), Str(root, "path"));
 
                     default:
                         return Task.FromResult(CliIpcProtocol.ErrorJson($"unknown command '{command}' (not ported to the Avalonia host yet)"));

@@ -27,6 +27,12 @@ internal sealed class LocalAssetServer : IDisposable
     /// <summary>The one server every terminal shares — one port, one token, for the app's lifetime.</summary>
     public static LocalAssetServer Shared => _shared.Value;
 
+    private static readonly Lazy<LocalAssetServer> _markdown = new(() =>
+        new LocalAssetServer(Path.Combine(AppContext.BaseDirectory, "Wasm", "markdown")));
+
+    /// <summary>The code view's Markdown preview page and its mermaid bundle — its own root, so neither page can reach the other's files.</summary>
+    public static LocalAssetServer Markdown => _markdown.Value;
+
     private static readonly IReadOnlyDictionary<string, string> ContentTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [".html"] = "text/html; charset=utf-8",

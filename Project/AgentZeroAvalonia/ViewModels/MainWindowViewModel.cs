@@ -216,6 +216,8 @@ public partial class MainWindowViewModel : ObservableObject
         if (newValue is not null) newValue.IsActive = true;
         OnPropertyChanged(nameof(HasActiveWorkspace));
         OnPropertyChanged(nameof(EmptyStateHint));
+        // The code view shows the active workspace's files (loaded only while it is open).
+        if (CodeVisible) Code.FollowWorkspace(newValue);
         RaiseActiveTerminalChanged();
     }
 
@@ -241,12 +243,15 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnBotVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(BotDockVisible));
+        if (value) BottomTab = BottomTab.Bot;   // summoning the bot brings its tab to the front
+        RaiseBottomPanel();
         BotFloatRequested?.Invoke(value && !BotDocked);
     }
 
     partial void OnBotDockedChanged(bool value)
     {
         OnPropertyChanged(nameof(BotDockVisible));
+        RaiseBottomPanel();
         BotFloatRequested?.Invoke(BotVisible && !value);
         CliWorkspacePersistence.SaveBotDocked(value);
     }
@@ -468,8 +473,11 @@ public partial class MainWindowViewModel : ObservableObject
         tab.Title = newTitle;
         AppLogger.Log($"[Workspaces] renamed '{ws.DisplayName}/{old}' -> '{newTitle}'");
         Persist();
-        // ACTIVE SESSIONS shows the new name now, not on the next detection tick.
-        if (_agentTimer is not null) RefreshActiveSessions();
+        // The pane's tab strip is drawn from code with the title of the moment, so it showed the
+        // old name until a tab switch rebuilt it (the sidebar, bound to Title, changed at once).
+        // Re-lay out now — that also moves the bot's header and ACTIVE SESSIONS to the new name.
+        if (ReferenceEquals(ws, ActiveWorkspace)) RaiseActiveTerminalChanged();
+        else if (_agentTimer is not null) RefreshActiveSessions();
     }
 
     public void RestartTab(WorkspaceViewModel ws, TerminalTabViewModel tab) => RestartRequested?.Invoke(ws, tab);
@@ -609,6 +617,7 @@ public partial class MainWindowViewModel : ObservableObject
             case WindowCommandIds.Dock: DockActive(); break;
             case HotkeyTable.BotToggle: ToggleBot(); break;
             case HotkeyTable.BotEmbedToggle: ToggleBotEmbedded(); break;
+            case HotkeyTable.CodeToggle: ToggleCode(); break;
             case HotkeyTable.NextTab: CycleTab(+1); break;
             case HotkeyTable.PrevTab: CycleTab(-1); break;
             case HotkeyTable.MoveTabNextPane: MoveActiveTabToNextPane(); break;

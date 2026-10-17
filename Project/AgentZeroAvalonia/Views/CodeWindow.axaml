@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+        xmlns:views="using:AgentZeroAvalonia.Views"
+        x:Class="AgentZeroAvalonia.Views.CodeWindow"
+        x:DataType="vm:CodeViewModel"
+        Title="{Binding RootName, StringFormat='Code — {0}'}"
+        Icon="avares://AgentZeroLite/Assets/agentzero.ico"
+        Width="1000" Height="640" MinWidth="480" MinHeight="240"
+        Background="#1E1E1E"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- The code view as its own window — the floating bot's arrangement: no state here,
+         the DataContext is the same CodeViewModel the docked tab uses. -->
+    <views:CodeView />
+</Window>

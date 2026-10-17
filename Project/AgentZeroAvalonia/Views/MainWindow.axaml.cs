@@ -28,6 +28,7 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             if (_botWindow is not null) _botWindow.ClosingProgrammatically = true;
+            if (_codeWindow is not null) _codeWindow.ClosingProgrammatically = true;
         };
     }
 
@@ -56,22 +57,46 @@ public partial class MainWindow : Window
         if (_botVm is not null)
         {
             _botVm.BotFloatRequested -= OnBotFloatRequested;
+            _botVm.CodeFloatRequested -= OnCodeFloatRequested;
             _botVm.PropertyChanged -= OnBotVmPropertyChanged;
         }
         _botVm = vm;
         if (_botVm is null) return;
 
         _botVm.BotFloatRequested += OnBotFloatRequested;
+        _botVm.CodeFloatRequested += OnCodeFloatRequested;
         _botVm.PropertyChanged += OnBotVmPropertyChanged;
         ApplyBotDockRows();
         // The stored dock state may already say "floating".
         OnBotFloatRequested(_botVm.BotVisible && !_botVm.BotDocked);
     }
 
+    private CodeWindow? _codeWindow;
+
+    /// <summary>The code view's own window (⧉ on its tab) — the floating bot's arrangement.</summary>
+    private void OnCodeFloatRequested(bool floating)
+    {
+        if (_botVm is null) return;
+        if (!floating)
+        {
+            if (_codeWindow is not null)
+            {
+                _codeWindow.ClosingProgrammatically = true;
+                _codeWindow.Close();
+                _codeWindow = null;
+            }
+            return;
+        }
+        if (_codeWindow is not null) { _codeWindow.Activate(); return; }
+        _codeWindow = new CodeWindow { DataContext = _botVm.Code };
+        _codeWindow.EmbedRequested += () => _botVm.EmbedCode();
+        _codeWindow.Show(this);
+    }
+
     private void OnBotVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainWindowViewModel.BotMaximized)
-                          or nameof(MainWindowViewModel.BotDockVisible))
+                          or nameof(MainWindowViewModel.BottomDockVisible))
             ApplyBotDockRows();
     }
 
@@ -94,7 +119,8 @@ public partial class MainWindow : Window
     {
         if (_botVm is null) return;
 
-        if (!_botVm.BotDockVisible)
+        // The bottom panel: the bot's tab, the code view's, or both.
+        if (!_botVm.BottomDockVisible)
         {
             TopRow.Height = new GridLength(1, GridUnitType.Star);
             BotSplitterRow.Height = new GridLength(0);

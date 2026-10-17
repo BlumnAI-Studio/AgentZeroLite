@@ -29,6 +29,9 @@ public static class HotkeyTable
     /// <summary>Move the bot between the docked pane and its own window (M0041).</summary>
     public const string BotEmbedToggle = "bot.embed-toggle";
 
+    /// <summary>Open / close the code view in the bottom panel (VS Code's explorer, read-only).</summary>
+    public const string CodeToggle = "code.toggle";
+
     /// <summary>Host defaults for ids the WPF suggested table does not bind.</summary>
     public static readonly IReadOnlyDictionary<string, string> HostDefaults = new Dictionary<string, string>
     {
@@ -43,6 +46,7 @@ public static class HotkeyTable
         [FocusDown] = "Alt+Down",
         [BotToggle] = "Ctrl+Alt+B",
         [BotEmbedToggle] = "Ctrl+Shift+Backquote",
+        [CodeToggle] = "Ctrl+Alt+E",
     };
 
     /// <summary>Ids this host implements; anything else in the settings is ignored here.</summary>
@@ -52,7 +56,7 @@ public static class HotkeyTable
         WindowCommandIds.TerminalAdd, WindowCommandIds.PanelToggle,
         WindowCommandIds.Float, WindowCommandIds.Dock,
         NextTab, PrevTab, MoveTabNextPane, ClosePane, FocusLeft, FocusRight, FocusUp, FocusDown, BotToggle,
-        BotEmbedToggle,
+        BotEmbedToggle, CodeToggle,
     };
 
     public static IReadOnlyList<HotkeyBinding> Build(ShortcutSettings? settings, bool isMac)

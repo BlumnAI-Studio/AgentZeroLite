@@ -75,6 +75,7 @@ internal static class CliMain
             "web" => MoreVerbs.Web(client, rest),
             "mcp" => MoreVerbs.Mcp(client, rest),
             "plugin" => PluginVerbs.Run(client, rest),
+            "code" => Code(client, rest),
             "agent-state" => AgentState(client),
             _ => Unknown(command),
         };
@@ -178,6 +179,32 @@ internal static class CliMain
         return 0;
     }
 
+    /// <summary><c>code open [path] | close | status</c> — the code view in the bottom panel.</summary>
+    private static int Code(CliClient client, string[] args)
+    {
+        var verb = args.Length > 0 ? args[0].ToLowerInvariant() : "status";
+        if (verb is "help" or "--help" or "-h")
+        {
+            Console.WriteLine("Usage: AgentZeroLite -cli code open [path] | close | status");
+            Console.WriteLine("  open [path]   Show the code view (bottom panel, CODE tab); open a file of the active workspace");
+            Console.WriteLine("                (relative to the workspace, or absolute inside it)");
+            Console.WriteLine("  view preview|plain   Markdown: rendered with mermaid diagrams (default), or its source");
+            Console.WriteLine("  close         Close the code view");
+            Console.WriteLine("  status        Root, open file, kind, visible/docked");
+            return 0;
+        }
+        var payload = new System.Text.Json.Nodes.JsonObject
+        {
+            ["command"] = "code",
+            ["verb"] = verb,
+            ["path"] = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "",
+        };
+        var reply = client.Send(payload.ToJsonString());
+        if (reply is null) return client.NoWait ? 0 : 1;
+        Console.WriteLine(reply);
+        return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
+    }
+
     private static int Unknown(string command)
     {
         Console.Error.WriteLine($"Unknown or not-yet-ported command: {command}");
@@ -207,6 +234,7 @@ internal static class CliMain
         Console.WriteLine("  mcp list|import|refresh|allow|deny|call ...   MCP servers for AI mode; 'mcp help' for options");
         Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
         Console.WriteLine("  agent-state                          Detected agent state per terminal + attention rollup");
+        Console.WriteLine("  code open [path] | close | status    The code view (bottom panel): the active workspace's files");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");
         Console.WriteLine("  bot-chat <message> [--from <name>]   Deliver a message to AgentBot (DONE(...) is the peer envelope)");
         Console.WriteLine("  bot-ask <text...>                    Ask AgentBot in AI mode (starts an agent-loop turn)");

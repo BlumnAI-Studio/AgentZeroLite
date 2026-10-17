@@ -73,6 +73,21 @@
         <Style Selector="GridSplitter">
             <Setter Property="Background" Value="{DynamicResource BorderColor}" />
         </Style>
+        <!-- Bottom panel tabs (VS Code's panel; the WPF host's BOT / NOTE tabs) -->
+        <Style Selector="Button.ptab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Button.ptab.selected">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
     </Window.Styles>
 
     <!-- The WPF MainWindow's frame: activity bar (48) · sidebar · content · status bar. -->
@@ -101,6 +116,9 @@
                                 Content="▣" ToolTip.Tip="Terminals" Command="{Binding ShowTerminalsCommand}" />
                         <Button Classes="activity" Classes.selected="{Binding BotVisible}"
                                 Content="🤖" ToolTip.Tip="AgentBot" Command="{Binding ToggleBotCommand}" />
+                        <Button Classes="activity" Classes.selected="{Binding CodeVisible}"
+                                Content="📄" ToolTip.Tip="Code — the workspace's files (Ctrl+Alt+E)"
+                                Command="{Binding ToggleCodeCommand}" />
                         <Button Classes="activity" Content="▤" ToolTip.Tip="Toggle sidebar"
                                 Command="{Binding ToggleSidebarCommand}" />
                         <Button Classes="activity" Classes.selected="{Binding IsWearablePage}"
@@ -219,24 +237,37 @@
             <GridSplitter Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" x:Name="BotSplitter"
                           Height="6" ResizeDirection="Rows"
                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                          IsVisible="{Binding BotDockVisible}" />
+                          IsVisible="{Binding BottomDockVisible}" />
             <Border Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" x:Name="BotPane"
                     Background="{DynamicResource CyberBgPanel}"
                     BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
-                    IsVisible="{Binding BotDockVisible}">
+                    IsVisible="{Binding BottomDockVisible}">
                 <DockPanel>
-                    <!-- Pane chrome: undock · maximize/restore · close -->
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
-                                HorizontalAlignment="Right" Spacing="1" Margin="0,2,4,0">
-                        <Button Classes="chrome" Content="⧉" ToolTip.Tip="Float in its own window (Ctrl+Shift+`)"
-                                Command="{Binding UndockBotCommand}" />
-                        <Button Classes="chrome" Content="▣" ToolTip.Tip="Maximize / restore the pane"
-                                Command="{Binding ToggleBotMaximizedCommand}" />
-                        <Button Classes="chrome" Content="✕" ToolTip.Tip="Close the bot"
-                                Command="{Binding CloseBotCommand}" />
-                    </StackPanel>
+                    <!-- Tabs on the left; pane chrome (float · maximize/restore · close), acting on
+                         the tab in front, on the right. -->
+                    <DockPanel DockPanel.Dock="Top" Margin="4,2,4,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="1">
+                            <Button Classes="chrome" Content="⧉" ToolTip.Tip="Float this tab in its own window"
+                                    Command="{Binding FloatFrontTabCommand}" />
+                            <Button Classes="chrome" Content="▣" ToolTip.Tip="Maximize / restore the panel"
+                                    Command="{Binding ToggleBotMaximizedCommand}" />
+                            <Button Classes="chrome" Content="✕" ToolTip.Tip="Close this tab"
+                                    Command="{Binding CloseFrontTabCommand}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="ptab" Classes.selected="{Binding ShowBotInDock}" Content="🤖 BOT"
+                                    IsVisible="{Binding BotDockVisible}" Command="{Binding SelectBotTabCommand}" />
+                            <Button Classes="ptab" Classes.selected="{Binding ShowCodeInDock}" Content="📄 CODE"
+                                    IsVisible="{Binding CodeDockVisible}" Command="{Binding SelectCodeTabCommand}" />
+                        </StackPanel>
+                    </DockPanel>
                     <Panel>
-                        <views:AgentBotView DataContext="{Binding Bot}" />
+                        <Panel IsVisible="{Binding ShowBotInDock}">
+                            <views:AgentBotView DataContext="{Binding Bot}" />
+                        </Panel>
+                        <Panel IsVisible="{Binding ShowCodeInDock}">
+                            <views:CodeView DataContext="{Binding Code}" />
+                        </Panel>
                     </Panel>
                 </DockPanel>
             </Border>

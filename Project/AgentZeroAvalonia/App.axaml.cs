@@ -110,6 +110,7 @@ public partial class App : Application
                 AgentState = () => Dispatcher.UIThread.InvokeAsync(vm.AgentStateJson).GetTask(),
                 LayoutStatus = () => (vm.ActiveWorkspace?.DockLayoutJson, vm.ActiveWorkspace?.Layout.PaneCount ?? 0, vm.ActiveWorkspace?.DisplayName),
                 FloatingCount = () => vm.FloatingCount,
+                CodeCommand = vm.CodeCommandAsync,
             };
             _cliServer = CliServer.Start(router);
 

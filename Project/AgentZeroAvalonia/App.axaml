@@ -5,6 +5,8 @@
 
     <Application.Styles>
         <FluentTheme />
+        <!-- The code view's editor (AvaloniaEdit) draws nothing without its control theme. -->
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
         <!-- The WPF app's dark palette, re-expressed for Avalonia. -->
         <StyleInclude Source="avares://AgentZeroLite/Styles/Theme.axaml" />
     </Application.Styles>

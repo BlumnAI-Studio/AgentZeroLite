@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+             xmlns:ae="using:AvaloniaEdit"
+             x:Class="AgentZeroAvalonia.Views.CodeView"
+             x:DataType="vm:CodeViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TreeViewItem" x:DataType="vm:FileNodeViewModel">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="Button.bar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Button.bar:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- VS Code's explorer + editor, read-only: the tree follows the active workspace and
+         loads a folder when it is expanded; the editor uses VS Code's TextMate grammars. -->
+    <Grid ColumnDefinitions="240,4,*">
+
+        <!-- Explorer -->
+        <DockPanel Grid.Column="0" Background="{DynamicResource CyberBgPanel}">
+            <DockPanel DockPanel.Dock="Top" Margin="8,2,2,2">
+                <Button DockPanel.Dock="Right" Classes="bar" Content="⟳" ToolTip.Tip="Refresh the tree"
+                        Command="{Binding RefreshCommand}" />
+                <TextBlock Text="{Binding RootName}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+            <TreeView x:Name="Tree" ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
+                      Background="Transparent">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate DataType="vm:FileNodeViewModel" ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent"
+                                    ToolTip.Tip="{Binding FullPath}">
+                            <TextBlock Text="{Binding Icon}" FontSize="11" Width="16" TextAlignment="Center"
+                                       VerticalAlignment="Center" Foreground="#C8D6E5" />
+                            <TextBlock Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"
+                                       FontFamily="Cascadia Mono, Consolas, Menlo, monospace" />
+                        </StackPanel>
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </DockPanel>
+
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource BorderColor}" />
+
+        <!-- Editor -->
+        <DockPanel Grid.Column="2" Background="#1E1E1E">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
+                    BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="8,2">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasFile}">
+                        <Button Classes="bar" Content="{Binding PreviewToggleLabel}" IsVisible="{Binding IsMarkdown}"
+                                Command="{Binding TogglePreviewCommand}"
+                                ToolTip.Tip="Markdown: switch between the rendered view (with mermaid diagrams) and the source" />
+                        <Button x:Name="CopyPathButton" Classes="bar" Content="⧉ path" ToolTip.Tip="Copy the path relative to the workspace" />
+                        <Button x:Name="OpenExternalButton" Classes="bar" Content="↗ open" ToolTip.Tip="Open with the default app" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding CurrentTitle}" FontSize="12" VerticalAlignment="Center"
+                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace"
+                               Foreground="{DynamicResource TextPrimary}" TextTrimming="PrefixCharacterEllipsis" />
+                </DockPanel>
+            </Border>
+            <TextBlock DockPanel.Dock="Top" Text="{Binding Note}" IsVisible="{Binding HasNote}" FontSize="11"
+                       Margin="10,4" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
+            <Panel>
+                <ae:TextEditor x:Name="Editor" IsReadOnly="True" ShowLineNumbers="True"
+                               IsVisible="{Binding IsTextView}"
+                               FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="13"
+                               Background="#1E1E1E" Foreground="#D4D4D4"
+                               HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                <!-- Markdown rendered (Markdig in ZeroCommon) with mermaid drawn by the WPF host's
+                     offline bundle, served from the loopback asset server. Created on first use. -->
+                <Panel x:Name="PreviewHost" IsVisible="{Binding IsPreview}" />
+                <ScrollViewer IsVisible="{Binding IsImage}" HorizontalScrollBarVisibility="Auto">
+                    <Image x:Name="Picture" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" />
+                </ScrollViewer>
+            </Panel>
+        </DockPanel>
+    </Grid>
+</UserControl>

@@ -39,10 +39,12 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.0" />
+    <PackageReference Include="AvaloniaEdit.TextMate" Version="12.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <!-- macOS/Linux PTY (forkpty). Windows uses the ConPTY host copied from the WPF
          app and never loads this package's natives. -->
@@ -67,10 +69,7 @@
     <_WearableApplies Condition="'$(IncludeWearableHost)' == 'true' And '$(OS)' == 'Windows_NT' And ('$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win')))">true</_WearableApplies>
   </PropertyGroup>
   <ItemGroup Condition="'$(_WearableApplies)' == 'true'">
-    <ProjectReference Include="..\ZeroWearable\ZeroWearable.csproj"
-                      ReferenceOutputAssembly="false"
-                      SkipGetTargetFrameworkProperties="true"
-                      Private="false" />
+    <ProjectReference Include="..\ZeroWearable\ZeroWearable.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" Private="false" />
   </ItemGroup>
 
   <Target Name="CopyWearableHost" AfterTargets="Build" Condition="'$(_WearableApplies)' == 'true'">
@@ -80,11 +79,8 @@
     <ItemGroup>
       <_WearableFiles Include="$(_WearableOut)**\*" Exclude="$(_WearableOut)**\*.pdb" />
     </ItemGroup>
-    <Copy SourceFiles="@(_WearableFiles)"
-          DestinationFiles="@(_WearableFiles->'$(OutDir)wearable\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"
-          Condition="'@(_WearableFiles)' != ''" />
-    <Message Importance="normal" Text="Wearable host copied: @(_WearableFiles->Count()) file(s) -> $(OutDir)wearable\" />
+    <Copy SourceFiles="@(_WearableFiles)" DestinationFiles="@(_WearableFiles->'$(OutDir)wearable\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_WearableFiles)' != ''" />
+    <Message Importance="normal" Text="Wearable host copied: @(_WearableFiles-&gt;Count()) file(s) -&gt; $(OutDir)wearable\" />
   </Target>
 
   <!-- Same RID and self-contained flag as this publish, or a framework-dependent host
@@ -97,30 +93,25 @@
       <_WearablePublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)'))wearable\</_WearablePublishDir>
     </PropertyGroup>
     <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)\..\ZeroWearable\ZeroWearable.csproj&quot; -c $(Configuration) $(_WearableRidArg) $(_WearableSelfContainedArg) -p:PublishSingleFile=false -o &quot;$(_WearablePublishDir)&quot;" />
-    <Message Importance="high" Text="Wearable host published -> $(_WearablePublishDir)" />
+    <Message Importance="high" Text="Wearable host published -&gt; $(_WearablePublishDir)" />
   </Target>
 
   <ItemGroup>
     <!-- xterm.js and its fonts are one bundle, kept in the WPF folder and linked here:
          the renderer must stay byte-identical between hosts. index.html / term.js are
          this host's own copies (Wasm/xterm/) because the message transport differs. -->
-    <Content Include="..\AgentZeroWpf\Wasm\xterm\vendor\**\*"
-             Link="Wasm\xterm\vendor\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\AgentZeroWpf\Wasm\xterm\vendor\**\*" Link="Wasm\xterm\vendor\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Wasm\**\*" CopyToOutputDirectory="PreserveNewest" />
     <!-- The Plugins page (WebDev in WPF): the bridge script and the built-in samples are the
          WPF host's files, linked rather than copied — zero-bridge.js must stay byte-identical
          so a plugin meets the same window.zero on both hosts. This host's own
          Wasm/common/zero-webview-shim.js lands beside it. -->
-    <Content Include="..\AgentZeroWpf\Wasm\common\**\*"
-             Link="Wasm\common\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\AgentZeroWpf\Wasm\voice-test\**\*"
-             Link="Wasm\voice-test\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\AgentZeroWpf\Wasm\chat-test\**\*"
-             Link="Wasm\chat-test\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\AgentZeroWpf\Wasm\common\**\*" Link="Wasm\common\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The code view's Markdown preview draws mermaid with the WPF host's offline bundle
+         (it embeds the same file as a resource) — linked, not copied, so there is one copy. -->
+    <Content Include="..\AgentZeroWpf\Assets\mermaid.min.js" Link="Wasm\markdown\mermaid.min.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\AgentZeroWpf\Wasm\voice-test\**\*" Link="Wasm\voice-test\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\AgentZeroWpf\Wasm\chat-test\**\*" Link="Wasm\chat-test\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\AgentZeroWpf\version.txt" Link="version.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- The app icon is AgentZero's own, linked rather than copied so the two hosts
          cannot drift: ApplicationIcon stamps the Windows exe (taskbar, desktop shortcut,
