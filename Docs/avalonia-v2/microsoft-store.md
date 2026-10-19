@@ -296,6 +296,19 @@ Submission 6. 새 권한·네트워크 흐름은 없지만 다른 프로그램�
   패키지와 Windows 릴리스는 그대로 두고 수정만 main에 올렸다(f8e87da, ae76f01 — 경로를 링크까지 풀어서 비교; 다음 릴리스에 포함). 릴리스 태그 전에
   `Avalonia host — build & self-test`(macOS 포함)가 초록인지 먼저 보는 편이 낫다.
 
+### 10차 제출 — 여섯 번째 업데이트 (1.25.8.0, 2026-10-19)
+
+내용: ACTIVE SESSIONS의 에이전트 상태를 화면만이 아니라 에이전트 자신의 기록에서 읽는다 — Claude Code는
+`~/.claude/sessions/<pid>.json`(busy / waiting / idle), Codex는 스레드 rollout의 `task_started` / `task_complete`.
+작업 중에는 턴 내내 working, 질문은 waiting, 끝난 턴은 1초 안에 done(확인 전까지). 링크를 거친 워크트리 경로 수정.
+Submission 7. 새 권한·네트워크 흐름은 없지만 상태를 읽으려고 Claude/Codex의 상태 파일과 **실행 중인 프로세스
+목록**을 PC 안에서 읽으므로 개인정보 처리방침 문단을 넓히고(`doc-v1.45.0`) 반영을 확인한 뒤 제출했다. 같은 날
+GitHub 릴리스 `v0.25.8`. 패키지 157 MB, 업로드 약 60초, 첫 Save에 1.25.7.0이 빠지고 1.25.8.0만 Validated, 첫 Submit
+클릭에 In certification. Features는 ACTIVE SESSIONS 줄만 고쳤다(12줄 그대로).
+
+이번에 바뀐 것: 멀티 OS CI(`avalonia-build.yml`)는 더 이상 push나 `v*` 태그로 돌지 않는다 — `ci-*` 태그나 수동 실행으로만.
+이번 릴리스는 macOS 점검 없이 냈다(필요할 때 `ci-<버전>` 태그).
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
