@@ -151,14 +151,44 @@
                     <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Workspaces}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:WorkspaceViewModel">
-                                <Border Classes="ws" Classes.selected="{Binding IsActive}">
-                                    <DockPanel>
-                                        <Button DockPanel.Dock="Right" Classes="sidex" Content="✕"
-                                                ToolTip.Tip="Remove workspace" Command="{Binding RemoveCommand}" />
-                                        <Button Classes="side" Content="{Binding DisplayName}"
-                                                ToolTip.Tip="{Binding DirectoryPath}" Command="{Binding ActivateCommand}" />
-                                    </DockPanel>
-                                </Border>
+                                <!-- A workspace that is a worktree of a repository another row hosts is
+                                     drawn under that row (below), not here. -->
+                                <StackPanel IsVisible="{Binding !IsNested}">
+                                    <Border Classes="ws" Classes.selected="{Binding IsActive}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Classes="sidex" Content="✕"
+                                                    ToolTip.Tip="Remove workspace" Command="{Binding RemoveCommand}" />
+                                            <Button Classes="side" ToolTip.Tip="{Binding DirectoryPath}" Command="{Binding ActivateCommand}"
+                                                    HorizontalContentAlignment="Stretch">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding BranchLabel}" IsVisible="{Binding HasBranchLabel}"
+                                                               FontSize="9" Margin="6,0,0,0" VerticalAlignment="Center" MaxWidth="80"
+                                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextDim}" />
+                                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Button>
+                                        </DockPanel>
+                                    </Border>
+                                    <!-- The repository's other git worktrees: open ones switch, detected ones open on click. -->
+                                    <ItemsControl ItemsSource="{Binding Worktrees}" IsVisible="{Binding HasWorktrees}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:WorktreeEntryViewModel">
+                                                <Border Classes="ws" Classes.selected="{Binding Workspace.IsActive, FallbackValue=False}" Margin="14,0,0,0">
+                                                    <DockPanel>
+                                                        <Button DockPanel.Dock="Right" Classes="sidex" Content="✕" IsVisible="{Binding IsOpened}"
+                                                                ToolTip.Tip="Close this workspace (the worktree folder stays)" Command="{Binding CloseCommand}" />
+                                                        <Button Classes="side" ToolTip.Tip="{Binding Tip}" Command="{Binding GoCommand}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="5" Opacity="{Binding LabelOpacity}">
+                                                                <TextBlock Text="⎇" FontSize="11" Foreground="{DynamicResource CyberTealBrush}" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

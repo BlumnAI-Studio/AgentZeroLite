@@ -111,6 +111,7 @@ public partial class App : Application
                 LayoutStatus = () => (vm.ActiveWorkspace?.DockLayoutJson, vm.ActiveWorkspace?.Layout.PaneCount ?? 0, vm.ActiveWorkspace?.DisplayName),
                 FloatingCount = () => vm.FloatingCount,
                 CodeCommand = vm.CodeCommandAsync,
+                WorktreeCommand = vm.WorktreeCommandAsync,
             };
             _cliServer = CliServer.Start(router);
 
@@ -121,6 +122,7 @@ public partial class App : Application
             desktop.MainWindow = new MainWindow { DataContext = vm };
             vm.Wearable?.AutoStart();
             vm.StartAgentStateMonitor();
+            vm.StartWorktreeMonitor();
 
             desktop.ShutdownRequested += (_, _) =>
             {

@@ -335,7 +335,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     // ── workspaces ───────────────────────────────────────────────────────────
 
-    public WorkspaceViewModel AddWorkspace(string path)
+    /// <param name="preferredName">The name to use instead of the folder's (a Codex worktree's folder is the repository's own name).</param>
+    public WorkspaceViewModel AddWorkspace(string path, string? preferredName = null)
     {
         var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var existing = Workspaces.FirstOrDefault(w => string.Equals(w.DirectoryPath, full,
@@ -346,7 +347,7 @@ public partial class MainWindowViewModel : ObservableObject
             return existing;
         }
 
-        var baseName = Path.GetFileName(full);
+        var baseName = string.IsNullOrWhiteSpace(preferredName) ? Path.GetFileName(full) : preferredName.Trim();
         if (string.IsNullOrEmpty(baseName)) baseName = full;
         var name = baseName;
         for (var n = 2; Workspaces.Any(w => w.DisplayName == name); n++) name = $"{baseName}-{n}";

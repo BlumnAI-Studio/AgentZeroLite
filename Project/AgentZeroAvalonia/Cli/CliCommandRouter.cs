@@ -64,6 +64,9 @@ internal sealed class CliCommandRouter
     /// <summary>The code view's <c>code open|close|status</c> (verb, path) → reply; null in tests.</summary>
     public Func<string, string, Task<string>>? CodeCommand { get; set; }
 
+    /// <summary>The sidebar's git worktrees: <c>worktree list|open</c> (verb, arg) → reply; null in tests.</summary>
+    public Func<string, string, Task<string>>? WorktreeCommand { get; set; }
+
     public CliCommandRouter(IClassicDesktopStyleApplicationLifetime? desktop) => _desktop = desktop;
 
     public Task<string> HandleAsync(string json, CancellationToken ct)
@@ -146,6 +149,11 @@ internal sealed class CliCommandRouter
                         return CodeCommand is null
                             ? Task.FromResult(CliIpcProtocol.ErrorJson("the code view is not available in this host"))
                             : CodeCommand(Str(root, "verb").ToLowerInvariant(), Str(root, "path"));
+
+                    case "worktree":
+                        return WorktreeCommand is null
+                            ? Task.FromResult(CliIpcProtocol.ErrorJson("worktrees are not available in this host"))
+                            : WorktreeCommand(Str(root, "verb").ToLowerInvariant(), Str(root, "arg"));
 
                     default:
                         return Task.FromResult(CliIpcProtocol.ErrorJson($"unknown command '{command}' (not ported to the Avalonia host yet)"));

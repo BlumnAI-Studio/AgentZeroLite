@@ -33,6 +33,26 @@ public partial class WorkspaceViewModel : ObservableObject, ICliGroupInfo
     public Action<WorkspaceViewModel>? ActivateRequested { get; set; }
     public Action<WorkspaceViewModel>? RemoveRequested { get; set; }
 
+    // ── git worktrees (sidebar nesting) ─────────────────────────────────────
+
+    /// <summary>
+    /// The repository's other working trees, listed under this row — set only on the row that
+    /// hosts the repository in the sidebar (the main tree, or the first listed tree of a repo
+    /// whose main tree is not a workspace). Empty for every other row.
+    /// </summary>
+    public ObservableCollection<WorktreeEntryViewModel> Worktrees { get; } = new();
+
+    /// <summary>This workspace is a tree of a repository another row hosts — it is drawn under that row, not at the top level.</summary>
+    [ObservableProperty] private bool _isNested;
+
+    /// <summary>The checked-out branch when the folder is a git working tree root, shown beside the name.</summary>
+    [ObservableProperty] private string _branchLabel = "";
+
+    public bool HasWorktrees => Worktrees.Count > 0;
+    public bool HasBranchLabel => BranchLabel.Length > 0;
+    partial void OnBranchLabelChanged(string value) => OnPropertyChanged(nameof(HasBranchLabel));
+    internal void RaiseWorktreesChanged() => OnPropertyChanged(nameof(HasWorktrees));
+
     public WorkspaceViewModel(string directoryPath, string displayName)
     {
         DirectoryPath = directoryPath;

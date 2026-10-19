@@ -76,6 +76,7 @@ internal static class CliMain
             "mcp" => MoreVerbs.Mcp(client, rest),
             "plugin" => PluginVerbs.Run(client, rest),
             "code" => Code(client, rest),
+            "worktree" => Worktree(client, rest),
             "agent-state" => AgentState(client),
             _ => Unknown(command),
         };
@@ -205,6 +206,30 @@ internal static class CliMain
         return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
     }
 
+    private static int Worktree(CliClient client, string[] args)
+    {
+        var verb = args.Length > 0 ? args[0].ToLowerInvariant() : "list";
+        if (verb is "help" or "--help" or "-h")
+        {
+            Console.WriteLine("Usage: AgentZeroLite -cli worktree list | open <path|branch> | close <path|branch>");
+            Console.WriteLine("  list               Workspaces with their git branch, which row each is nested under,");
+            Console.WriteLine("                     and the repository's other worktrees detected under the host row");
+            Console.WriteLine("  open <path|branch> Switch to a detected worktree (opens it as a workspace the first time)");
+            Console.WriteLine("  close <path|branch> Close the workspace a worktree is open as (the folder stays)");
+            return 0;
+        }
+        var payload = new System.Text.Json.Nodes.JsonObject
+        {
+            ["command"] = "worktree",
+            ["verb"] = verb,
+            ["arg"] = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "",
+        };
+        var reply = client.Send(payload.ToJsonString());
+        if (reply is null) return client.NoWait ? 0 : 1;
+        Console.WriteLine(reply);
+        return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
+    }
+
     private static int Unknown(string command)
     {
         Console.Error.WriteLine($"Unknown or not-yet-ported command: {command}");
@@ -235,6 +260,7 @@ internal static class CliMain
         Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
         Console.WriteLine("  agent-state                          Detected agent state per terminal + attention rollup");
         Console.WriteLine("  code open [path] | close | status    The code view (bottom panel): the active workspace's files");
+        Console.WriteLine("  worktree list | open | close <path|branch>   Git worktrees detected under each workspace (sidebar nesting)");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");
         Console.WriteLine("  bot-chat <message> [--from <name>]   Deliver a message to AgentBot (DONE(...) is the peer envelope)");
         Console.WriteLine("  bot-ask <text...>                    Ask AgentBot in AI mode (starts an agent-loop turn)");

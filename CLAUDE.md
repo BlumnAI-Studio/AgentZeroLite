@@ -290,7 +290,7 @@ What differs from the WPF host, and why:
 
 - **Terminal**: xterm.js inside `NativeWebView`, served by `LocalAssetServer` (loopback, token path) because the Avalonia WebView cannot map a folder; the PTY is `ConPtyHost` (a copy of `ManagedConPtyHost`) on Windows and `PortaPtyHost` (Porta.Pty) on macOS behind ZeroCommon's `IPtyHost`/`XtermTerminalSession`. Two ConPTY facts the WPF copy never hit: a parent whose stdio is a pipe hands its std handles to the child (blanked around `CreateProcess`), and pipe EOF is not the exit signal (a process-handle watcher is).
 - **Split panes**: `WorkspaceLayout<T>` + one Canvas that positions every renderer over its pane slot — no native re-parenting. The stored `CliGroup.LayoutJson` is byte-identical to what WPF writes.
-- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout`, `mcp`, `plugin` and `code` (the code view — the bottom panel is tabbed,
+- **CLI**: same request/response JSON as WPF over the pipe `AgentZeroLite.cli` (not WM_COPYDATA), so `-cli help agentzero` applies; extra verbs `bot-ask`, `layout`, `mcp`, `plugin`, `worktree` (the sidebar's git worktrees: `list|open|close`) and `code` (the code view — the bottom panel is tabbed,
   🤖 BOT | 📄 CODE, sharing one dock; file rules in ZeroCommon `Workspace/WorkspaceFiles`).
 - **ACTIVE SESSIONS** (sidebar): every started terminal across workspaces with its detected agent state —
   `ZeroCommon/Agents/AgentActivityTracker` (moved down from WPF's `AgentStateMonitor`, which wraps it), run on a
