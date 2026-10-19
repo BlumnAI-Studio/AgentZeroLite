@@ -59,7 +59,7 @@ public sealed class GitWorktreeScannerTests : IDisposable
 
         var set = GitWorktreeScanner.Scan(repo)!;
 
-        Assert.True(GitWorktreeScanner.SameFolder(repo, set.MainPath));
+        Assert.Equal(GitWorktreeScanner.RealPath(repo), GitWorktreeScanner.RealPath(set.MainPath), ignoreCase: OperatingSystem.IsWindows());
         Assert.Equal(3, set.Worktrees.Count);
         Assert.True(set.Worktrees[0].IsMain);
         Assert.Equal("main", set.Worktrees[0].Label);
@@ -100,6 +100,16 @@ public sealed class GitWorktreeScannerTests : IDisposable
             // The folder's own entry carries the path as the workspace names it.
             Assert.Contains(set!.Worktrees, w => !w.IsMain && GitWorktreeScanner.SameFolder(w.Path, viaLink));
             Assert.Equal(2, set.Worktrees.Count);
+
+            // The main tree opened by its real path and the linked tree opened through the link are
+            // one repository: the linked one nests under the main one, and is not listed twice.
+            var repo = Path.Combine(_root, "repo");
+            var paths = new[] { repo, viaLink };
+            var rows = WorktreeNesting.Plan(paths, GitWorktreeScanner.Scan);
+            Assert.False(rows[0].IsNested);
+            Assert.Equal(0, rows[1].NestedUnder);
+            Assert.Single(rows[0].Children);
+            Assert.Equal("feat/x", rows[1].Branch);
         }
         finally
         {
@@ -162,7 +172,7 @@ public sealed class GitWorktreeScannerTests : IDisposable
 
         var set = GitWorktreeScanner.Scan(linked)!;
 
-        Assert.True(GitWorktreeScanner.SameFolder(repo, set.MainPath));
+        Assert.Equal(GitWorktreeScanner.RealPath(repo), GitWorktreeScanner.RealPath(set.MainPath), ignoreCase: OperatingSystem.IsWindows());
         Assert.Equal(new[] { "main", "feature" }, set.Worktrees.Select(w => w.Label));
     }
 

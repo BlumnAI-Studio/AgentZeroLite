@@ -160,27 +160,33 @@ public partial class MainWindowViewModel
             var ws = workspaces[i];
             ws.BranchLabel = rows[i].Branch;
             ws.IsNested = rows[i].IsNested;
-            SyncEntries(ws, rows[i].Children);
+            SyncEntries(ws, rows[i].Children, sets);
         }
     }
 
-    private void SyncEntries(WorkspaceViewModel host, IReadOnlyList<GitWorktreeInfo> trees)
+    private void SyncEntries(WorkspaceViewModel host, IReadOnlyList<GitWorktreeInfo> trees,
+        IReadOnlyDictionary<string, GitWorktreeSet?> sets)
     {
-        WorkspaceViewModel? Opened(string path) =>
-            Workspaces.FirstOrDefault(w => GitWorktreeScanner.SameFolder(w.DirectoryPath, path));
+        // A tree is open when a workspace's own tree resolves to the same folder (git's recorded
+        // path and the workspace's typed path can differ by a link); the typed path is the fallback.
+        WorkspaceViewModel? Opened(GitWorktreeInfo tree) =>
+            Workspaces.FirstOrDefault(w =>
+                sets.TryGetValue(w.DirectoryPath, out var s) && s?.Self is { } self
+                    ? GitWorktreeScanner.SamePath(self.Real, tree.Real)
+                    : GitWorktreeScanner.SameFolder(w.DirectoryPath, tree.Path));
 
         var same = host.Worktrees.Count == trees.Count
                    && host.Worktrees.Select(e => e.Path).SequenceEqual(trees.Select(t => t.Path), PathComparer);
         if (same)
         {
-            for (var i = 0; i < trees.Count; i++) host.Worktrees[i].Update(trees[i], Opened(trees[i].Path));
+            for (var i = 0; i < trees.Count; i++) host.Worktrees[i].Update(trees[i], Opened(trees[i]));
             return;
         }
 
         var before = host.Worktrees.Count;
         host.Worktrees.Clear();
         foreach (var t in trees)
-            host.Worktrees.Add(new WorktreeEntryViewModel(t, Opened(t.Path), OpenWorktree, RemoveWorkspace));
+            host.Worktrees.Add(new WorktreeEntryViewModel(t, Opened(t), OpenWorktree, RemoveWorkspace));
         host.RaiseWorktreesChanged();
         if (trees.Count != before)
             AppLogger.Log($"[Worktrees] '{host.DisplayName}': {trees.Count} other worktree(s) — {string.Join(", ", trees.Select(t => t.Label))}");

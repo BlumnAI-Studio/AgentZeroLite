@@ -7,6 +7,14 @@ namespace Agent.Common.Workspace;
 /// <param name="IsMain">The repository's main working tree — the one whose <c>.git</c> is a folder.</param>
 public sealed record GitWorktreeInfo(string Path, string? Branch, string? Head, bool IsMain)
 {
+    /// <summary>
+    /// The folder with every symbolic link and junction resolved — what compares two trees, since
+    /// git records resolved paths and a workspace keeps the path as typed (macOS: /var → /private/var).
+    /// Set by <see cref="GitWorktreeScanner.Scan"/>; <see cref="Path"/> when not set.
+    /// </summary>
+    public string Real { get => string.IsNullOrEmpty(_real) ? Path : _real; init => _real = value; }
+    private readonly string? _real;
+
     /// <summary>Who made the tree, read off where it lives (see <see cref="WorktreeOrigin"/>).</summary>
     public WorktreeOrigin Origin => WorktreeOrigins.Of(Path);
 
@@ -100,7 +108,15 @@ public static class WorktreeOrigins
 /// <summary>A folder's repository as its worktrees: the main tree and every linked one.</summary>
 /// <param name="MainPath">The main working tree.</param>
 /// <param name="Worktrees">Main first, then the linked trees by path.</param>
-public sealed record GitWorktreeSet(string MainPath, IReadOnlyList<GitWorktreeInfo> Worktrees);
+public sealed record GitWorktreeSet(string MainPath, IReadOnlyList<GitWorktreeInfo> Worktrees)
+{
+    /// <summary>The repository's identity: its common dir, resolved. Two scans of one repository agree on it whatever path each started from.</summary>
+    public string RepoKey { get => string.IsNullOrEmpty(_repoKey) ? MainPath : _repoKey; init => _repoKey = value; }
+    private readonly string? _repoKey;
+
+    /// <summary>The scanned folder's own tree (its <see cref="GitWorktreeInfo.Path"/> is the folder as given).</summary>
+    public GitWorktreeInfo? Self { get; init; }
+}
 
 /// <summary>
 /// Which worktrees a workspace folder's repository has — read from git's own files, without
@@ -136,10 +152,15 @@ public static class GitWorktreeScanner
             // folder's own entry keeps the path as the workspace names it.
             var mainPath = ownAdmin is null ? root : Normalize(Path.GetDirectoryName(common) ?? common);
             var list = new List<GitWorktreeInfo>();
+            GitWorktreeInfo? self = null;
             var (mainBranch, mainHead) = ReadHead(Path.Combine(common, "HEAD"));
             // A bare repository has no main working tree to list.
             if (string.Equals(Path.GetFileName(common), ".git", StringComparison.OrdinalIgnoreCase))
-                list.Add(new GitWorktreeInfo(mainPath, mainBranch, mainHead, IsMain: true));
+            {
+                var main = new GitWorktreeInfo(mainPath, mainBranch, mainHead, IsMain: true) { Real = RealPath(mainPath) };
+                list.Add(main);
+                if (ownAdmin is null) self = main;
+            }
 
             var worktrees = Path.Combine(common, "worktrees");
             if (Directory.Exists(worktrees))
@@ -158,14 +179,17 @@ public static class GitWorktreeScanner
                     if (tree is null || !Directory.Exists(tree)) continue;
                     var (branch, head) = ReadHead(Path.Combine(admin, "HEAD"));
                     var own = ownAdmin is not null && string.Equals(Path.GetFileName(admin), Path.GetFileName(ownAdmin), StringComparison.Ordinal);
-                    linked.Add(new GitWorktreeInfo(own ? root : Normalize(tree), branch, head, IsMain: false));
+                    var path = own ? root : Normalize(tree);
+                    var entry = new GitWorktreeInfo(path, branch, head, IsMain: false) { Real = RealPath(path) };
+                    linked.Add(entry);
+                    if (own) self = entry;
                 }
                 list.AddRange(linked.OrderBy(w => w.Path, StringComparer.OrdinalIgnoreCase));
             }
 
             // A linked folder whose admin entry was not listed (half-removed) is not a tree to show.
-            if (!list.Any(w => ReferenceEquals(w.Path, root) || SamePath(w.Path, root))) return null;
-            return new GitWorktreeSet(mainPath, list);
+            if (self is null) return null;
+            return new GitWorktreeSet(mainPath, list) { RepoKey = RealPath(common), Self = self };
         }
         catch
         {
@@ -218,6 +242,32 @@ public static class GitWorktreeScanner
         catch
         {
             return (null, null);
+        }
+    }
+
+    /// <summary>
+    /// <paramref name="path"/> with every symbolic link / junction along it resolved, normalized.
+    /// Walks the components because .NET resolves only a path's last one. IO — call off the UI thread.
+    /// </summary>
+    public static string RealPath(string path)
+    {
+        try
+        {
+            var full = Normalize(path);
+            var root = Path.GetPathRoot(full) ?? "";
+            var current = root;
+            foreach (var part in full[root.Length..].Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, part);
+                var info = new DirectoryInfo(current);
+                if (info.Exists && info.LinkTarget is not null && info.ResolveLinkTarget(returnFinalTarget: true) is { } target)
+                    current = Path.GetFullPath(target.FullName);
+            }
+            return Normalize(current);
+        }
+        catch
+        {
+            return Normalize(path);
         }
     }
 

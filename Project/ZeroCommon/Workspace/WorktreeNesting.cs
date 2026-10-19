@@ -26,24 +26,28 @@ public static class WorktreeNesting
         var sets = workspacePaths.Select(scan).ToList();
         var rows = new WorktreeRow[workspacePaths.Count];
 
-        // Repository (main tree path) → the row indexes in it, in list order.
-        var groups = new List<(string Main, List<int> Members)>();
+        // Repository → the row indexes in it, in list order. Keyed and compared by resolved paths
+        // (RepoKey, Real): two workspaces reaching one repository through different paths — a
+        // symlink, a junction — are still one group.
+        var groups = new List<(string Repo, List<int> Members)>();
         for (var i = 0; i < workspacePaths.Count; i++)
         {
             var set = sets[i];
-            var own = set?.Worktrees.FirstOrDefault(t => GitWorktreeScanner.SameFolder(t.Path, workspacePaths[i]));
+            var own = set is null ? null : SelfOf(set, workspacePaths[i]);
             rows[i] = new WorktreeRow(own?.Label ?? "", -1, Array.Empty<GitWorktreeInfo>());
-            if (set is null) continue;
-            var group = groups.FirstOrDefault(g => GitWorktreeScanner.SameFolder(g.Main, set.MainPath));
-            if (group.Members is null) groups.Add((set.MainPath, new List<int> { i }));
+            if (set is null || own is null) continue;
+            var group = groups.FirstOrDefault(g => GitWorktreeScanner.SamePath(g.Repo, set.RepoKey));
+            if (group.Members is null) groups.Add((set.RepoKey, new List<int> { i }));
             else group.Members.Add(i);
         }
 
-        foreach (var (main, members) in groups)
+        foreach (var (_, members) in groups)
         {
-            var host = members.FirstOrDefault(i => GitWorktreeScanner.SameFolder(workspacePaths[i], main), members[0]);
+            // The main tree hosts its repository; without it, the first listed tree does.
+            var host = members.FirstOrDefault(i => SelfOf(sets[i]!, workspacePaths[i])!.IsMain, members[0]);
+            var hostReal = SelfOf(sets[host]!, workspacePaths[host])!.Real;
             var children = sets[host]!.Worktrees
-                .Where(t => !GitWorktreeScanner.SameFolder(t.Path, workspacePaths[host]))
+                .Where(t => !GitWorktreeScanner.SamePath(t.Real, hostReal))
                 .ToList();
             rows[host] = rows[host] with { Children = children };
             foreach (var i in members)
@@ -51,4 +55,7 @@ public static class WorktreeNesting
         }
         return rows;
     }
+
+    private static GitWorktreeInfo? SelfOf(GitWorktreeSet set, string path) =>
+        set.Self ?? set.Worktrees.FirstOrDefault(t => GitWorktreeScanner.SameFolder(t.Path, path));
 }
