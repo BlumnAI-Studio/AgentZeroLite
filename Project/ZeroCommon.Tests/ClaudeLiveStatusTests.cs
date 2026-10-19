@@ -85,18 +85,22 @@ public sealed class ClaudeLiveStatusTests : IDisposable
     [Fact]
     public void Without_a_pid_a_folder_match_counts_only_when_it_is_unambiguous()
     {
-        WriteStatus(200, "busy", cwd: @"C:\work");
-        WriteStatus(901, "busy", cwd: @"C:\work");   // a claude in some other app's terminal — not below us
+        // A native path: the workspace keeps the folder as typed (trailing separator), Claude writes it bare.
+        var work = Path.Combine(Path.GetTempPath(), "aztest-work");
+        WriteStatus(200, "busy", cwd: work);
+        WriteStatus(901, "busy", cwd: work);   // a claude in some other app's terminal — not below us
         var src = Source();
         src.BeginPass();
 
-        Assert.Equal(AgentActivity.Working, src.StatusOf("a", null, @"C:\work\", onlyAgentTabInFolder: true)!.Activity);
-        Assert.Null(Source().StatusOf("b", null, @"C:\work", onlyAgentTabInFolder: false));
+        Assert.Equal(AgentActivity.Working, src.StatusOf("a", null, work + Path.DirectorySeparatorChar, onlyAgentTabInFolder: true)!.Activity);
+        var notUnique = Source();
+        notUnique.BeginPass();
+        Assert.Null(notUnique.StatusOf("b", null, work, onlyAgentTabInFolder: false));
 
-        WriteStatus(400, "idle", cwd: @"C:\work");   // two of ours in one folder: which is which is unknowable
+        WriteStatus(400, "idle", cwd: work);   // two of ours in one folder: which is which is unknowable
         var two = Source();
         two.BeginPass();
-        Assert.Null(two.StatusOf("c", null, @"C:\work", onlyAgentTabInFolder: true));
+        Assert.Null(two.StatusOf("c", null, work, onlyAgentTabInFolder: true));
     }
 
     // ── the tracker ──────────────────────────────────────────────────────────
