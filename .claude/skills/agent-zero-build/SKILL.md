@@ -129,6 +129,21 @@ If git status has other unstaged files at this point, something
 unexpected happened between Step 1 and here. Do not silently sweep
 them into the bump commit — stop and show the user.
 
+## Step 2.5 — Multi-OS pre-check (on request, before the release tag)
+
+`avalonia-build.yml` (Windows + macOS build and self-test) no longer runs on every push; it
+runs for a `ci-*` tag, a `v*` tag, or a manual run. Before tagging a release, push a
+lightweight check tag for the commit you are about to release and wait for it:
+
+```bash
+git tag ci-<X.Y.Z> && git push origin ci-<X.Y.Z>
+gh run watch $(gh run list --workflow=avalonia-build.yml --limit 1 --json databaseId --jq '.[0].databaseId') --exit-status
+```
+
+Green → continue to Step 3. Red → fix on main first; do not tag `v<X.Y.Z>` over a failing
+check (v0.25.7 was tagged before the macOS job ran and it then failed on a /var →
+/private/var symlink). The `ci-*` tag can be deleted afterwards (`git push origin :ci-<X.Y.Z>`).
+
 ## Step 3 — Create the annotated tag and push it
 
 Always an **annotated** tag (`-a`), never lightweight. The tag
