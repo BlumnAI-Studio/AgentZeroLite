@@ -274,6 +274,28 @@ Product features 두 줄 → Submit for certification. 인증은 제출 당일 �
 끝난 것을 확인한 뒤 제출했다. 같은 날 GitHub 릴리스 `v0.25.6`도 찍어 버전을 맞췄다. 패키지 157 MB(에디터·TextMate
 문법·`libonigwrap`·Markdig 약 8 MB 증가). 업로드 45초, Save 바로 열림, 첫 Submit 클릭에 In certification.
 
+### 9차 제출 — 다섯 번째 업데이트 (1.25.7.0, 2026-10-19)
+
+내용: Claude Code / Codex 터미널이 열릴 때 그 에이전트가 폴더에 기록해 둔 세션을 골라 이어 열기(최신이 위,
+"다시 묻지 않기"는 에이전트별), 사이드바의 git 워크트리(워크스페이스 아래 중첩 — Claude Code의
+`.claude/worktrees`, Codex의 `$CODEX_HOME/worktrees` 포함), 작업 폴더에 닿지 못한 터미널은 홈 폴더에서 시작.
+Submission 6. 새 권한·네트워크 흐름은 없지만 다른 프로그램의 파일(`.claude`·`.codex` 세션 파일, 워크스페이스의
+`.git`)을 PC 안에서 읽으므로 개인정보 처리방침에 문단을 하나 더하고(`doc-v1.44.0`) 페이지 반영을 확인한 뒤 제출했다.
+같은 날 GitHub 릴리스 `v0.25.7`. 패키지 157 MB, 업로드 약 60초, "Analyzing package"에서 멈추지 않음, 첫 Save에
+1.25.6.0이 빠지고 1.25.7.0 하나만 Validated, 첫 Submit 클릭에 In certification.
+
+이번에 확인한 것:
+
+- **Store listings의 언어 링크는 접혀 있다.** 개요의 "Languages supported in packages"를 펼쳐야 English 링크
+  (`submissions/<id>/listings?languageid=4`)가 DOM에 생긴다.
+- **Product features 입력은 10칸만 보이고, 11번째부터는 "Add more"로 추가한다.** 이 "Add more"는 button도 link도
+  아닌 텍스트라 역할로는 잡히지 않는다(`getByText('Add more', { exact: true })`). 입력 id는 `feature-<n>`,
+  What's new는 `releaseNotes`.
+- **태그 뒤에 macOS CI가 버그를 찾았다.** `/var/folders`가 `/private/var/folders`의 심볼릭 링크라 git이 기록한
+  경로와 워크스페이스 경로 문자열이 달라 워크트리를 못 찾았다. Windows에는 해당 경로가 없어 동작이 같으므로
+  패키지와 Windows 릴리스는 그대로 두고 수정만 main에 올렸다(f8e87da, 다음 릴리스에 포함). 릴리스 태그 전에
+  `Avalonia host — build & self-test`(macOS 포함)가 초록인지 먼저 보는 편이 낫다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
