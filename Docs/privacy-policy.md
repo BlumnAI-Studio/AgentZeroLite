@@ -1,6 +1,6 @@
 # AgentZero Lite — Privacy Policy
 
-_Last updated: 2026-10-17._
+_Last updated: 2026-10-19._
 
 Published page: <https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html>
 (this Markdown file is its source — keep the two in step).
@@ -24,6 +24,11 @@ encrypted at rest with Windows DPAPI (tied to your Windows account).
   when you uninstall the app.
 - **Edition installed from GitHub:** under `%LOCALAPPDATA%\AgentZeroLite\`. Uninstalling
   does not delete this folder; you can delete it yourself.
+
+**Files of other programs the app reads, on your computer only:** to offer resuming a
+conversation, the app lists the session files Claude Code and Codex keep in your user
+folder (`.claude`, `.codex`); to show git worktrees, it reads a workspace's `.git`
+folder. Nothing from them leaves your computer.
 
 ## When the app connects to the internet
 

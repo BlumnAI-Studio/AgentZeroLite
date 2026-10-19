@@ -24,7 +24,14 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.6.0 — submission 8)
+## What's new in this version (1.25.7.0 — submission 9)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Resume an agent session: when a Claude Code or Codex terminal opens, pick one of the conversations that agent already has for this folder (newest first, with its title and first prompt) — or start a new one. "Don't ask again" turns the question off per agent; Settings → Terminal turns it back on.
+- Git worktrees in the sidebar: a workspace shows its branch and lists the repository's other worktrees under it — including the ones Claude Code (.claude/worktrees) and Codex create — so you can switch to one, or open it, with a click. New worktrees appear on their own.
+- Fix: a terminal whose folder cannot be reached now starts in your home folder.
+
+## What's new in version 1.25.6.0 (submission 8)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Code view: browse the workspace's files in a new CODE tab of the bottom panel, next to the bot (📄 on the left bar or Ctrl+Alt+E). Syntax highlighting with VS Code's grammars, images, and Markdown shown rendered — with Mermaid diagrams — or as source. It can float in its own window too.
@@ -56,6 +63,8 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
 - Active-sessions sidebar showing which agent is working, waiting for you or done
 - Code view: the workspace's files with VS Code syntax highlighting, Markdown rendered with Mermaid diagrams
+- Resume a Claude Code or Codex conversation when its terminal opens
+- Git worktrees listed under their workspace, including those Claude Code and Codex create
 - No account, no telemetry — settings and history stay on your PC
 - Open source
 
