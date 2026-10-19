@@ -48,6 +48,26 @@ public static class CliToolMention
         return false;
     }
 
+    /// <summary>
+    /// Where the first command word naming <paramref name="tool"/> ends in
+    /// <paramref name="text"/> (the index just past it), or -1 — the same token-and-stem
+    /// rule as <see cref="Mentions(string?, string)"/>, for a caller that has to put
+    /// something right after the command (<c>claude</c> → <c>claude --resume …</c>).
+    /// </summary>
+    public static int FindCommandEnd(string? text, string tool)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return -1;
+        var i = 0;
+        while (i < text.Length)
+        {
+            while (i < text.Length && Array.IndexOf(Separators, text[i]) >= 0) i++;
+            var start = i;
+            while (i < text.Length && Array.IndexOf(Separators, text[i]) < 0) i++;
+            if (i > start && Mentions(text[start..i], tool)) return i;
+        }
+        return -1;
+    }
+
     /// <summary>Whether either half of a definition names the tool.</summary>
     public static bool Mentions(string? exePath, string? arguments, string tool) =>
         Mentions(exePath, tool) || Mentions(arguments, tool);

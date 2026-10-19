@@ -267,6 +267,13 @@
                         <TextBlock Classes="lbl" Grid.Row="5" Text="" />
                         <CheckBox Grid.Row="5" Grid.Column="1" Content="WebGL renderer (applies to terminals opened afterwards)" IsChecked="{Binding UseWebGl}" />
                     </Grid>
+                    <TextBlock Classes="h1" Text="Session resume" Margin="0,16,0,0" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="When a Claude or Codex terminal starts, list the sessions that agent already recorded for the workspace folder (newest first) and offer to reopen one. Turned off by the dialog's &quot;Don't ask again&quot;; tick here to ask again." />
+                    <StackPanel Spacing="4" Margin="0,8,0,0">
+                        <CheckBox Content="Ask to resume a Claude session (claude --resume)" IsChecked="{Binding AskResumeClaude}" />
+                        <CheckBox Content="Ask to resume a Codex session (codex resume)" IsChecked="{Binding AskResumeCodex}" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
                         <Button Content="Apply and save" Command="{Binding SaveTerminalCommand}" />
                     </StackPanel>

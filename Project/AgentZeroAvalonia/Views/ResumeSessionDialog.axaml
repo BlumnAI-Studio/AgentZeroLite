@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="using:AgentZeroAvalonia.Views"
+        x:Class="AgentZeroAvalonia.Views.ResumeSessionDialog"
+        Title="Resume session"
+        Icon="avares://AgentZeroLite/Assets/agentzero.ico"
+        Width="640" Height="460" MinWidth="460" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True" ShowInTaskbar="False"
+        Background="{DynamicResource CyberBgPanel}">
+
+    <!-- Asked before a Claude / Codex tab starts: reopen one of the sessions the agent
+         already recorded for this folder (newest first), or start a new one. -->
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10">
+            <TextBlock x:Name="HeadingText" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+            <TextBlock x:Name="WhereText" FontSize="11" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="NewButton" Content="New session" />
+                <Button x:Name="ResumeButton" Classes="accent" Content="Resume selected" IsDefault="True" />
+            </StackPanel>
+            <CheckBox x:Name="DontAskBox" VerticalAlignment="Center" FontSize="12" />
+        </DockPanel>
+
+        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Background="{DynamicResource CyberBgDeep}">
+            <ListBox x:Name="SessionList" Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="v:ResumeSessionItem">
+                        <Grid ColumnDefinitions="*,Auto" Margin="2,3">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Detail}" IsVisible="{Binding HasDetail}" FontSize="11"
+                                           Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding When}" FontSize="11" Foreground="{DynamicResource CyberTealBrush}" HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding Meta}" FontSize="10" FontFamily="{DynamicResource MonoFont}"
+                                           Foreground="{DynamicResource TextDim}" HorizontalAlignment="Right" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</Window>

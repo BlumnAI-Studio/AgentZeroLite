@@ -14,13 +14,15 @@ namespace Agent.Common.Agents;
 public static class ClaudeSessionLocator
 {
     /// <summary>
-    /// Slugs a cwd the way Claude Code names its <c>projects/</c> subfolders:
-    /// path separators and the drive colon become '-' (e.g.
-    /// <c>C:\code\psmon\CodeScan</c> → <c>C--code-psmon-CodeScan</c>).
+    /// Slugs a cwd the way Claude Code names its <c>projects/</c> subfolders: every
+    /// character that is not an ASCII letter or digit becomes '-' (e.g.
+    /// <c>C:\code\psmon\CodeScan</c> → <c>C--code-psmon-CodeScan</c>,
+    /// <c>…\.claude\worktrees</c> → <c>…--claude-worktrees</c>). Separators alone were not
+    /// enough: a path with a dot, an underscore, a space or Hangul in it was never found.
     /// </summary>
     public static string Slug(string cwd)
     {
-        var chars = (cwd ?? "").Select(c => c is '\\' or '/' or ':' ? '-' : c).ToArray();
+        var chars = (cwd ?? "").Select(c => c is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') ? c : '-').ToArray();
         return new string(chars);
     }
 

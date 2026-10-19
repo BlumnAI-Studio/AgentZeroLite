@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Agent.Common;
+using Agent.Common.Agents;
 using Agent.Common.Data;
 using Agent.Common.Data.Entities;
 using Agent.Common.Llm;
@@ -709,6 +710,18 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _themeName = TerminalThemeCatalog.DefaultName;
     [ObservableProperty] private string _terminalStatus = "";
 
+    /// <summary>Ask which earlier session to reopen when a Claude / Codex tab starts (<see cref="AgentResumeSettings"/>).</summary>
+    [ObservableProperty] private bool _askResumeClaude = true;
+    [ObservableProperty] private bool _askResumeCodex = true;
+
+    /// <summary>Re-read the resume questions — the session dialog's "don't ask again" writes the file behind this page.</summary>
+    public void ReloadResumeSettings()
+    {
+        var r = AgentResumeSettingsStore.Load();
+        AskResumeClaude = r.AskClaude;
+        AskResumeCodex = r.AskCodex;
+    }
+
     private void LoadTerminal()
     {
         TerminalSettings s;
@@ -719,6 +732,7 @@ public partial class SettingsViewModel : ObservableObject
         CursorBlink = s.CursorBlink;
         UseWebGl = s.UseWebGlRenderer;
         ThemeName = TerminalThemeCatalog.IsPreset(s.ThemeName) ? s.ThemeName : TerminalThemeCatalog.DefaultName;
+        ReloadResumeSettings();
     }
 
     /// <summary>Clamp and default the edited fields into a settings object (pure — the tests pin it).</summary>
@@ -743,6 +757,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             var s = BuildTerminalSettings(FontFamily, (int)(FontSize ?? 14), (double)(LineHeight ?? 1.0m), CursorBlink, UseWebGl, ThemeName);
             TerminalSettingsStore.Save(s);
+            AgentResumeSettingsStore.Save(new AgentResumeSettings { AskClaude = AskResumeClaude, AskCodex = AskResumeCodex });
             FontSize = s.FontSize;
             LineHeight = (decimal)s.LineHeight;
             FontFamily = s.FontFamily;

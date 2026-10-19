@@ -5,6 +5,8 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Agent.Common;
+using Agent.Common.Agents;
+using Agent.Common.Data.Entities;
 using Agent.Common.Services;
 using AgentZeroAvalonia.Layout;
 using AgentZeroAvalonia.Security;
@@ -492,6 +494,101 @@ public partial class TerminalsView : UserControl
             AppLogger.Log($"[Terminals] cannot plan '{def.Name}': {error}");
             return;
         }
+
+        // Claude / Codex: offer the sessions the agent recorded for this folder before its
+        // process starts. The control is already registered, so a second EnsureStarted
+        // for this tab while the question is open is a no-op.
+        if (!def.IsRemote && AgentCliTools.Match(def) is { } tool && AgentSessionCatalog.Supports(tool)
+            && AgentResumeSettingsStore.Load().Asks(tool))
+        {
+            _ = LaunchAfterResumeChoiceAsync(ws, tab, control, def, spec, tool);
+            return;
+        }
+        Launch(ws, tab, control, def, spec);
+    }
+
+    /// <summary>One resume question on screen at a time — restoring several agent tabs at startup queues them.</summary>
+    private static readonly SemaphoreSlim ResumeQuestion = new(1, 1);
+
+    private async Task LaunchAfterResumeChoiceAsync(WorkspaceViewModel ws, TerminalTabViewModel tab,
+        XtermWebViewTerminalControl control, CliDefinition def, TerminalLaunchSpec spec, AgentCliTool tool)
+    {
+        bool StillOurs() => _controls.TryGetValue(tab, out var c) && ReferenceEquals(c, control);
+
+        var launch = spec;
+        try
+        {
+            var sessions = await Task.Run(() => AgentSessionCatalog.List(tool, ws.DirectoryPath, spec.Env));
+            if (sessions.Count > 0 && StillOurs())
+            {
+                ResumeChoice? choice = null;
+                tab.HealthText = "choose a session";
+                await ResumeQuestion.WaitAsync();
+                try
+                {
+                    if (StillOurs() && await DialogOwnerAsync() is { } owner)
+                    {
+                        var dialog = new ResumeSessionDialog(tool.Name, $"{ws.DisplayName}/{tab.Title} · {ws.DirectoryPath}", sessions);
+                        choice = await dialog.ShowDialog<ResumeChoice?>(owner) ?? dialog.Result;
+                    }
+                }
+                finally
+                {
+                    ResumeQuestion.Release();
+                    tab.HealthText = "";
+                }
+
+                if (choice?.DontAskAgain == true)
+                {
+                    var settings = AgentResumeSettingsStore.Load();
+                    settings.SetAsks(tool, false);
+                    AgentResumeSettingsStore.Save(settings);
+                    _vm?.Settings.ReloadResumeSettings();
+                    AppLogger.Log($"[Terminals] resume question for {tool.Name} turned off (don't ask again)");
+                }
+                if (choice?.SessionId is { } id)
+                {
+                    var resumed = AgentResumeLaunch.WithResume(def, tool, id) is { } d
+                        ? TerminalLaunchPlanner.Plan(d, ws.DirectoryPath, AppContext.BaseDirectory, out _)
+                        : null;
+                    if (resumed is not null)
+                    {
+                        launch = resumed;
+                        AppLogger.Log($"[Terminals] {ws.DisplayName}/{tab.Title} resumes {tool.Name} session {id}");
+                    }
+                    else AppLogger.Log($"[Terminals] {ws.DisplayName}/{tab.Title}: could not put a resume of {id} into '{def.Arguments}' — starting new");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError($"[Terminals] resume question for {ws.DisplayName}/{tab.Title} failed — starting new", ex);
+        }
+
+        if (StillOurs()) Launch(ws, tab, control, def, launch);
+    }
+
+    /// <summary>The window a dialog can be modal to — the main window, once it is on screen.</summary>
+    private async Task<Window?> DialogOwnerAsync()
+    {
+        var owner = TopLevel.GetTopLevel(this) as Window
+                    ?? (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (owner is null) return null;
+        if (!owner.IsVisible)
+        {
+            // Tabs restored at startup start before the main window has opened.
+            var opened = new TaskCompletionSource();
+            void OnOpened(object? s, EventArgs e) => opened.TrySetResult();
+            owner.Opened += OnOpened;
+            if (!owner.IsVisible) await opened.Task;
+            owner.Opened -= OnOpened;
+        }
+        return owner;
+    }
+
+    private void Launch(WorkspaceViewModel ws, TerminalTabViewModel tab, XtermWebViewTerminalControl control,
+        CliDefinition def, TerminalLaunchSpec spec)
+    {
         tab.LaunchSpec = spec;
 
         var host = control.StartPty(spec);

@@ -41,6 +41,9 @@ public static class AgentResumeCatalog
     // safe characters (defense against injection via a spoofed id).
     private static readonly Regex SafeId = new(@"^[A-Za-z0-9._\-:/]{1,128}$", RegexOptions.Compiled);
 
+    /// <summary>Whether a session id is safe to put on a launch command line.</summary>
+    public static bool IsSafeId(string? sessionId) => !string.IsNullOrWhiteSpace(sessionId) && SafeId.IsMatch(sessionId);
+
     /// <summary>Finds the resume spec for an agent/tab name, or null.</summary>
     public static ResumeSpec? Lookup(string? agentName)
     {
