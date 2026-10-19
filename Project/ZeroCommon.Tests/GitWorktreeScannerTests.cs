@@ -83,6 +83,48 @@ public sealed class GitWorktreeScannerTests : IDisposable
     }
 
     [Fact]
+    public void Scan_ThroughALinkedPath_StillFindsTheFoldersOwnTree()
+    {
+        // Measured on the macOS runner: /var/folders is /private/var/folders, git records the
+        // resolved path, and comparing strings made every tree read as "not a worktree root".
+        var a = Path.Combine(_root, "repo-feat");
+        FakeRepo(("repo-feat", a, "ref: refs/heads/feat/x"));
+        var alias = Path.Combine(Path.GetTempPath(), "aztest-wt-link-" + Guid.NewGuid().ToString("n"));
+        if (!TryLink(alias, _root)) return;   // no way to make a link here: nothing to prove
+        try
+        {
+            var viaLink = Path.Combine(alias, "repo-feat");
+            var set = GitWorktreeScanner.Scan(viaLink);
+
+            Assert.NotNull(set);
+            // The folder's own entry carries the path as the workspace names it.
+            Assert.Contains(set!.Worktrees, w => !w.IsMain && GitWorktreeScanner.SameFolder(w.Path, viaLink));
+            Assert.Equal(2, set.Worktrees.Count);
+        }
+        finally
+        {
+            try { Directory.Delete(alias); } catch { }
+        }
+    }
+
+    /// <summary>A directory symlink, or on Windows without the privilege a junction.</summary>
+    private static bool TryLink(string link, string target)
+    {
+        try { Directory.CreateSymbolicLink(link, target); return true; }
+        catch { }
+        if (!OperatingSystem.IsWindows()) return false;
+        try
+        {
+            var psi = new ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{target}\"")
+                { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            using var p = Process.Start(psi)!;
+            p.WaitForExit(10_000);
+            return p.ExitCode == 0 && Directory.Exists(link);
+        }
+        catch { return false; }
+    }
+
+    [Fact]
     public void Scan_LeavesOutATreeDeletedWithoutRemove()
     {
         var gone = Path.Combine(_root, "gone");

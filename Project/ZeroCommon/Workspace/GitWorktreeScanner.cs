@@ -18,7 +18,7 @@ public sealed record GitWorktreeInfo(string Path, string? Branch, string? Head, 
     {
         get
         {
-            var plain = Branch ?? (Head is { Length: > 0 } h ? "(" + h + ")" : System.IO.Path.GetFileName(Path));
+            var plain = Branch ?? (Head is { Length: > 0 } h ? "(" + h + ")" : WorktreeOrigins.FolderName(Path));
             return Origin == WorktreeOrigin.Codex && Branch is null
                 ? $"codex {WorktreeOrigins.CodexId(Path)} {plain}".Trim()
                 : plain;
@@ -34,7 +34,7 @@ public sealed record GitWorktreeInfo(string Path, string? Branch, string? Head, 
     {
         get
         {
-            var folder = System.IO.Path.GetFileName(Path);
+            var folder = WorktreeOrigins.FolderName(Path);
             return Origin == WorktreeOrigin.Codex ? $"{folder}-codex-{WorktreeOrigins.CodexId(Path)}" : folder;
         }
     }
@@ -67,6 +67,13 @@ public static class WorktreeOrigins
                 return WorktreeOrigin.Codex;
         }
         return WorktreeOrigin.Git;
+    }
+
+    /// <summary>The last segment of a path, split on both separators.</summary>
+    public static string FolderName(string path)
+    {
+        var parts = Segments(path);
+        return parts.Length == 0 ? "" : parts[^1];
     }
 
     /// <summary>The Codex pool's id folder (<c>c14b</c> in <c>…/worktrees/c14b/AgentZeroLite</c>), or "".</summary>
@@ -119,10 +126,15 @@ public static class GitWorktreeScanner
         try
         {
             var root = Normalize(folder);
-            var common = CommonDirOf(root);
+            var (common, ownAdmin) = CommonDirOf(root);
             if (common is null) return null;
 
-            var mainPath = Normalize(Path.GetDirectoryName(common) ?? common);
+            // Which tree is the folder itself is decided by structure (its .git is the common dir,
+            // or names an admin folder), never by comparing path strings: git records resolved
+            // paths, and on macOS /var/folders/… is /private/var/folders/… — measured, the string
+            // check found no match and every workspace there read as "not a worktree root". The
+            // folder's own entry keeps the path as the workspace names it.
+            var mainPath = ownAdmin is null ? root : Normalize(Path.GetDirectoryName(common) ?? common);
             var list = new List<GitWorktreeInfo>();
             var (mainBranch, mainHead) = ReadHead(Path.Combine(common, "HEAD"));
             // A bare repository has no main working tree to list.
@@ -145,13 +157,14 @@ public static class GitWorktreeScanner
                     // until `git worktree prune`; there is nothing to switch to.
                     if (tree is null || !Directory.Exists(tree)) continue;
                     var (branch, head) = ReadHead(Path.Combine(admin, "HEAD"));
-                    linked.Add(new GitWorktreeInfo(Normalize(tree), branch, head, IsMain: false));
+                    var own = ownAdmin is not null && string.Equals(Path.GetFileName(admin), Path.GetFileName(ownAdmin), StringComparison.Ordinal);
+                    linked.Add(new GitWorktreeInfo(own ? root : Normalize(tree), branch, head, IsMain: false));
                 }
                 list.AddRange(linked.OrderBy(w => w.Path, StringComparer.OrdinalIgnoreCase));
             }
 
-            // The folder must be one of the trees (not a subfolder of one).
-            if (!list.Any(w => SamePath(w.Path, root))) return null;
+            // A linked folder whose admin entry was not listed (half-removed) is not a tree to show.
+            if (!list.Any(w => ReferenceEquals(w.Path, root) || SamePath(w.Path, root))) return null;
             return new GitWorktreeSet(mainPath, list);
         }
         catch
@@ -160,29 +173,33 @@ public static class GitWorktreeScanner
         }
     }
 
-    /// <summary>The repository's common dir when <paramref name="root"/> is a working tree root, else null.</summary>
-    private static string? CommonDirOf(string root)
+    /// <summary>
+    /// The repository's common dir when <paramref name="root"/> is a working tree root (null
+    /// otherwise — a subfolder has no .git of its own), and for a linked tree the admin folder
+    /// its .git file names (null for the main tree).
+    /// </summary>
+    private static (string? Common, string? OwnAdmin) CommonDirOf(string root)
     {
         var dotGit = Path.Combine(root, ".git");
-        if (Directory.Exists(dotGit)) return Normalize(dotGit);
-        if (!File.Exists(dotGit)) return null;
+        if (Directory.Exists(dotGit)) return (Normalize(dotGit), null);
+        if (!File.Exists(dotGit)) return (null, null);
 
         // Linked tree: ".git" is "gitdir: <common>/worktrees/<name>".
         var line = File.ReadLines(dotGit).FirstOrDefault()?.Trim() ?? "";
-        if (!line.StartsWith("gitdir:", StringComparison.Ordinal)) return null;
+        if (!line.StartsWith("gitdir:", StringComparison.Ordinal)) return (null, null);
         var admin = line["gitdir:".Length..].Trim();
         if (!Path.IsPathRooted(admin)) admin = Path.GetFullPath(Path.Combine(root, admin));
-        if (!Directory.Exists(admin)) return null;
+        if (!Directory.Exists(admin)) return (null, null);
 
         var commondirFile = Path.Combine(admin, "commondir");
         if (File.Exists(commondirFile))
         {
             var rel = File.ReadAllText(commondirFile).Trim();
             if (rel.Length > 0)
-                return Normalize(Path.IsPathRooted(rel) ? rel : Path.GetFullPath(Path.Combine(admin, rel)));
+                return (Normalize(Path.IsPathRooted(rel) ? rel : Path.GetFullPath(Path.Combine(admin, rel))), admin);
         }
         // Without commondir (a submodule's gitdir, say) this is not a linked worktree.
-        return null;
+        return (null, null);
     }
 
     private static (string? Branch, string? Head) ReadHead(string headFile)
