@@ -16,7 +16,7 @@ namespace Agent.Common.Services;
 /// pushes a viewport snapshot (<see cref="SetScreenSnapshot"/>) and this class serves
 /// the last one.</para>
 /// </summary>
-public sealed class XtermTerminalSession : ITerminalSession, ITerminalTitleSource, IDisposable
+public sealed class XtermTerminalSession : ITerminalSession, ITerminalTitleSource, ITerminalProcessSource, IDisposable
 {
     private readonly IPtyHost _host;
     private readonly string _sessionId;
@@ -72,6 +72,9 @@ public sealed class XtermTerminalSession : ITerminalSession, ITerminalTitleSourc
     public string? WindowTitle { get; private set; }
 
     public void SetWindowTitle(string? title) => WindowTitle = string.IsNullOrEmpty(title) ? null : title;
+
+    /// <summary>The PTY's child process (see <see cref="IPtyHost.ProcessId"/>).</summary>
+    public int? ProcessId => _host.ProcessId;
 
     public int OutputLength => _console.Length;
 

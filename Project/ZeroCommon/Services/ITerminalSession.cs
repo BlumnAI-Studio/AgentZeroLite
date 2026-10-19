@@ -129,3 +129,14 @@ public interface ITerminalTitleSource
     /// <summary>The last title the program set, or null when it never set one.</summary>
     string? WindowTitle { get; }
 }
+
+/// <summary>
+/// A session that knows the process it started. Agent-state detection walks that process's
+/// descendants to find an agent CLI (claude.exe) and read the status the agent itself writes —
+/// a better answer than the screen. Optional, like <see cref="ITerminalTitleSource"/>.
+/// </summary>
+public interface ITerminalProcessSource
+{
+    /// <summary>The PTY's child process id, or null when unknown.</summary>
+    int? ProcessId { get; }
+}

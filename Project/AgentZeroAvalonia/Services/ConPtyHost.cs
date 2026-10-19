@@ -53,6 +53,9 @@ internal sealed class ConPtyHost : IPtyHost
 
     public bool IsRunning => _running;
 
+    /// <summary>The process CreateProcess started in the pseudo-console (the shell).</summary>
+    public int? ProcessId { get; private set; }
+
 
     /// <summary>Diagnostic breadcrumb of the last Start() — HRESULTs, sizes, PID, last errors.</summary>
     public string Diagnostics { get; private set; } = "";
@@ -172,6 +175,7 @@ internal sealed class ConPtyHost : IPtyHost
             if (!ok)
                 throw new InvalidOperationException($"CreateProcess failed: {Marshal.GetLastWin32Error()}");
 
+            ProcessId = procInfo.dwProcessId;
             _processHandle = new SafeFileHandle(procInfo.hProcess, ownsHandle: true);
             _threadHandle = new SafeFileHandle(procInfo.hThread, ownsHandle: true);
 

@@ -18,9 +18,11 @@ public static class AgentManifestCatalog
     /// <summary>Claude Code.</summary>
     public static AgentManifest Claude { get; } = new("claude", new DetectRule[]
     {
-        // Braille spinner in the OS window title → working.
+        // A spinner leading the OS window title → working. Older builds spun a braille glyph;
+        // 2.1.283 (measured 2026-10-19) shows "◐ Claude Code" while busy and "✳ <task title>" at
+        // rest — ✳ is the resting mark, so it stays out of the set.
         new("osc_title_spinner", AgentActivity.Working, 1100, ScreenRegion.OscTitle,
-            Rx(@"[⠀-⣿]")),
+            Rx(@"[⠀-⣿]", @"^\s*[◐◓◑◒]")),
         // Approval / confirmation form → blocked.
         new("blocked_confirm", AgentActivity.Blocked, 980, ScreenRegion.BottomLines,
             new MatchGroup

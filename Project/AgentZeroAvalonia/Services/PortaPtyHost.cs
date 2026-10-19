@@ -35,6 +35,9 @@ internal sealed class PortaPtyHost : IPtyHost
     public bool IsRunning => _running;
     public string Diagnostics { get; private set; } = "";
 
+    /// <summary>The process forkpty started (the shell).</summary>
+    public int? ProcessId => _conn?.Pid;
+
     public void Start(TerminalLaunchSpec spec, int cols, int rows)
     {
         if (_conn is not null) throw new InvalidOperationException("PTY host already started.");

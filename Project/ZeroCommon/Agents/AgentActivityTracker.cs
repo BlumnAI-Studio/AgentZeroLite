@@ -36,6 +36,14 @@ public sealed class AgentActivityTracker
     public int WorkingGracePasses { get; init; } = 1;
 
     /// <summary>
+    /// What agents say about themselves, asked before the screen rules (null: screen only).
+    /// The default reads Claude Code's own status files (<see cref="ClaudeLiveStatusSource"/>):
+    /// it does not depend on where the spinner is drawn, and it knows a question to the user
+    /// from a finished turn. A terminal it has no answer for keeps the screen rules.
+    /// </summary>
+    public IAgentLiveStatusSource? LiveStatus { get; init; } = new ClaudeLiveStatusSource();
+
+    /// <summary>
     /// One detection pass over every started terminal. <paramref name="active"/> is the
     /// focused (group, tab) — focusing a finished agent marks it seen. Returns true when any
     /// state or seen flag changed since the previous pass (so the UI repaints only then).
@@ -62,10 +70,15 @@ public sealed class AgentActivityTracker
     private bool UpdateCore(IReadOnlyList<ICliGroupInfo> groups, (int Group, int Tab)? active)
     {
         var live = new HashSet<string>();
+        LiveStatus?.BeginPass();
 
         for (int gi = 0; gi < groups.Count; gi++)
         {
             var tabs = groups[gi].TabsView;
+            // Without a pid, a status file is matched to a tab by folder — only safe when no
+            // other tab in this workspace could be running the same agent.
+            var agentTabs = tabs.Count(t => t.IsTerminalStarted && t.Session is not Services.ITerminalProcessSource { ProcessId: not null }
+                                            && AgentManifestCatalog.ResolveId(t.Title) == "claude");
             for (int ti = 0; ti < tabs.Count; ti++)
             {
                 var tab = tabs[ti];
@@ -91,7 +104,22 @@ public sealed class AgentActivityTracker
                 // screen detection (the correct default).
                 AgentActivity activity;
                 string? rule;
-                if (AgentIntegrationCatalog.UseScreenDetection(tab.Title, HookInstalled(tab.Title)))
+                var pid = (tab.Session as Services.ITerminalProcessSource)?.ProcessId;
+                var reported = LiveStatus?.StatusOf(key, pid, groups[gi].DirectoryPath,
+                    onlyAgentTabInFolder: agentTabs == 1 && AgentManifestCatalog.ResolveId(tab.Title) == "claude");
+                if (reported is not null)
+                {
+                    // The agent's own word. A turn that was running and now is not is Done —
+                    // the "finished, look at me" the screen rules could only guess at — and it
+                    // stays Done (seen or not) until the next turn starts.
+                    activity = reported.Activity == AgentActivity.Idle
+                               && prev?.Activity is AgentActivity.Working or AgentActivity.Done
+                        ? AgentActivity.Done
+                        : reported.Activity;
+                    rule = reported.Rule;
+                    _quietPasses.Remove(key);
+                }
+                else if (AgentIntegrationCatalog.UseScreenDetection(tab.Title, HookInstalled(tab.Title)))
                 {
                     var manifest = AgentManifestCatalog.ForAgent(tab.Title);
                     var res = AgentStateDetector.Detect(manifest, new ScreenSnapshot(lines, title));
@@ -128,6 +156,7 @@ public sealed class AgentActivityTracker
         {
             _states.Remove(stale);
             _quietPasses.Remove(stale);
+            LiveStatus?.Forget(stale);
         }
 
         var sig = string.Join("|", _states.Values

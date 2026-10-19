@@ -61,7 +61,7 @@ public sealed class AgentActivityTrackerTests
             new Group("ws1", new Tab("bash", a)),
             new Group("ws2", new Tab("not-started", null, started: false), new Tab("zsh", b)),
         };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
 
         Assert.True(tracker.Update(groups, active: (0, 0)));
         Assert.Equal(AgentActivity.Working, tracker.Lookup(0, 0)!.Activity);
@@ -81,7 +81,7 @@ public sealed class AgentActivityTrackerTests
     public void A_closed_terminal_drops_out()
     {
         var a = new Screen("a") { Text = "esc to interrupt" };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(new ICliGroupInfo[] { new Group("ws", new Tab("bash", a)) }, null);
         Assert.NotNull(tracker.Lookup(0, 0));
 
@@ -92,7 +92,7 @@ public sealed class AgentActivityTrackerTests
     [Fact]
     public void Cli_json_matches_the_wpf_agent_state_contract()
     {
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(new ICliGroupInfo[] { new Group("ws", new Tab("배시 \"q\"", new Screen("x") { Text = "continue? (y/n)" })) }, null);
 
         using var doc = JsonDocument.Parse(tracker.ToCliJson());
@@ -158,7 +158,7 @@ public sealed class AgentActivityTrackerGraceTests
     {
         var s = new Screen { Text = Working };
         var groups = new Agent.Common.Module.ICliGroupInfo[] { new Group(s) };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(groups, null);
         Assert.Equal(AgentActivity.Working, tracker.Lookup(0, 0)!.Activity);
 
@@ -174,7 +174,7 @@ public sealed class AgentActivityTrackerGraceTests
     {
         var s = new Screen { Text = Working };
         var groups = new Agent.Common.Module.ICliGroupInfo[] { new Group(s) };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(groups, null);
         foreach (var text in new[] { Idle, Working, Idle })
         {
@@ -189,7 +189,7 @@ public sealed class AgentActivityTrackerGraceTests
     {
         var s = new Screen { Text = Working };
         var groups = new Agent.Common.Module.ICliGroupInfo[] { new Group(s) };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(groups, null);
         s.Text = "Do you want to proceed?\n❯ 1. Yes\nEsc to cancel\n";
         tracker.Update(groups, null);
@@ -200,10 +200,22 @@ public sealed class AgentActivityTrackerGraceTests
     public void The_terminal_title_reaches_the_detector()
     {
         var s = new Screen { Text = Idle, Title = "⠂ Refactor the bridge" };
-        var tracker = new AgentActivityTracker();
+        var tracker = new AgentActivityTracker { LiveStatus = null };   // screen rules only — no real ~/.claude here
         tracker.Update(new Agent.Common.Module.ICliGroupInfo[] { new Group(s) }, null);
         Assert.Equal(AgentActivity.Working, tracker.Lookup(0, 0)!.Activity);
         Assert.Equal("osc_title_spinner", tracker.Lookup(0, 0)!.Rule);
+    }
+
+    [Theory]
+    [InlineData("◐ Claude Code", AgentActivity.Working)]                         // 2.1.283 while busy
+    [InlineData("◓ Ping round-trip time explanation", AgentActivity.Working)]
+    [InlineData("✳ Ping round-trip time explanation", AgentActivity.Idle)]       // the resting mark
+    public void The_current_title_spinner_reads_as_working(string title, AgentActivity expected)
+    {
+        var s = new Screen { Text = Idle, Title = title };
+        var tracker = new AgentActivityTracker { LiveStatus = null };
+        tracker.Update(new Agent.Common.Module.ICliGroupInfo[] { new Group(s) }, null);
+        Assert.Equal(expected, tracker.Lookup(0, 0)!.Activity);
     }
 }
 

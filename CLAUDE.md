@@ -295,7 +295,12 @@ What differs from the WPF host, and why:
 - **ACTIVE SESSIONS** (sidebar): every started terminal across workspaces with its detected agent state —
   `ZeroCommon/Agents/AgentActivityTracker` (moved down from WPF's `AgentStateMonitor`, which wraps it), run on a
   1.5 s UI-thread timer in `MainWindowViewModel.ActiveSessions.cs`. Its record is `TerminalAgentState`, not
-  `AgentTabState` (that name is `AgentStateRollup`'s). Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+  `AgentTabState` (that name is `AgentStateRollup`'s). **For Claude Code the agent's own status file wins over the
+  screen**: every interactive Claude keeps `~/.claude/sessions/<pid>.json` with `status` busy / waiting (+`waitingFor`)
+  / idle; `ClaudeLiveStatusSource` finds the one below the tab's shell (`ITerminalProcessSource.ProcessId` →
+  `Platform/ProcessTable` descendants; a unique folder match when a host gives no pid) and the tracker turns
+  busy → idle into **Done**. Measured on 2.1.283: the file flips within a second of the turn ending, the screen rules
+  ~3 s later and only ever to "idle". No file → the screen rules (whose title spinner now includes `◐◓◑◒`). Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it

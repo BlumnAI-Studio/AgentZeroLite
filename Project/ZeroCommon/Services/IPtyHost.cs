@@ -25,4 +25,10 @@ public interface IPtyHost : IDisposable
 
     /// <summary>One line for the log: what was launched and how it is doing.</summary>
     string Diagnostics { get; }
+
+    /// <summary>
+    /// The process the PTY started (usually a shell), or null when the host cannot tell. Agent
+    /// detection walks its descendants to find the agent CLI running inside the tab.
+    /// </summary>
+    int? ProcessId => null;
 }
