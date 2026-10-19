@@ -293,7 +293,7 @@ Submission 6. 새 권한·네트워크 흐름은 없지만 다른 프로그램�
   What's new는 `releaseNotes`.
 - **태그 뒤에 macOS CI가 버그를 찾았다.** `/var/folders`가 `/private/var/folders`의 심볼릭 링크라 git이 기록한
   경로와 워크스페이스 경로 문자열이 달라 워크트리를 못 찾았다. Windows에는 해당 경로가 없어 동작이 같으므로
-  패키지와 Windows 릴리스는 그대로 두고 수정만 main에 올렸다(f8e87da, 다음 릴리스에 포함). 릴리스 태그 전에
+  패키지와 Windows 릴리스는 그대로 두고 수정만 main에 올렸다(f8e87da, ae76f01 — 경로를 링크까지 풀어서 비교; 다음 릴리스에 포함). 릴리스 태그 전에
   `Avalonia host — build & self-test`(macOS 포함)가 초록인지 먼저 보는 편이 낫다.
 
 ## 참고
