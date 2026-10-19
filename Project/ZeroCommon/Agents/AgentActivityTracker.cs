@@ -41,7 +41,8 @@ public sealed class AgentActivityTracker
     /// it does not depend on where the spinner is drawn, and it knows a question to the user
     /// from a finished turn. A terminal it has no answer for keeps the screen rules.
     /// </summary>
-    public IAgentLiveStatusSource? LiveStatus { get; init; } = new ClaudeLiveStatusSource();
+    public IAgentLiveStatusSource? LiveStatus { get; init; } =
+        new CompositeLiveStatusSource(new ClaudeLiveStatusSource(), new CodexLiveStatusSource());
 
     /// <summary>
     /// One detection pass over every started terminal. <paramref name="active"/> is the
@@ -113,11 +114,22 @@ public sealed class AgentActivityTracker
                     // the "finished, look at me" the screen rules could only guess at — and it
                     // stays Done (seen or not) until the next turn starts.
                     activity = reported.Activity == AgentActivity.Idle
-                               && prev?.Activity is AgentActivity.Working or AgentActivity.Done
+                               && prev?.Activity is AgentActivity.Working or AgentActivity.Blocked or AgentActivity.Done
                         ? AgentActivity.Done
                         : reported.Activity;
                     rule = reported.Rule;
                     _quietPasses.Remove(key);
+
+                    // A record that only knows "a turn is running" (Codex's rollout has no approval
+                    // events) cannot see the turn stop for a question; the screen can, and a
+                    // Blocked screen is a positive signal — it wins over Working.
+                    if (activity == AgentActivity.Working
+                        && AgentStateDetector.Detect(AgentManifestCatalog.ForAgent(tab.Title), new ScreenSnapshot(lines, title))
+                            is { State: AgentActivity.Blocked, StateChanged: true } screen)
+                    {
+                        activity = AgentActivity.Blocked;
+                        rule = screen.MatchedRuleId;
+                    }
                 }
                 else if (AgentIntegrationCatalog.UseScreenDetection(tab.Title, HookInstalled(tab.Title)))
                 {

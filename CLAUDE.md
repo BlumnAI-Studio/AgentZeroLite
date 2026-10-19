@@ -300,7 +300,14 @@ What differs from the WPF host, and why:
   / idle; `ClaudeLiveStatusSource` finds the one below the tab's shell (`ITerminalProcessSource.ProcessId` →
   `Platform/ProcessTable` descendants; a unique folder match when a host gives no pid) and the tracker turns
   busy → idle into **Done**. Measured on 2.1.283: the file flips within a second of the turn ending, the screen rules
-  ~3 s later and only ever to "idle". No file → the screen rules (whose title spinner now includes `◐◓◑◒`). Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+  ~3 s later and only ever to "idle". No file → the screen rules (whose title spinner now includes `◐◓◑◒`).
+  **Codex** has no such file, and its TUI is only a client of a shared `codex app-server` daemon (the turn runs
+  there, measured on 0.162), so `CodexLiveStatusSource` reads the thread's rollout instead: `task_started` →
+  working, `task_complete` / `turn_aborted` → done. The tab's thread is the user thread (not a guardian sub-agent)
+  created in the workspace folder right after the codex process below the tab's shell started (19:27:23 →
+  19:27:24 measured); with several Codex tabs a thread belongs to the TUI that started last before it. Approvals
+  are not in the rollout, so a Blocked screen wins over a reported Working. `CompositeLiveStatusSource` asks
+  Claude's source, then Codex's. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it
@@ -355,7 +362,9 @@ What differs from the WPF host, and why:
   above them. `-cli plugin list|open|call|capture` drives the page; `call` runs `window.zero.invoke` inside
   it, so it is an end-to-end check of shim + bridge + dispatcher.
 - **Local LLM is Windows-only** (LLamaSharp DLLs); macOS uses External providers. Gemma 4's native tool-call syntax is converted to the JSON envelope by `GemmaNativeToolCall` (ZeroCommon, benefits both hosts).
-- CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`) is the per-push check. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
+- CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`) runs **on request,
+  not per push**: a `ci-*` tag (the pre-release check — push `ci-<version>`, wait for green, then tag `v<version>`), every
+  `v*` release tag, or the Run workflow button. macOS GUI checks need a person: `Docs/avalonia-v2/macos-smoke.md`.
 - **Releases ship this host since v0.25.4** (`release.yml`, `v*` tag): `AgentZeroLite-v<ver>-Setup.exe`
   (`installer/AgentZeroLite.iss`, with `wearable\`) and `-win-x64.zip`, marked Latest — the `-osx-arm64.zip` is built
   too but kept as the `macos` artifact until a person has run `macos-smoke.md` on a Mac; a manual run
