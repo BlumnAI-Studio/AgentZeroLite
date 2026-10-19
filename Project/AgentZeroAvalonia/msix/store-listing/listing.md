@@ -24,7 +24,13 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.7.0 — submission 9)
+## What's new in this version (1.25.8.0 — submission 10)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Agent status you can trust: ACTIVE SESSIONS now reads what Claude Code and Codex record about themselves, not only the screen. A working agent stays "working" for the whole turn, a question to you shows as "waiting", and a finished turn shows "done" within a second — until you look at it.
+- Fix: a git worktree opened through a linked folder is recognised and nested under its repository.
+
+## What's new in version 1.25.7.0 (submission 9)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Resume an agent session: when a Claude Code or Codex terminal opens, pick one of the conversations that agent already has for this folder (newest first, with its title and first prompt) — or start a new one. "Don't ask again" turns the question off per agent; Settings → Terminal turns it back on.
@@ -61,7 +67,7 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Built-in assistant that can read and drive your terminals, on a local model or any OpenAI-compatible API
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
-- Active-sessions sidebar showing which agent is working, waiting for you or done
+- Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status
 - Code view: the workspace's files with VS Code syntax highlighting, Markdown rendered with Mermaid diagrams
 - Resume a Claude Code or Codex conversation when its terminal opens
 - Git worktrees listed under their workspace, including those Claude Code and Codex create

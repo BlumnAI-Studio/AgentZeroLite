@@ -26,9 +26,10 @@ encrypted at rest with Windows DPAPI (tied to your Windows account).
   does not delete this folder; you can delete it yourself.
 
 **Files of other programs the app reads, on your computer only:** to offer resuming a
-conversation, the app lists the session files Claude Code and Codex keep in your user
-folder (`.claude`, `.codex`); to show git worktrees, it reads a workspace's `.git`
-folder. Nothing from them leaves your computer.
+conversation and to show whether an agent is working, the app reads the session and status
+files Claude Code and Codex keep in your user folder (`.claude`, `.codex`) and the list of
+running processes (to find which terminal an agent runs in); to show git worktrees, it reads
+a workspace's `.git` folder. Nothing from them leaves your computer.
 
 ## When the app connects to the internet
 
