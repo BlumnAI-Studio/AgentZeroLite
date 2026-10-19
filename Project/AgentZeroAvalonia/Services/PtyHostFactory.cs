@@ -21,7 +21,10 @@ internal static class PtyHostFactory
     /// <summary>Spawn <paramref name="spec"/> at <paramref name="cols"/>×<paramref name="rows"/>. Throws on failure — the caller logs and shows the reason.</summary>
     public static IPtyHost Start(TerminalLaunchSpec spec, int cols, int rows)
     {
-        var cwd = UsableCwd(spec.Cwd);
+        // Unusable folder → the home folder, named explicitly. Passing nothing (or the process's
+        // current directory) meant "wherever the GUI was launched from" — for a GUI started from
+        // a repository checkout, that is the main tree, and a worktree's terminal opened there.
+        var cwd = UsableCwd(spec.Cwd) ?? HomeFolder();
         if (OperatingSystem.IsWindows())
         {
             var host = new ConPtyHost();
@@ -31,11 +34,13 @@ internal static class PtyHostFactory
         if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
         {
             var host = new PortaPtyHost();
-            host.Start(cwd is null ? spec with { Cwd = Environment.CurrentDirectory } : spec, cols, rows);
+            host.Start(spec with { Cwd = cwd }, cols, rows);
             return host;
         }
         throw new PlatformNotSupportedException($"No PTY backend for {Environment.OSVersion}");
     }
+
+    private static string HomeFolder() => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     /// <summary>Budget for the working-folder check, which runs on the UI thread.</summary>
     internal const int CwdProbeMs = 2000;

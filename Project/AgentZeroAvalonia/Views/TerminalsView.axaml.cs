@@ -616,7 +616,7 @@ public partial class TerminalsView : UserControl
         if (SshPasswordWatcher.ArmFor(def, session, SshPasswordVault.Unprotect) is { } autofill)
             _sshAutofill[tab] = autofill;
 
-        AppLogger.Log($"[Terminals] started {ws.DisplayName}/{tab.Title} | {spec.CommandLine}");
+        AppLogger.Log($"[Terminals] started {ws.DisplayName}/{tab.Title} | cwd={spec.Cwd} | {spec.CommandLine}");
     }
 
     /// <summary>Kill and relaunch one tab with the spec it was started with (banner button, context menu).</summary>
