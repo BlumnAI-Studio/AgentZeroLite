@@ -7,16 +7,15 @@ name: Avalonia host — build & self-test
 # (PTY spawn, named-pipe IPC, secret protection, the ZeroCommon suite on macOS).
 
 # Requested, not automatic: it ran on every push to main (a 4-minute Windows + macOS pair per
-# commit, most of them docs or small fixes). Now it runs when asked —
-#   · a `ci-*` tag  — the pre-release check: push e.g. `ci-0.25.8` and wait for green before
-#                     tagging the release (the macOS job has caught what Windows could not);
-#   · a `v*` tag    — beside release.yml, so every release still gets the multi-OS check;
+# commit, most of them docs or small fixes). Now it runs only when asked —
+#   · a `ci-*` tag  — the multi-OS check, e.g. `ci-0.25.8`, when macOS compatibility matters
+#                     (the macOS job has caught what Windows could not);
 #   · the Run workflow button (workflow_dispatch).
+# A `v*` release tag does not run it: release.yml builds and tests the Windows release itself.
 on:
   push:
     tags:
       - 'ci-*'
-      - 'v*'
   workflow_dispatch:
 
 env:

@@ -129,11 +129,12 @@ If git status has other unstaged files at this point, something
 unexpected happened between Step 1 and here. Do not silently sweep
 them into the bump commit — stop and show the user.
 
-## Step 2.5 — Multi-OS pre-check (on request, before the release tag)
+## Step 2.5 — Multi-OS pre-check (optional, only when asked)
 
-`avalonia-build.yml` (Windows + macOS build and self-test) no longer runs on every push; it
-runs for a `ci-*` tag, a `v*` tag, or a manual run. Before tagging a release, push a
-lightweight check tag for the commit you are about to release and wait for it:
+`avalonia-build.yml` (Windows + macOS build and self-test) runs only for a `ci-*` tag or a
+manual run — not per push and not for the release tag. Skip this step unless the user asks
+for the macOS check (or the release changes something macOS-specific). When it is wanted,
+push a lightweight check tag for the commit you are about to release and wait for it:
 
 ```bash
 git tag ci-<X.Y.Z> && git push origin ci-<X.Y.Z>
