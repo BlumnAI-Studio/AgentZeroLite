@@ -482,3 +482,7 @@ Project/AgentOne/native/_cache/
 
 # Microsoft Store MSIX build output (Project/AgentZeroAvalonia/msix/build-msix.ps1)
 /publish-msix/
+
+# macOS Avalonia publish output (dotnet publish -r osx-arm64 -o publish-avalonia/osx-arm64,
+# then macos/build-app.sh → publish-avalonia/AgentZeroLite.app) — the paths release.yml uses.
+/publish-avalonia/
