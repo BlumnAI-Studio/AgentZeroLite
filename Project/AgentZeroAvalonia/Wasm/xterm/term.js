@@ -146,6 +146,32 @@
   var host = document.getElementById('term');
   term.open(host);
 
+  // Korean (and any composing) IME on macOS: WKWebView drops the composition once the
+  // focused helper textarea has a non-zero box, and xterm.js gives it one (the cell size)
+  // in _syncTextArea after every write — i.e. after every echoed keystroke. Measured: with
+  // the shell echoing, 2-Set Korean committed bare jamo ("ㅎ", "ㄱ") and dropped the vowels;
+  // keeping left/top and zeroing the size composes "한글". WebView2 (Windows) is unaffected,
+  // and the composition itself still sizes the textarea while it runs.
+  // Same engine, second trap: xterm.css gives the textarea `white-space: nowrap`, so WebKit
+  // turns a space the IME commits ("글 ") into U+00A0 to keep it — a shell then reads
+  // `git commit -m 한글 메시지` as one word. `pre` keeps it a plain space (measured: a0 → 20).
+  try {
+    var core = term._core;
+    var isMacWebKit = /Mac/.test(navigator.platform || '') && !/Chrome\//.test(navigator.userAgent || '');
+    if (isMacWebKit && core && core.textarea) core.textarea.style.whiteSpace = 'pre';
+    if (isMacWebKit && core && typeof core._syncTextArea === 'function') {
+      var syncTextArea = core._syncTextArea.bind(core);
+      core._syncTextArea = function () {
+        syncTextArea();
+        var ta = core.textarea;
+        if (ta && !(core._compositionHelper && core._compositionHelper.isComposing)) {
+          ta.style.width = '0';
+          ta.style.height = '0';
+        }
+      };
+    }
+  } catch (e) {}
+
   // Renderer: DOM unless the host asked for WebGL (see the WPF copy for the why).
   var renderer = 'dom';
   try {
