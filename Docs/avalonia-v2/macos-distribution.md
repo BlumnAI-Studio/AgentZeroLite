@@ -90,6 +90,14 @@ NOTARY_KEY=.secret/AuthKey_<KEYID>.p8 NOTARY_KEY_ID=<KEYID> NOTARY_ISSUER=<ISSUE
 | 2026-10-21 | `build-app.sh` Developer ID 경로 (375개 파일 개별 서명) | ✅ `valid on disk`, `satisfies its Designated Requirement` |
 | 2026-10-21 | `build-pkg.sh` + `PKG_SIGN_ID` | ✅ Developer ID Installer, 신뢰 타임스탬프 |
 | 2026-10-21 | `notarize.sh` (API 키) — submission `5094d9a2-a4d6-404e-ad73-3237cdaa5151` | ✅ **Accepted**, issues 없음, 스테이플 OK, `spctl`: `source=Notarized Developer ID` |
+| 2026-10-21 | **CI** `release.yml` 수동 실행(`publish=false`, run 39561626354, macos-14) | ✅ 서명 → .pkg → 공증 Accepted → 스테이플. 내려받은 .pkg가 이 맥에서 `spctl` accepted |
+
+### CI (`.github/workflows/release.yml`)
+
+GitHub Secrets: `MACOS_DEVID_APP_P12`·`MACOS_DEVID_INSTALLER_P12`(base64), `MACOS_P12_PASSWORD`, `ASC_KEY_P8`·`ASC_KEY_ID`·
+`ASC_ISSUER_ID`, `APPLE_TEAM_ID`. 있으면 macos 잡이 임시 키체인에 두 ID를 넣고 서명 → `AgentZeroLite-v<ver>-osx-arm64.pkg` →
+공증 → 릴리스에 첨부. 없으면(포크 등) ad-hoc `.app` zip만 워크플로 결과물로. release 잡은 Windows만 성공하면 진행한다.
+`.github/workflows/` 수정을 푸시하려면 gh 토큰에 `workflow` 권한이 필요하다(`gh auth refresh -h github.com -s workflow`).
 
 ### 서명 환경 (이 맥에서 실제로 쓴 구성)
 
