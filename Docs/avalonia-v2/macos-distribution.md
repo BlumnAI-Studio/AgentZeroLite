@@ -10,7 +10,7 @@ Windows 쪽 짝은 `microsoft-store.md`. 서명 일반 지식은 `harness/knowle
 | 경로 | 무엇 | 기능 | 상태 |
 |---|---|---|---|
 | **Developer ID 서명 + 공증** | 지금의 `.pkg`를 Apple 인증서로 서명하고 Apple 공증 티켓을 붙인다. 홈페이지·GitHub Releases 배포 | 제한 없음 | **1단계 — 진행 중** |
-| **Mac App Store** | App Sandbox 안에서 도는 빌드를 App Store Connect에 제출 | 터미널 크게 제한 | 2단계 — 샌드박스 실측 후 판단 |
+| **Mac App Store** | App Sandbox 안에서 도는 빌드를 App Store Connect에 제출 | 예외 엔타이틀먼트로 대부분 동작(§4.3) | 2단계 — **0.25.8 심사 제출(2026-10-21)** |
 
 Mac App Store는 **App Sandbox가 필수**이고, 앱이 띄운 **자식 프로세스는 부모의 샌드박스를 그대로 물려받는다.**
 Windows MSIX의 desktop app breakaway(`DesktopAppBreakaway.cs`) 같은 탈출구가 macOS에는 없다. Apple DTS 답변(포럼
@@ -139,21 +139,47 @@ GitHub Secrets: `MACOS_DEVID_APP_P12`·`MACOS_DEVID_INSTALLER_P12`(base64), `MAC
 | 앱: `selftest ipc` (`-cli`가 쓰는 named pipe) | ❌ no reply over the pipe |
 | 앱: GUI 기동 | ❌ 270 ms 만에 SIGABRT — `Sandbox: deny(1) mach-lookup com.apple.coreservices.launchservicesd`, `[NSApplication sharedApplication]` → `_RegisterApplication` → `abort` (메인 스레드). 같은 엔타이틀먼트의 최소 AppKit 앱은 정상 기동하므로 AgentZero 쪽 원인. 하드닝 런타임 유무·중첩 서명 방식을 바꿔도 같음 |
 
-결론: 샌드박스판에서 AgentZero 터미널이 할 수 있는 것은 **컨테이너 안의 시스템 셸과 ssh**뿐이다. 핵심
-사용처(사용자 폴더에서 claude/codex/git 실행, CLI 설치)는 막히고, `-cli` 자동화도 끊긴다. 사용자가 폴더를
-고르는 권한(`user-selected`)을 넣어도 homebrew 바이너리 실행과 git은 풀리지 않는다.
-App Store판을 만든다면 "SSH 원격 터미널 + AI 모드(외부 LLM) + 플러그인" 같은 **별도 기능 구성**이어야 하고,
-그 전에 GUI 기동 크래시(launchservicesd 조회 거부)부터 해결해야 한다.
+결론(1차 실측): 예외 엔타이틀먼트 없이는 터미널이 컨테이너 안의 시스템 셸과 ssh만 쓸 수 있고, GUI도 기동하지 못했다.
+아래 4.2–4.4에서 둘 다 해결했다.
 
-### 4.2 성립한다면 — 제출 절차
+### 4.2 해결 — GUI 기동, `-cli`, 탭의 HOME (2026-10-21)
 
-1. 위 결론을 보고 App Store판 범위를 정한다.
-2. 그다음: 번들 ID 등록(`asc bundle-ids create --platform MAC_OS`), 앱 레코드(`asc web apps create`), 인증서
-   `MAC_APP_DISTRIBUTION` · `MAC_INSTALLER_DISTRIBUTION`(`asc certificates create`), 프로비저닝 프로파일을
-   `Contents/embedded.provisionprofile`로 넣고, 엔타이틀먼트에 `com.apple.application-identifier` ·
-   `com.apple.developer.team-identifier` 추가 → `asc builds upload --pkg` → 메타데이터·스크린샷 → `asc publish appstore --submit`.
-3. 개인정보 처리방침 URL은 Microsoft Store와 같은 페이지를 쓴다:
-   https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html
+| 문제 | 원인(실측) | 해결 |
+|---|---|---|
+| GUI 270 ms 만에 abort | App Sandbox 프로파일(`application.sb`)에는 `launchservicesd` 조회 규칙이 없다. AppKit을 **실행 시점에 링크**한 앱은 그 전에 연결이 맺어져 정상이고, **나중에 dlopen**하면 `_RegisterApplication`이 abort. 두 줄짜리 프로브로 양쪽 모두 확인. .NET apphost는 AppKit을 링크하지 않는다 | `macos/launcher/` — AppKit을 링크한 네이티브 런처가 apphost를 대신해 `hostfxr_main_startupinfo`(apphost와 같은 호출) |
+| `-cli` 연결 불가 | 컨테이너 tmp 아래 소켓 경로가 Unix 소켓 한도 104바이트 초과 → accept가 200 ms마다 실패 | `CliIpcBridge.ResolvePipeName` — 샌드박스면 컨테이너 홈의 절대 경로(`~/.AgentZeroLite.cli`) |
+| 탭의 `HOME`이 컨테이너 | 시스템이 샌드박스 앱의 HOME을 컨테이너로 바꾼다 → `~/.zshrc`·`~/.claude`를 못 봄 | `TerminalEnvironment.BuildPosix` — 탭 환경에서 실제 홈으로 되돌림(테스트 포함) |
+| 앱 메뉴가 "Avalonia Application" | `Application.Name` 미설정 | `App.axaml`에 `Name="AgentZero Lite"` |
+
+### 4.3 임시 예외 엔타이틀먼트 실측 (`macos/appstore/entitlements.plist`)
+
+`temporary-exception.files.home-relative-path.read-write ["/"]` + `…absolute-path.read-write ["/opt/homebrew/", "/usr/local/"]`:
+
+| 항목 | 결과 |
+|---|---|
+| 사용자 폴더 읽기·쓰기, `~/.claude`, Claude 키체인 항목 | ✅ |
+| node·claude·codex `--version`, `npm -g` 경로 쓰기 | ✅ |
+| `/usr/bin/git` (Xcode CLT 심) | ❌ `xcrun: error: cannot be used within an App Sandbox.` → Homebrew git 필요(설명문에 안내) |
+| `ps` | ❌ → 에이전트 상태 감지 일부 제한 |
+| zsh job control | ❌ `can't set tty pgrp` (tty ioctl 거부). 입력·명령 실행은 정상 |
+| claude·codex **대화형 실행** | ❌ claude: `EPERM open '/tmp/claude-501'`(`/private/tmp` 거부), codex: `Operation not permitted (os error 1)`. **사용자 쪽 문제로 둔다** — AgentZero는 동작하는 터미널을 띄우는 역할(운영자 결정, 2026-10-21) |
+
+### 4.4 등록·제출 기록
+
+- App Store Connect: 번들 ID `com.psmon.agentzerolite`(UL4SVKU9LR), 앱 ID **6825237056**, SKU `agentzerolite-mac`, 기본 언어 en-US.
+- 인증서(API로 발급 가능 — Developer ID와 달리 계정 소유자 제한 없음): Apple Distribution(N533973YS8),
+  Mac Installer Distribution(CU9T288D7T, 키체인 이름 "3rd Party Mac Developer Installer"), 프로파일 MAC_APP_STORE(2J2SZTHSPZ). 모두 2027-10-21 만료.
+- 빌드: `MAS_SIGN_ID=… MAS_PKG_ID=… MAS_PROFILE=… sh macos/appstore/build-appstore.sh <publish> <out> <ver> <build>`
+  (`MAS_SANDBOX_TEST=1`이면 ad-hoc 로컬 실행용). 업로드: `asc builds upload --app 6825237056 --pkg … --version … --build-number …`.
+  - 빌드 1: **ITMS-90296** — `createdump`에 샌드박스 엔타이틀먼트 없음 → 스토어판에서 제거, 보조 실행 파일은 `inherit.entitlements`.
+  - 빌드 2: **VALID**, 암호화 exempt(`ITSAppUsesNonExemptEncryption=false`).
+- 메타데이터(`macos/appstore/listing.md`가 원본, asc로 반영): 부제·설명·키워드·프로모션 문구·지원/마케팅 URL·저작권,
+  카테고리 개발자 도구/유틸리티, 연령 4+(전부 없음), 무료·전 지역, 수동 출시(MANUAL), 심사 연락처·메모(예외 엔타이틀먼트 사유 포함).
+- 웹(Playwright)으로만 된 것: 앱 개인정보 **데이터 수집 안 함** 게시, 콘텐츠 권한 "타사 콘텐츠 없음", EU DSA **비거래자**.
+  대한민국 연락처 확인(이메일, 사업자등록번호 없음)은 Apple 쪽 "문제가 발생했습니다"로 두 번 실패 — 웹에서 재시도 필요.
+- 스크린샷 3장(`macos/appstore/screenshots/`, 1440×900): 샌드박스 테스트 빌드 창(1180×788)을 캡처해 1440×900 캔버스에 배치,
+  알파 채널 제거(업로드가 알파 PNG를 거부). 이 앱은 창 크기를 저장하지 않는다.
+- **2026-10-21 17:46 KST 심사 제출** — submission `38e8bb1c-45f0-4cee-b073-0e7f9089f54a`, 상태 `WAITING_FOR_REVIEW`.
 
 ---
 
