@@ -116,7 +116,7 @@
 ## 7. macOS `.app` — Developer ID 서명·공증 (Avalonia 호스트, M0040)
 
 > 2026-10-21: 스크립트화됨 — `build-app.sh`의 `SIGN_ID` 모드(중첩 Mach-O 개별 서명, `--deep` 미사용) + `macos/notarize.sh`.
-> 절차·Mac App Store 판단은 `Docs/avalonia-v2/macos-distribution.md`가 기준이다. 아래 1의 `--deep` 예시는 구 방식.
+> 절차·Mac App Store 판단은 `Docs/avalonia-v2/macos-distribution.md`가 기준이다. 스토어 심사 결과 대응은 `mac-app-store-review.md`. 아래 1의 `--deep` 예시는 구 방식.
 
 현재 상태: CI(`avalonia-build.yml` macos-14 잡)의 `Project/AgentZeroAvalonia/macos/build-app.sh`가 **ad-hoc 서명**(`codesign --sign -`)까지만
 한다. 다른 Mac에서는 `xattr -dr com.apple.quarantine AgentZeroLite.app` 후 실행(`Docs/avalonia-v2/macos-smoke.md`). Developer ID + 공증은

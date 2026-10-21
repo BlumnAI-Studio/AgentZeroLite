@@ -333,6 +333,12 @@ What differs from the WPF host, and why:
   settings installer create their processes with the desktop-app breakaway policy (`ZeroCommon/Services/
   DesktopAppBreakaway.cs`, applied only when `IsPackagedProcess()`), so npm -g / claude / git write the real
   profile. Packaging, verification and submission history: `Docs/avalonia-v2/microsoft-store.md`.
+- **macOS ships two ways** (`Docs/avalonia-v2/macos-distribution.md`): a Developer ID signed + notarized `.pkg`
+  (`macos/build-app.sh` `SIGN_ID`, `build-pkg.sh`, `notarize.sh`; `release.yml` does it when the `MACOS_DEVID_*` /
+  `ASC_*` secrets exist) and the **Mac App Store** build (`macos/appstore/build-appstore.sh`: App Sandbox, the
+  AppKit-linked `macos/launcher` in place of the apphost — sandboxed, the apphost's late AppKit load aborts the GUI —
+  and temporary file exceptions so tabs can reach the person's home and Homebrew). The App Store review is answered
+  from `harness/knowledge/_shared/mac-app-store-review.md` — when a review result arrives, start there.
 - **MCP servers in AI mode (Avalonia first)** — Settings → MCP / `-cli mcp list|import|refresh|allow|deny|call`,
   stored in `mcp-settings.json` (`ZeroCommon/Mcp`: our own `McpClient` over stdio, Streamable HTTP and the older
   HTTP+SSE; header and env values sealed like the LLM keys). The agent calls an allowed tool as `server.tool`
