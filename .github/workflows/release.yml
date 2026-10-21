@@ -1,17 +1,18 @@
 name: Build & Release
 
-# The official release: the Avalonia host (Project/AgentZeroAvalonia) — released for Windows;
-# macOS is built for testers (artifact) until it has been checked on a Mac.
+# The official release: the Avalonia host (Project/AgentZeroAvalonia) — Windows, and macOS when
+# the signing secrets are present.
 # Up to v0.25.3 this workflow shipped the WPF host; WPF is now the reference build and has
 # its own on-demand workflow (release-wpf.yml) that attaches to an existing release.
 #
 #   windows  → AgentZeroLite-v<ver>-Setup.exe (Inno Setup, installer/AgentZeroLite.iss)
 #              AgentZeroLite-v<ver>-win-x64.zip  (portable)
 #              both include the wearable host (wearable\) — the Microsoft Store edition does not
-#   macos    → AgentZeroLite-v<ver>-osx-arm64.zip (ad-hoc signed .app) as a workflow ARTIFACT only:
-#              the macOS edition has not been checked on a Mac by a person yet
-#              (Docs/avalonia-v2/macos-smoke.md), so it is not attached to the release
-#   release  → one GitHub release with the two Windows files, marked Latest
+#   macos    → AgentZeroLite-v<ver>-osx-arm64.pkg — Developer ID signed + notarized, attached to the
+#              release — when the MACOS_DEVID_* / ASC_* secrets exist (Docs/avalonia-v2/macos-distribution.md);
+#              without them only an ad-hoc .app zip as a workflow artifact
+#   release  → one GitHub release with the two Windows files (+ the macOS .pkg), marked Latest;
+#              a failed macos job does not hold back the Windows release
 #
 # A manual run with publish=false builds and uploads the files as workflow artifacts only —
 # the way to check the installer before tagging.
@@ -130,21 +131,80 @@ jobs:
           chmod +x publish-avalonia/osx-arm64/AgentZeroLite publish-avalonia/osx-arm64/AgentZeroLite.sh
           publish-avalonia/osx-arm64/AgentZeroLite -cli version
           publish-avalonia/osx-arm64/AgentZeroLite -cli selftest all
-      - name: Bundle .app (ad-hoc signed) and zip
+      # Developer ID signing + notarization run only when the secrets are there (a fork, or a repo
+      # without them, still gets the ad-hoc .app). Same identities and scripts as the local flow in
+      # Docs/avalonia-v2/macos-distribution.md: a throwaway keychain holds the two .p12 files, and
+      # its partition list lets codesign/productbuild use the keys without a prompt.
+      - name: Import Developer ID identities
+        id: sign
+        env:
+          APP_P12: ${{ secrets.MACOS_DEVID_APP_P12 }}
+          INSTALLER_P12: ${{ secrets.MACOS_DEVID_INSTALLER_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+        run: |
+          if [ -z "$APP_P12" ] || [ -z "$INSTALLER_P12" ]; then
+            echo "no signing secrets - ad-hoc build"; echo "enabled=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          kc="$RUNNER_TEMP/agentzero-signing.keychain-db"
+          kcpw="$(openssl rand -base64 24)"
+          security create-keychain -p "$kcpw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kcpw" "$kc"
+          printf '%s' "$APP_P12" | base64 --decode > "$RUNNER_TEMP/app.p12"
+          printf '%s' "$INSTALLER_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+          security import "$RUNNER_TEMP/app.p12" -k "$kc" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+          security import "$RUNNER_TEMP/installer.p12" -k "$kc" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+          rm -f "$RUNNER_TEMP/app.p12" "$RUNNER_TEMP/installer.p12"
+          curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$kc"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kcpw" "$kc" > /dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          app_id="$(security find-identity -v -p codesigning "$kc" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)"
+          pkg_id="$(security find-identity -v -p basic "$kc" | sed -n 's/.*"\(Developer ID Installer: .*\)"/\1/p' | head -1)"
+          [ -n "$app_id" ] && [ -n "$pkg_id" ] || { echo "identities not found"; security find-identity -v "$kc"; exit 1; }
+          echo "app_id=$app_id" >> "$GITHUB_OUTPUT"
+          echo "pkg_id=$pkg_id" >> "$GITHUB_OUTPUT"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "signing as: $app_id / $pkg_id"
+      - name: Bundle .app and zip
+        env:
+          SIGN_ID: ${{ steps.sign.outputs.app_id }}
         run: |
           v='${{ needs.version.outputs.version }}'
           sh Project/AgentZeroAvalonia/macos/build-app.sh publish-avalonia/osx-arm64 publish-avalonia/AgentZeroLite.app "$v"
           publish-avalonia/AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh version
           cd publish-avalonia && ditto -c -k --keepParent AgentZeroLite.app "AgentZeroLite-v$v-osx-arm64.zip"
+      - name: Installer package, notarized
+        if: steps.sign.outputs.enabled == 'true'
+        env:
+          PKG_SIGN_ID: ${{ steps.sign.outputs.pkg_id }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          v='${{ needs.version.outputs.version }}'
+          pkg="publish-avalonia/AgentZeroLite-v$v-osx-arm64.pkg"
+          sh Project/AgentZeroAvalonia/macos/build-pkg.sh publish-avalonia/AgentZeroLite.app "$pkg" "$v"
+          export NOTARY_KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_KEY_P8" > "$NOTARY_KEY"
+          sh Project/AgentZeroAvalonia/macos/notarize.sh "$pkg"
+          rm -f "$NOTARY_KEY"
+      - name: Remove the signing keychain
+        if: always() && steps.sign.outputs.enabled == 'true'
+        run: security delete-keychain "$RUNNER_TEMP/agentzero-signing.keychain-db" || true
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: publish-avalonia/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.zip
+          path: |
+            publish-avalonia/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.zip
+            publish-avalonia/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.pkg
           if-no-files-found: error
 
+  # Waits for macOS too, but only Windows has to succeed: a notarization hiccup must not hold
+  # back the Windows release. The notarized .pkg is attached when the macos job produced one.
   release:
-    needs: [version, windows]
-    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true'
+    needs: [version, windows, macos]
+    if: always() && needs.windows.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -152,6 +212,16 @@ jobs:
           path: dist
           merge-multiple: true
       - run: ls -la dist
+      - name: macOS package (when notarized)
+        id: mac
+        run: |
+          pkg="dist/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.pkg"
+          if [ -f "$pkg" ]; then
+            echo "file=$pkg" >> "$GITHUB_OUTPUT"
+            echo "row=| \`$(basename "$pkg")\` | macOS 12+ on Apple Silicon — signed (Developer ID) and notarized installer; installs **AgentZero Lite.app** into /Applications. |" >> "$GITHUB_OUTPUT"
+          else
+            echo "row=" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -160,6 +230,7 @@ jobs:
           files: |
             dist/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
             dist/AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip
+            ${{ steps.mac.outputs.file }}
           body: |
             **AgentZero Lite** — the official build is now the cross-platform (Avalonia) host, released for Windows.
 
@@ -167,10 +238,9 @@ jobs:
             |---|---|
             | `AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe` | Windows 10/11 x64 installer (recommended). Includes the **wearable** host. Upgrades an earlier install in place; your workspaces and settings are kept. |
             | `AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip` | Windows portable — unzip and run. Includes the wearable host. |
+            ${{ steps.mac.outputs.row }}
 
             Also on the **Microsoft Store** (automatic updates, no wearable): https://apps.microsoft.com/detail/9NRHDFMD38H7
-
-            macOS (Apple Silicon) is in testing and will be released once it has been checked on a Mac.
 
             The WPF host is kept as a reference build — build it from source, or ask for a WPF installer on a release.
           fail_on_unmatched_files: true

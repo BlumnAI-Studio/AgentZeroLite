@@ -34,6 +34,24 @@ sed -e "s/__VERSION__/$version/g" "$here/Info.plist" > "$app/Contents/Info.plist
 printf 'APPL????' > "$app/Contents/PkgInfo"
 [ -f "$here/AgentZeroLite.icns" ] && cp "$here/AgentZeroLite.icns" "$app/Contents/Resources/"
 
+# SIGN_ID set ("Developer ID Application: <Team> (<TEAMID>)"): sign for notarization —
+# every nested file first, each with hardened runtime and a secure timestamp, then the
+# bundle with the entitlements. Everything under Contents/MacOS counts as code, not only
+# Mach-O: measured, a strict verify failed on "NAudio.Core.dll: code object is not signed
+# at all" (codesign keeps a non-Mach-O file's signature in its extended attributes).
+# --deep is not used because it applies the main executable's entitlements to every dylib.
+if [ -n "${SIGN_ID:-}" ]; then
+  find "$app/Contents/MacOS" -type f ! -path "$app/Contents/MacOS/AgentZeroLite" | while IFS= read -r f; do
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$f"
+  done
+  codesign --force --options runtime --timestamp --sign "$SIGN_ID" \
+    --entitlements "$here/entitlements.plist" "$app"
+  codesign --verify --deep --strict --verbose=2 "$app"
+  echo "[build-app] signed with $SIGN_ID: $app"
+  echo "[build-app] $app (version $version)"
+  exit 0
+fi
+
 # Ad-hoc signature: enough to launch locally after `xattr -dr com.apple.quarantine`.
 # --deep signs the bundled dylibs too; the entitlements keep JIT/unsigned-memory for
 # the .NET runtime and allow the loopback asset server + outbound HTTP.
