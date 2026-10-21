@@ -5,14 +5,33 @@ public class SshCommandBuilderTests
     [Theory]
     [InlineData("cmd.exe", SshShellKind.Cmd)]
     [InlineData("CMD.EXE", SshShellKind.Cmd)]
-    [InlineData(@"C:\Windows\System32\cmd.exe", SshShellKind.Cmd)]
     [InlineData("powershell.exe", SshShellKind.PowerShell)]
     [InlineData("pwsh.exe", SshShellKind.PowerShell)]
-    [InlineData(@"C:\Program Files\PowerShell\7\pwsh.exe", SshShellKind.PowerShell)]
     [InlineData("bash.exe", SshShellKind.Other)]
     [InlineData("", SshShellKind.Other)]
     public void DetectShellKind_classifies_the_three_supported_shells(string exe, SshShellKind expected)
     {
+        Assert.Equal(expected, SshCommandBuilder.DetectShellKind(exe));
+    }
+
+    // Full Windows paths only split on '\' where it is a separator.
+    [SkippableTheory]
+    [InlineData(@"C:\Windows\System32\cmd.exe", SshShellKind.Cmd)]
+    [InlineData(@"C:\Program Files\PowerShell\7\pwsh.exe", SshShellKind.PowerShell)]
+    public void DetectShellKind_classifies_full_windows_paths(string exe, SshShellKind expected)
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows path semantics");
+        Assert.Equal(expected, SshCommandBuilder.DetectShellKind(exe));
+    }
+
+    [SkippableTheory]
+    [InlineData("/usr/local/bin/pwsh", SshShellKind.PowerShell)]
+    [InlineData("/opt/homebrew/bin/pwsh", SshShellKind.PowerShell)]
+    [InlineData("/bin/zsh", SshShellKind.Other)]
+    [InlineData("/bin/bash", SshShellKind.Other)]
+    public void DetectShellKind_classifies_full_posix_paths(string exe, SshShellKind expected)
+    {
+        Skip.If(OperatingSystem.IsWindows(), "POSIX path semantics");
         Assert.Equal(expected, SshCommandBuilder.DetectShellKind(exe));
     }
 
@@ -114,12 +133,22 @@ public class SshCommandBuilderTests
         Assert.Equal("-NoExit -Command ssh -o StrictHostKeyChecking=accept-new psmac@192.168.0.50", args);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ComposeArguments_powershell_7_with_pem_quotes_the_path()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows path semantics");
         var ssh = new SshLaunchSettings(true, "10.0.0.5", "root", SshAuthMode.PublicKey, @"C:\keys\prod.pem");
         var args = SshCommandBuilder.ComposeArguments(@"C:\Program Files\PowerShell\7\pwsh.exe", null, ssh);
         Assert.Equal(@"-NoExit -Command ssh -o StrictHostKeyChecking=accept-new -i ""C:\keys\prod.pem"" root@10.0.0.5", args);
+    }
+
+    [SkippableFact]
+    public void ComposeArguments_powershell_7_with_pem_quotes_the_path_posix()
+    {
+        Skip.If(OperatingSystem.IsWindows(), "POSIX path semantics");
+        var ssh = new SshLaunchSettings(true, "10.0.0.5", "root", SshAuthMode.PublicKey, "/Users/me/.ssh/prod.pem");
+        var args = SshCommandBuilder.ComposeArguments("/usr/local/bin/pwsh", null, ssh);
+        Assert.Equal(@"-NoExit -Command ssh -o StrictHostKeyChecking=accept-new -i ""/Users/me/.ssh/prod.pem"" root@10.0.0.5", args);
     }
 
     [Fact]

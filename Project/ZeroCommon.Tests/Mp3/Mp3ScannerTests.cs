@@ -23,14 +23,31 @@ public sealed class Mp3ScannerTests
         // "01.mp3" — stripping the "track number" would leave nothing; keep the stem.
         => Assert.Equal("01", Mp3Scanner.TitleFromFileName("01.mp3"));
 
-    [Theory]
+    // Windows paths only mean anything where '\' is a separator.
+    [SkippableTheory]
     [InlineData(@"C:\music", @"C:\music\kpop\a.mp3", "kpop/a.mp3")]
     [InlineData(@"C:\music", @"C:\music\a.mp3", "a.mp3")]
     [InlineData(@"C:\music", @"C:\other\a.mp3", "")]          // outside root → unplayable
     [InlineData(@"C:\music", @"C:\music\..\secret\a.mp3", "")] // escape attempt → ""
     [InlineData("", @"C:\music\a.mp3", "")]
     public void ToRelativePath_MapsUnderRootOnly(string root, string full, string expected)
-        => Assert.Equal(expected, Mp3Scanner.ToRelativePath(root, full));
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows path semantics");
+        Assert.Equal(expected, Mp3Scanner.ToRelativePath(root, full));
+    }
+
+    // The same contract on macOS / Linux.
+    [SkippableTheory]
+    [InlineData("/Users/me/Music", "/Users/me/Music/kpop/a.mp3", "kpop/a.mp3")]
+    [InlineData("/Users/me/Music", "/Users/me/Music/a.mp3", "a.mp3")]
+    [InlineData("/Users/me/Music", "/Users/me/Other/a.mp3", "")]          // outside root → unplayable
+    [InlineData("/Users/me/Music", "/Users/me/Music/../secret/a.mp3", "")] // escape attempt → ""
+    [InlineData("", "/Users/me/Music/a.mp3", "")]
+    public void ToRelativePath_MapsUnderRootOnly_Posix(string root, string full, string expected)
+    {
+        Skip.If(OperatingSystem.IsWindows(), "POSIX path semantics");
+        Assert.Equal(expected, Mp3Scanner.ToRelativePath(root, full));
+    }
 
     [Fact]
     public void BuildClassifyHint_UsesTagFieldsThenPathFacts()

@@ -235,9 +235,10 @@ public sealed class WhisperModelStoreTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Normalize_names_aliasless_roots_after_their_folder_and_keeps_aliases_unique()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows path semantics");
         var s = new WearableSettings
         {
             AllowedRoots =
@@ -246,6 +247,28 @@ public sealed class WhisperModelStoreTests
                 new AllowedRoot { Alias = "music", Path = @"E:\Other Music" },
                 new AllowedRoot { Alias = "  ", Path = "   " },          // dropped
                 new AllowedRoot { Alias = "My Docs", Path = @"C:\Docs", Writable = true },
+            ],
+        };
+
+        s.Normalize();
+
+        Assert.Equal(new[] { "music", "music-2", "my-docs" }, s.AllowedRoots.Select(r => r.Alias));
+        Assert.True(s.AllowedRoots[2].Writable);
+        Assert.False(s.AllowedRoots[0].Writable);
+    }
+
+    [SkippableFact]
+    public void Normalize_names_aliasless_roots_after_their_folder_and_keeps_aliases_unique_posix()
+    {
+        Skip.If(OperatingSystem.IsWindows(), "POSIX path semantics");
+        var s = new WearableSettings
+        {
+            AllowedRoots =
+            [
+                new AllowedRoot { Alias = "", Path = "/Volumes/Media/Music/" },
+                new AllowedRoot { Alias = "music", Path = "/Users/me/Other Music" },
+                new AllowedRoot { Alias = "  ", Path = "   " },          // dropped
+                new AllowedRoot { Alias = "My Docs", Path = "/Users/me/Docs", Writable = true },
             ],
         };
 
