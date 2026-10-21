@@ -62,7 +62,23 @@ public static class CliIpcBridge
 {
     public const string DefaultPipeName = "AgentZeroLite.cli";
 
-    public static ICliIpcBridge Create(string pipeName = DefaultPipeName) => new NamedPipeIpcBridge(pipeName);
+    public static ICliIpcBridge Create(string pipeName = DefaultPipeName) => new NamedPipeIpcBridge(ResolvePipeName(pipeName));
+
+    /// <summary>
+    /// The name both ends open. Inside the macOS App Sandbox (Mac App Store build) the default
+    /// lands in the container's tmp — <c>~/Library/Containers/&lt;bundle id&gt;/Data/tmp/CoreFxPipe_…</c>
+    /// — which is past the 104-byte limit of a Unix socket path, so the server's accept loop failed
+    /// every 200 ms and no CLI call got through. A rooted name is used as the socket path as is, so
+    /// there the pipe goes straight under the container's home. Server and client both come
+    /// through here, and both run in the same container (the CLI is the bundle's own executable).
+    /// </summary>
+    public static string ResolvePipeName(string pipeName)
+    {
+        if (OperatingSystem.IsWindows() || Path.IsPathRooted(pipeName)) return pipeName;
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_SANDBOX_CONTAINER_ID"))) return pipeName;
+        var home = Environment.GetEnvironmentVariable("HOME");
+        return string.IsNullOrEmpty(home) ? pipeName : Path.Combine(home, "." + pipeName);
+    }
 }
 
 /// <summary>Named-pipe implementation; the only one so far, used on every OS.</summary>

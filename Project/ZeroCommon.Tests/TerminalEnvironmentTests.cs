@@ -137,4 +137,24 @@ public class TerminalEnvironmentTests
     {
         Assert.Equal("\0", TerminalEnvironment.ToBlock(Array.Empty<KeyValuePair<string, string>>()));
     }
+
+    /// <summary>Mac App Store build: the sandbox points HOME at the container; a tab gets the real one.</summary>
+    [Fact]
+    public void BuildPosix_GivesATabTheRealHomeInsideTheAppSandbox()
+    {
+        var env = TerminalEnvironment.BuildPosix(Source(
+            ("HOME", "/Users/me/Library/Containers/com.psmon.agentzerolite/Data"),
+            ("APP_SANDBOX_CONTAINER_ID", "com.psmon.agentzerolite")));
+
+        Assert.Equal("/Users/me", env["HOME"]);
+    }
+
+    [Theory]
+    [InlineData("/Users/me", null)]
+    [InlineData("/Users/me/Library/Containers/com.x.app/Data", "/Users/me")]
+    [InlineData("/Users/me/Library/Containers/com.x.app/Data/", "/Users/me")]
+    [InlineData("/Users/me/Library/Containers/com.x.app", null)]
+    [InlineData("/Users/me/Library/Containers/com.x.app/Data/sub", null)]
+    public void RealHomeFromSandbox_RecognisesOnlyAContainerHome(string home, string? expected)
+        => Assert.Equal(expected, TerminalEnvironment.RealHomeFromSandbox(home));
 }

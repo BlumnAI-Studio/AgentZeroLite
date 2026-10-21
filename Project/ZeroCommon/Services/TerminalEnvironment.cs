@@ -113,7 +113,27 @@ public static class TerminalEnvironment
         env.TryAdd("TERM", "xterm-256color");
         if (!env.ContainsKey("LANG") && !env.ContainsKey("LC_ALL"))
             env["LANG"] = "en_US.UTF-8";
+        if (env.TryGetValue("HOME", out var home) && RealHomeFromSandbox(home) is { } real)
+            env["HOME"] = real;
         return env;
+    }
+
+    /// <summary>
+    /// The person's home when <paramref name="home"/> is a macOS App Sandbox container
+    /// (<c>/Users/x/Library/Containers/&lt;bundle id&gt;/Data</c>), else null. The Mac App Store
+    /// build runs sandboxed and the system points HOME at the container; a tab's shell would
+    /// then skip ~/.zshrc and Claude Code would look for ~/.claude there — measured, a fresh
+    /// prompt with no PATH from the person's profile. The build's home-relative file exception
+    /// lets the tab use the real home, so the tab gets it back.
+    /// </summary>
+    public static string? RealHomeFromSandbox(string home)
+    {
+        const string marker = "/Library/Containers/";
+        var at = home.IndexOf(marker, StringComparison.Ordinal);
+        if (at <= 0) return null;
+        var rest = home[(at + marker.Length)..].TrimEnd('/');
+        var slash = rest.IndexOf('/');
+        return slash > 0 && rest[(slash + 1)..] == "Data" ? home[..at] : null;
     }
 
     /// <summary>
