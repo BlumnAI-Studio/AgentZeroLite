@@ -42,7 +42,7 @@ test build (`.pkg`). Home page:
 | **Windows installer** (recommended) | [Releases](https://github.com/psmon/AgentZeroLite/releases/latest) → `AgentZeroLite-v<ver>-Setup.exe` | The only edition with the ⌚ **wearable** host. Installing over an earlier (WPF) install upgrades it in place; workspaces and settings are kept. |
 | Windows portable | Releases → `AgentZeroLite-v<ver>-win-x64.zip` | Unzip and run; includes the wearable host. |
 | **Microsoft Store** | [apps.microsoft.com/detail/9NRHDFMD38H7](https://apps.microsoft.com/detail/9NRHDFMD38H7) | Automatic updates. Keeps its data inside the package. No wearable. |
-| macOS (Apple Silicon) — test build | Releases → `AgentZeroLite-v<ver>-osx-arm64.pkg` | Installer into `/Applications` (macOS 12+). Not yet signed by Apple: if a double-click is refused, right-click → Open. No local LLM, no wearable. |
+| macOS (Apple Silicon) — test build | Releases → `AgentZeroLite-v<ver>-osx-arm64.pkg` | Installer into `/Applications` (macOS 12+). Signed with an Apple Developer ID and notarized — a double-click installs it. No local LLM, no wearable. |
 
 The **WPF host** (`Project/AgentZeroWpf`) is now the reference build: the Windows-first lab
 where features are tried before they move to the official edition. Most of this README

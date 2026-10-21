@@ -40,7 +40,7 @@ AgentZero Lite는 단순한 아이디어로 만들어진 Windows 데스크톱 �
 | **Windows 설치판** (추천) | [Releases](https://github.com/psmon/AgentZeroLite/releases/latest) → `AgentZeroLite-v<ver>-Setup.exe` | ⌚ **웨어러블** 호스트가 들어 있는 유일한 판. 이전(WPF) 설치본 위에 설치하면 그 자리에서 업그레이드되고 워크스페이스·설정은 그대로 남습니다. |
 | Windows 포터블 | Releases → `AgentZeroLite-v<ver>-win-x64.zip` | 압축만 풀면 실행. 웨어러블 호스트 포함. |
 | **Microsoft Store** | [apps.microsoft.com/detail/9NRHDFMD38H7](https://apps.microsoft.com/detail/9NRHDFMD38H7) | 자동 업데이트. 데이터는 패키지 안에 따로 보관. 웨어러블 없음. |
-| macOS (Apple Silicon) — 테스트 빌드 | Releases → `AgentZeroLite-v<ver>-osx-arm64.pkg` | `/Applications` 에 설치하는 인스톨러(macOS 12 이상). 아직 Apple 서명 전이라 더블클릭이 막히면 우클릭 → 열기. 로컬 LLM·웨어러블 없음. |
+| macOS (Apple Silicon) — 테스트 빌드 | Releases → `AgentZeroLite-v<ver>-osx-arm64.pkg` | `/Applications` 에 설치하는 인스톨러(macOS 12 이상). Apple Developer ID 서명 + 공증을 마쳐 더블클릭으로 바로 설치됩니다. 로컬 LLM·웨어러블 없음. |
 
 **WPF 호스트**(`Project/AgentZeroWpf`)는 이제 레퍼런스 빌드입니다. 기능을 Windows 에서 먼저 빠르게
 시험하는 실험실이고, 검증된 것이 공식 판으로 옮겨집니다. 이 README 의 기능 설명 대부분은 그곳에서 만든
