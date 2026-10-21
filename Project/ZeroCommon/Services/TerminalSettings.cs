@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Services;
@@ -117,8 +118,8 @@ public static class TerminalSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "terminal-settings.json");
+        AppPaths.DataRoot,
+        "terminal-settings.json");
 
     public static TerminalSettings Load()
     {

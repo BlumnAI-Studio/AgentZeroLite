@@ -17,17 +17,32 @@ public sealed partial class WorktreeEntryViewModel : ObservableObject
 {
     private readonly Action<WorktreeEntryViewModel> _go;
     private readonly Action<WorkspaceViewModel> _close;
+    private readonly Action<string> _openFolder;
+    private readonly Action<string> _copyText;
 
     public WorktreeEntryViewModel(GitWorktreeInfo tree, WorkspaceViewModel? workspace,
-        Action<WorktreeEntryViewModel> go, Action<WorkspaceViewModel> close)
+        Action<WorktreeEntryViewModel> go, Action<WorkspaceViewModel> close,
+        Action<string> openFolder, Action<string> copyText, string hostPath)
     {
         Path = tree.Path;
         _go = go;
         _close = close;
+        _openFolder = openFolder;
+        _copyText = copyText;
+        // A worktree's relative form is from the repository row it is listed under
+        // (.claude/worktrees/x, or ../x for one beside it).
+        AbsolutePathText = PathCopyText.Absolute(tree.Path);
+        RelativePathText = PathCopyText.Relative(hostPath, tree.Path);
         Update(tree, workspace);
     }
 
     public string Path { get; }
+
+    public string? AbsolutePathText { get; }
+    public string? RelativePathText { get; }
+    public bool HasRelativePath => RelativePathText is not null;
+    public string CopyAbsoluteHeader => $"Copy absolute path   {AbsolutePathText}";
+    public string CopyRelativeHeader => $"Copy relative path   {RelativePathText}";
 
     [ObservableProperty] private string _label = "";
     [ObservableProperty] private bool _isMain;
@@ -68,6 +83,9 @@ public sealed partial class WorktreeEntryViewModel : ObservableObject
 
     [RelayCommand] private void Go() => _go(this);
     [RelayCommand] private void Close() { if (Workspace is { } ws) _close(ws); }
+    [RelayCommand] private void OpenFolder() => _openFolder(Path);
+    [RelayCommand] private void CopyAbsolutePath() { if (AbsolutePathText is { } t) _copyText(t); }
+    [RelayCommand] private void CopyRelativePath() { if (RelativePathText is { } t) _copyText(t); }
 }
 
 /// <summary>
@@ -186,7 +204,7 @@ public partial class MainWindowViewModel
         var before = host.Worktrees.Count;
         host.Worktrees.Clear();
         foreach (var t in trees)
-            host.Worktrees.Add(new WorktreeEntryViewModel(t, Opened(t), OpenWorktree, RemoveWorkspace));
+            host.Worktrees.Add(new WorktreeEntryViewModel(t, Opened(t), OpenWorktree, RemoveWorkspace, OpenFolder, CopyText, host.DirectoryPath));
         host.RaiseWorktreesChanged();
         if (trees.Count != before)
             AppLogger.Log($"[Worktrees] '{host.DisplayName}': {trees.Count} other worktree(s) — {string.Join(", ", trees.Select(t => t.Label))}");

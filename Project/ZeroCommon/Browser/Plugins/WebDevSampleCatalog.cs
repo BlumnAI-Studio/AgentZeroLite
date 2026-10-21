@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.IO;
 using Agent.Common;
 
@@ -31,8 +32,8 @@ public static class WebDevSampleCatalog
     public static string BuiltInRoot => Path.Combine(AppContext.BaseDirectory, "Wasm");
 
     public static string PluginsRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "Wasm", "plugins");
+        AppPaths.DataRoot,
+        "Wasm", "plugins");
 
     /// <param name="hiddenBuiltIns">
     /// Folders under <c>Wasm/</c> that are not samples in this host (the Avalonia host's

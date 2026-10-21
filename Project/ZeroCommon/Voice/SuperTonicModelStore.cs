@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 namespace Agent.Common.Voice;
 
 /// <summary>
@@ -37,8 +38,8 @@ public static class SuperTonicModelStore
     /// <c>voice_styles/</c>.
     /// </summary>
     public static string DefaultModelDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "models", "supertonic");
+        AppPaths.SharedRoot,
+        "models", "supertonic");
 
     /// <summary>Sub-directory holding the per-voice <c>{id}.json</c> embeddings.</summary>
     public static string VoiceStylesSubdir => "voice_styles";

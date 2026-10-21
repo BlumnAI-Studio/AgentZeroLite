@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -15,8 +16,8 @@ public static class BudgetSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "budget-settings.json");
+        AppPaths.DataRoot,
+        "budget-settings.json");
 
     /// <summary>Load from the default path (or an explicit one, for tests). Never throws.</summary>
     public static BudgetSettings Load(string? path = null)

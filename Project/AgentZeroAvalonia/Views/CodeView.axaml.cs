@@ -1,4 +1,5 @@
 using Agent.Common;
+using Agent.Common.Platform;
 using Agent.Common.Workspace;
 using AgentZeroAvalonia.ViewModels;
 using Avalonia.Controls;
@@ -30,14 +31,18 @@ public partial class CodeView : UserControl
     {
         InitializeComponent();
         DataContextChanged += (_, _) => Bind(DataContext as CodeViewModel);
-        CopyPathButton.Click += async (_, _) =>
-        {
-            if (_vm?.RelativePath is { } rel && TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                await clipboard.SetTextAsync(rel.Replace('\\', '/'));
-        };
+        CopyPathButton.Click += (_, _) => ShowCopyPathMenu();
         OpenExternalButton.Click += async (_, _) =>
         {
-            if (_vm?.CurrentPath is { } path && TopLevel.GetTopLevel(this) is { } top)
+            if (_vm is null) return;
+            if (_vm.IsFolderView)
+            {
+                // A folder goes to Explorer / Finder through the same seam as the sidebar's menu.
+                if (_vm.CurrentFolder is { } folder && FolderOpener.Create().Open(folder) is { } error)
+                    AppLogger.Log($"[Code] open folder failed | {error}");
+                return;
+            }
+            if (_vm.CurrentPath is { } path && TopLevel.GetTopLevel(this) is { } top)
                 await top.Launcher.LaunchFileInfoAsync(new FileInfo(path));
         };
         DetachedFromVisualTree += (_, _) =>
@@ -47,6 +52,32 @@ public partial class CodeView : UserControl
             _textMate = null;
         };
         AttachedToVisualTree += (_, _) => Show();
+    }
+
+    /// <summary>
+    /// "⧉ path": relative to the workspace (what a prompt or a doc wants) or absolute (what a
+    /// shell or a file dialog wants). Each item shows the text it will copy.
+    /// </summary>
+    private void ShowCopyPathMenu()
+    {
+        if (_vm is null) return;
+        var relative = PathCopyText.Relative(_vm.Root, _vm.SelectedPath);
+        var absolute = PathCopyText.Absolute(_vm.SelectedPath);
+        var flyout = new MenuFlyout();
+        if (relative is not null) flyout.Items.Add(CopyItem("Relative", relative));
+        if (absolute is not null) flyout.Items.Add(CopyItem("Absolute", absolute));
+        if (flyout.Items.Count > 0) flyout.ShowAt(CopyPathButton);
+    }
+
+    private MenuItem CopyItem(string kind, string text)
+    {
+        var item = new MenuItem { Header = $"{kind}   {text}" };
+        item.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                await clipboard.SetTextAsync(text);
+        };
+        return item;
     }
 
     private void Bind(CodeViewModel? vm)

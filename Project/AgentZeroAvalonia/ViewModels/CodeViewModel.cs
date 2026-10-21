@@ -72,6 +72,18 @@ public sealed partial class FileNodeViewModel : ObservableObject
     };
 }
 
+/// <summary>One row of the folder listing — read-only details, no actions.</summary>
+public sealed class FolderRowViewModel(FolderEntryInfo info)
+{
+    public string Name { get; } = info.Name;
+    public string FullPath { get; } = info.FullPath;
+    public bool IsDirectory { get; } = info.IsDirectory;
+    public string Icon { get; } = info.IsDirectory ? "📁" : "📄";
+    public string SizeText { get; } = info.Size is { } n ? WorkspaceFiles.FormatSize(n) : "—";
+    public string ModifiedText { get; } = info.Modified.ToString("yyyy-MM-dd HH:mm");
+    public string CreatedText { get; } = info.Created.ToString("yyyy-MM-dd HH:mm");
+}
+
 /// <summary>
 /// The code view (VS Code's explorer + a read-only editor): the active workspace's files in a
 /// tree, the selected one shown with VS Code's TextMate grammars. Follows the active workspace;
@@ -93,6 +105,45 @@ public sealed partial class CodeViewModel : ObservableObject
     [ObservableProperty] private string _note = "Select a file in the tree.";
     [ObservableProperty] private FileViewKind _kind = FileViewKind.Text;
     [ObservableProperty] private bool _hasFile;
+
+    /// <summary>The GIT LOG tab's content — follows the same workspace as the tree.</summary>
+    public GitLogViewModel GitLog { get; } = new();
+
+    /// <summary>True while the panel shows GIT LOG instead of the files (the tab beside CODE).</summary>
+    [ObservableProperty] private bool _showGitLog;
+
+    public CodeViewModel()
+    {
+        // A workspace without readable history cannot keep the tab in front.
+        GitLog.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(GitLogViewModel.IsAvailable) && !GitLog.IsAvailable) ShowGitLog = false;
+        };
+    }
+
+    [RelayCommand] private void ShowFiles() => ShowGitLog = false;
+    [RelayCommand] private void ShowHistory() { if (GitLog.IsAvailable) ShowGitLog = true; }
+
+    /// <summary>A folder selected in the tree: its entries are listed where a file would show.</summary>
+    [ObservableProperty] private string? _currentFolder;
+    [ObservableProperty] private bool _isFolderView;
+    [ObservableProperty] private string _folderSummary = "";
+    public ObservableCollection<FolderRowViewModel> FolderRows { get; } = new();
+
+    /// <summary>What the toolbar's path / open buttons act on: the open file or the listed folder.</summary>
+    public string? SelectedPath => IsFolderView ? CurrentFolder : HasFile ? CurrentPath : null;
+    public bool HasSelection => SelectedPath is not null;
+    public string OpenButtonTip => IsFolderView ? "Open the folder in Explorer / Finder" : "Open with the default app";
+
+    partial void OnCurrentFolderChanged(string? value) => RaiseSelection();
+    partial void OnIsFolderViewChanged(bool value) => RaiseSelection();
+
+    private void RaiseSelection()
+    {
+        OnPropertyChanged(nameof(SelectedPath));
+        OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(OpenButtonTip));
+    }
 
     /// <summary>The text the editor shows (empty for images and binaries).</summary>
     public string Text { get; private set; } = "";
@@ -120,8 +171,8 @@ public sealed partial class CodeViewModel : ObservableObject
     public string PreviewToggleLabel => MarkdownPreview ? "‹› Plain" : "◧ Preview";
 
     partial void OnKindChanged(FileViewKind value) => RaiseViewKind();
-    partial void OnHasFileChanged(bool value) => RaiseViewKind();
-    partial void OnCurrentPathChanged(string? value) => RaiseViewKind();
+    partial void OnHasFileChanged(bool value) { RaiseViewKind(); RaiseSelection(); }
+    partial void OnCurrentPathChanged(string? value) { RaiseViewKind(); RaiseSelection(); }
     partial void OnMarkdownPreviewChanged(bool value)
     {
         RaiseViewKind();
@@ -158,7 +209,40 @@ public sealed partial class CodeViewModel : ObservableObject
 
     partial void OnSelectedNodeChanged(FileNodeViewModel? value)
     {
-        if (value is { IsDirectory: false, FullPath.Length: > 0 }) _ = OpenAsync(value.FullPath);
+        if (value is { FullPath.Length: > 0 })
+            _ = value.IsDirectory ? ShowFolderAsync(value.FullPath) : OpenAsync(value.FullPath);
+    }
+
+    /// <summary>
+    /// List a folder of the workspace — name, size, modified, created — where a file would show.
+    /// Read-only, read off the UI thread (a workspace can sit on a network drive), and the same
+    /// filter as the tree, so a row never names something the tree hides.
+    /// </summary>
+    public async Task<string?> ShowFolderAsync(string path)
+    {
+        if (string.IsNullOrEmpty(Root)) return "no workspace is open";
+        var full = Path.IsPathRooted(path) ? path : Path.Combine(Root, path);
+        if (!WorkspaceFiles.IsInside(Root, full)) return "the folder is outside the workspace";
+        var generation = ++_openGeneration;
+        var patterns = Patterns;
+        var rows = await Task.Run(() => PathAvailability.DirectoryExistsFast(full)
+            ? WorkspaceFiles.ListDetailed(full, patterns)
+            : null);
+        if (generation != _openGeneration) return null; // a newer click won
+        if (rows is null) return "no such folder";
+
+        ClearFile("");
+        FolderRows.Clear();
+        // Files only: the tree beside it already shows the sub-folders.
+        var files = rows.Where(r => !r.IsDirectory).ToList();
+        foreach (var r in files) FolderRows.Add(new FolderRowViewModel(r));
+        FolderSummary = $"{files.Count} file(s) · {WorkspaceFiles.FormatSize(files.Sum(r => r.Size ?? 0))}";
+        if (files.Count == 0) Note = "No files directly in this folder (sub-folders are in the tree).";
+        var rel = PathCopyText.Relative(Root, full);
+        CurrentTitle = rel is null ? $"{RootName}/" : rel + "/";
+        CurrentFolder = full;
+        IsFolderView = true;
+        return null;
     }
 
     private int _rootGeneration;
@@ -183,6 +267,7 @@ public sealed partial class CodeViewModel : ObservableObject
         RootName = displayName ?? (directory is null ? "No workspace" : Path.GetFileName(directory.TrimEnd('\\', '/')));
         Nodes.Clear();
         ClearFile("Select a file in the tree.");
+        _ = GitLog.LoadAsync(directory);
         if (string.IsNullOrEmpty(directory)) return;
 
         // The WPF NOTE page's rule: never touch a workspace folder bare on the UI thread.
@@ -201,6 +286,8 @@ public sealed partial class CodeViewModel : ObservableObject
         }
         Patterns = patterns;
         foreach (var e in entries) Nodes.Add(new FileNodeViewModel(this, e));
+        // Nothing selected yet: the workspace's own folder is listed rather than an empty pane.
+        await ShowFolderAsync(root);
     }
 
     [RelayCommand]
@@ -232,6 +319,8 @@ public sealed partial class CodeViewModel : ObservableObject
             });
             if (generation != _openGeneration) return null; // a newer click won
             if (content is null) return "no such file";
+            IsFolderView = false;
+            CurrentFolder = null;
             CurrentPath = full;
             CurrentTitle = Path.GetRelativePath(Root, full).Replace('\\', '/');
             Kind = content.Kind;
@@ -253,6 +342,8 @@ public sealed partial class CodeViewModel : ObservableObject
 
     private void ClearFile(string note)
     {
+        IsFolderView = false;
+        CurrentFolder = null;
         CurrentPath = null;
         CurrentTitle = "";
         HasFile = false;
@@ -274,12 +365,20 @@ public sealed partial class CodeViewModel : ObservableObject
             ["visible"] = visible,
             ["docked"] = docked,
             ["root"] = Root,
-            ["file"] = CurrentTitle.Length == 0 ? null : CurrentTitle,
+            ["file"] = !HasFile || CurrentTitle.Length == 0 ? null : CurrentTitle,
             ["kind"] = HasFile ? Kind.ToString().ToLowerInvariant() : null,
-            ["view"] = !HasFile ? null : IsPreview ? "preview" : IsImage ? "image" : IsTextView ? "text" : "note",
+            ["folder"] = IsFolderView && CurrentFolder is not null ? CurrentTitle : null,
+            ["view"] = IsFolderView ? "folder" : !HasFile ? null : IsPreview ? "preview" : IsImage ? "image" : IsTextView ? "text" : "note",
             ["preview"] = PreviewInfo.Length == 0 ? null : PreviewInfo,
             ["chars"] = Text.Length,
             ["topLevel"] = Nodes.Count,
+            ["gitLog"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["available"] = GitLog.IsAvailable,
+                ["commits"] = GitLog.Commits.Count,
+                ["shown"] = ShowGitLog,
+                ["note"] = GitLog.Note.Length == 0 ? null : GitLog.Note,
+            },
         }.ToJsonString();
 
     /// <summary>Marshal a root change onto the UI thread (workspace switches arrive there already).</summary>

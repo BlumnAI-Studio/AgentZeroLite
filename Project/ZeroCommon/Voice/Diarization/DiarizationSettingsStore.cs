@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Voice.Diarization;
@@ -17,8 +18,8 @@ public static class DiarizationSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "diarization-settings.json");
+        AppPaths.DataRoot,
+        "diarization-settings.json");
 
     /// <summary>
     /// Convention root for Sherpa diarization model files when settings paths
@@ -26,8 +27,8 @@ public static class DiarizationSettingsStore
     /// the UI.
     /// </summary>
     public static string DefaultModelDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "models", "sherpa-diarization");
+        AppPaths.SharedRoot,
+        "models", "sherpa-diarization");
 
     public static string DefaultSegmentationPath => Path.Combine(DefaultModelDirectory, "segmentation.onnx");
 

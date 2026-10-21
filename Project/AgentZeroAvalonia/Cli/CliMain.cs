@@ -190,6 +190,7 @@ internal static class CliMain
             Console.WriteLine("  open [path]   Show the code view (bottom panel, CODE tab); open a file of the active workspace");
             Console.WriteLine("                (relative to the workspace, or absolute inside it)");
             Console.WriteLine("  view preview|plain   Markdown: rendered with mermaid diagrams (default), or its source");
+            Console.WriteLine("  tab files|gitlog     The files, or the GIT LOG tab beside CODE (recent commits, read with git)");
             Console.WriteLine("  close         Close the code view");
             Console.WriteLine("  status        Root, open file, kind, visible/docked");
             return 0;

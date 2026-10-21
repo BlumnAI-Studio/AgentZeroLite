@@ -39,7 +39,7 @@ public partial class PluginWindow : Window
         _pref = pluginId.Length > 0 ? PluginWindowPrefs.Get(pluginId) : new PluginWindowPref();
 
         TitleText.Text = displayName;
-        Title = displayName + " — AgentZero Lite";
+        Title = displayName + " — " + BuildFlavor.AppTitle;
 
         PinButton.IsChecked = _pref.Topmost;
         Topmost = _pref.Topmost;

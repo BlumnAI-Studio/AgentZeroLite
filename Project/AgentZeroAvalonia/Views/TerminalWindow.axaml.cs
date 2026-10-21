@@ -40,7 +40,7 @@ public partial class TerminalWindow : Window
     public void SetCaption(string caption)
     {
         TitleText.Text = caption;
-        Title = caption + " — AgentZero Lite";
+        Title = caption + " — " + BuildFlavor.AppTitle;
     }
 
     /// <summary>Put the moved renderer in the window.</summary>

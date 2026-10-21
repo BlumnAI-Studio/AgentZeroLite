@@ -327,6 +327,13 @@ What differs from the WPF host, and why:
   `avares://AgentZeroLite/Assets/agentzero.ico` window icon; macOS gets `macos/AgentZeroLite.icns`, generated
   from the same file, which `build-app.sh` and `Info.plist` already expected.
 - **Both GUIs share the SQLite file and the settings files** and refuse to run side by side (same single-instance mutex on Windows). Secrets: DPAPI on Windows, AES-GCM (`aesg:v1:`) elsewhere.
+- **A Debug Avalonia build runs beside the release** (`BuildFlavor`, applied first in `Program.Main`): own mutex
+  (`AgentZeroLite-Debug`), own CLI pipe (`AgentZeroLite.cli.debug`), `-DEBUG` in window titles, and its own data
+  profile `%LOCALAPPDATA%\AgentZeroLite-Debug` via `AppPaths.UseProfile` — seeded once from the release (settings JSON
+  + `VACUUM INTO` DB snapshot). Every ZeroCommon store now builds its path from `AppPaths.DataRoot` (profile) or
+  `AppPaths.SharedRoot` (models, hook snapshots) instead of `LocalApplicationData` by hand — a new store must do the
+  same, and must not read its path before `Main` has applied the profile. `AppPaths.OverrideRoot` is `AsyncLocal`, so
+  one test's override cannot leak into a store whose static path initialises on another test's thread.
 - **The Microsoft Store (MSIX) edition does not share them, by design.** Its own new AppData files stay in the
   package's private store; do not try to "fix" that with `unvirtualizedResources` — certification denied it
   (10.6.3) and the sharing was never needed. What must not be isolated is what the user runs: terminal tabs and the

@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -115,8 +116,8 @@ public static class AgentManifestCatalog
     /// rebuild. Defaults to <c>%LOCALAPPDATA%\AgentZeroLite\agent-detection</c>.
     /// </summary>
     public static string OverrideDir { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "agent-detection");
+        AppPaths.DataRoot,
+        "agent-detection");
 
     private static readonly Dictionary<string, AgentManifest> _cache = new();
 

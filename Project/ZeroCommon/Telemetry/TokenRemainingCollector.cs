@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.IO;
 using System.Text.Json;
 using Agent.Common.Data;
@@ -58,8 +59,7 @@ public sealed class TokenRemainingCollector
         string? Error);
 
     public static string SnapshotsDir { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite",
+        AppPaths.SharedRoot,
         "cc-hud-snapshots");
 
     public void Start(TimeSpan? interval = null)

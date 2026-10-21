@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -38,8 +39,8 @@ public static class PluginWindowPrefs
 
     /// <summary>Overridable for tests; the default is the file the WPF host uses.</summary>
     public static string FilePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "WebDev", "floating-prefs.json");
+        AppPaths.DataRoot,
+        "WebDev", "floating-prefs.json");
 
     public static PluginWindowPref Get(string pluginId)
     {

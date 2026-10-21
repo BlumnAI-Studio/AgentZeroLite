@@ -17,6 +17,9 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // A Debug build gets its own data profile before anything reads a path (BuildFlavor).
+        BuildFlavor.ApplyProfile();
+
         // Credentials at rest are protected for both modes — the CLI's `web`/`bot-chat`
         // paths load settings too — so the protector is chosen before the fork.
         SecretProtection.Protector = SecretProtectorFactory.Create();
@@ -24,12 +27,13 @@ internal static class Program
         if (args.Any(a => a.Equals("-cli", StringComparison.OrdinalIgnoreCase)))
             return CliMain.Run(args);
 
-        using var guard = SingleInstanceGuard.Create();
+        using var guard = SingleInstanceGuard.Create(BuildFlavor.InstanceId);
         if (!guard.TryAcquire())
         {
             // Same name as the WPF host's mutex on Windows: the two GUIs share one
-            // database and must not run at once either.
-            Console.Error.WriteLine("AgentZero Lite is already running.");
+            // database and must not run at once either. A Debug build has its own
+            // profile and its own mutex, so it runs beside the release.
+            Console.Error.WriteLine($"{BuildFlavor.AppTitle} is already running.");
             return 1;
         }
 

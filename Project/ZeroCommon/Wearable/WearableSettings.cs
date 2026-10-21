@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 namespace Agent.Common.Wearable;
 
 /// <summary>
@@ -155,7 +156,7 @@ public sealed class WearableSettings
     /// settings file and both settings pages keep listing only what the person chose.
     /// </summary>
     public static string HomeDirectory => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AgentZeroLite", "home");
+        AppPaths.DataRoot, "home");
 
     /// <summary><c>home</c> (created on demand) followed by the chosen folders — what the file tools see.</summary>
     public IEnumerable<AllowedRoot> RootsWithHome()

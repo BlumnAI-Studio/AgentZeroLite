@@ -12,5 +12,39 @@
 
     <!-- The code view as its own window — the floating bot's arrangement: no state here,
          the DataContext is the same CodeViewModel the docked tab uses. -->
-    <views:CodeView />
+    <Window.Styles>
+        <!-- MainWindow's panel-tab look (its styles are window-local). -->
+        <Style Selector="Button.ptab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Button.ptab.selected">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
+        <Style Selector="Button.ptab:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Button.ptab:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <!-- The dock's CODE | GIT LOG pair, for when the panel floats. -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="2" Margin="4,2">
+            <Button Classes="ptab" Classes.selected="{Binding !ShowGitLog}" Content="📄 CODE"
+                    Command="{Binding ShowFilesCommand}" />
+            <Button Classes="ptab" Classes.selected="{Binding ShowGitLog}" Content="⎇ GIT LOG"
+                    IsEnabled="{Binding GitLog.IsAvailable}" ToolTip.Tip="{Binding GitLog.TabTip}"
+                    ToolTip.ShowOnDisabled="True" Command="{Binding ShowHistoryCommand}" />
+        </StackPanel>
+        <views:CodeView />
+    </DockPanel>
 </Window>

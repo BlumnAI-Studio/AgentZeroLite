@@ -38,6 +38,18 @@ public sealed class WorkspaceFilesTests : IDisposable
     }
 
     [Fact]
+    public void The_detailed_listing_matches_the_tree_and_carries_sizes_for_files_only()
+    {
+        var patterns = WorkspaceFiles.LoadIgnorePatterns(_root);
+        var rows = WorkspaceFiles.ListDetailed(_root, patterns);
+
+        Assert.Equal(WorkspaceFiles.List(_root, patterns).Select(e => e.Name), rows.Select(r => r.Name));
+        Assert.Null(rows.Single(r => r.Name == "Docs").Size);
+        Assert.Equal(4, rows.Single(r => r.Name == "README.md").Size);
+        Assert.All(rows, r => Assert.NotEqual(default, r.Modified));
+    }
+
+    [Fact]
     public void Containment_rejects_escapes()
     {
         Assert.True(WorkspaceFiles.IsInside(_root, Path.Combine(_root, "src", "a.cs")));

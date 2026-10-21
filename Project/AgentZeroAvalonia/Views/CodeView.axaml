@@ -18,6 +18,25 @@
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
         </Style>
+        <!-- Folder listing -->
+        <Style Selector="TextBlock.colhead">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace" />
+            <Setter Property="Foreground" Value="#D4D4D4" />
+        </Style>
+        <Style Selector="TextBlock.cell.dim">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Border.row:pointerover">
+            <Setter Property="Background" Value="#2A2D2E" />
+        </Style>
         <Style Selector="Button.bar:pointerover">
             <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
         </Style>
@@ -25,7 +44,8 @@
 
     <!-- VS Code's explorer + editor, read-only: the tree follows the active workspace and
          loads a folder when it is expanded; the editor uses VS Code's TextMate grammars. -->
-    <Grid ColumnDefinitions="240,4,*">
+    <Panel>
+    <Grid ColumnDefinitions="240,4,*" IsVisible="{Binding !ShowGitLog}">
 
         <!-- Explorer -->
         <DockPanel Grid.Column="0" Background="{DynamicResource CyberBgPanel}">
@@ -58,12 +78,14 @@
             <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
                     BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="8,2">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasFile}">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasSelection}">
+                        <TextBlock Text="{Binding FolderSummary}" IsVisible="{Binding IsFolderView}" FontSize="11"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextDim}" />
                         <Button Classes="bar" Content="{Binding PreviewToggleLabel}" IsVisible="{Binding IsMarkdown}"
                                 Command="{Binding TogglePreviewCommand}"
                                 ToolTip.Tip="Markdown: switch between the rendered view (with mermaid diagrams) and the source" />
-                        <Button x:Name="CopyPathButton" Classes="bar" Content="⧉ path" ToolTip.Tip="Copy the path relative to the workspace" />
-                        <Button x:Name="OpenExternalButton" Classes="bar" Content="↗ open" ToolTip.Tip="Open with the default app" />
+                        <Button x:Name="CopyPathButton" Classes="bar" Content="⧉ path" ToolTip.Tip="Copy the path — relative to the workspace or absolute" />
+                        <Button x:Name="OpenExternalButton" Classes="bar" Content="↗ open" ToolTip.Tip="{Binding OpenButtonTip}" />
                     </StackPanel>
                     <TextBlock Text="{Binding CurrentTitle}" FontSize="12" VerticalAlignment="Center"
                                FontFamily="Cascadia Mono, Consolas, Menlo, monospace"
@@ -81,10 +103,87 @@
                 <!-- Markdown rendered (Markdig in ZeroCommon) with mermaid drawn by the WPF host's
                      offline bundle, served from the loopback asset server. Created on first use. -->
                 <Panel x:Name="PreviewHost" IsVisible="{Binding IsPreview}" />
+                <!-- A folder selected in the tree: its entries with their details, read-only. -->
+                <DockPanel IsVisible="{Binding IsFolderView}">
+                    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="10,4">
+                        <Grid ColumnDefinitions="*,90,130,130">
+                            <TextBlock Grid.Column="0" Classes="colhead" Text="Name" />
+                            <TextBlock Grid.Column="1" Classes="colhead" Text="Size" TextAlignment="Right" />
+                            <TextBlock Grid.Column="2" Classes="colhead" Text="Modified" Margin="16,0,0,0" />
+                            <TextBlock Grid.Column="3" Classes="colhead" Text="Created" Margin="16,0,0,0" />
+                        </Grid>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding FolderRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FolderRowViewModel">
+                                    <Border Classes="row" Padding="10,3" ToolTip.Tip="{Binding FullPath}">
+                                        <Grid ColumnDefinitions="*,90,130,130">
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding Icon}" FontSize="11" Width="16" TextAlignment="Center"
+                                                           VerticalAlignment="Center" Foreground="#C8D6E5" />
+                                                <TextBlock Classes="cell" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Classes="cell dim" Text="{Binding SizeText}" TextAlignment="Right" />
+                                            <TextBlock Grid.Column="2" Classes="cell dim" Text="{Binding ModifiedText}" Margin="16,0,0,0" />
+                                            <TextBlock Grid.Column="3" Classes="cell dim" Text="{Binding CreatedText}" Margin="16,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
                 <ScrollViewer IsVisible="{Binding IsImage}" HorizontalScrollBarVisibility="Auto">
                     <Image x:Name="Picture" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" />
                 </ScrollViewer>
             </Panel>
         </DockPanel>
     </Grid>
+
+    <!-- GIT LOG (the tab beside CODE): recent commits, newest first, as a plain list. -->
+    <Panel IsVisible="{Binding ShowGitLog}">
+    <DockPanel Background="#1E1E1E">
+        <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="8,2">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                    <TextBlock Text="loading…" IsVisible="{Binding GitLog.IsLoading}" FontSize="11" VerticalAlignment="Center"
+                               Margin="0,0,8,0" Foreground="{DynamicResource TextDim}" />
+                    <Button Classes="bar" Content="⟳" ToolTip.Tip="Read the history again" Command="{Binding GitLog.RefreshCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding GitLog.Summary}" FontSize="11" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding GitLog.Commits}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GitCommitRowViewModel">
+                        <!-- GitHub Desktop's history row: the subject, then who and when; hash on the right.
+                             The full message is the tooltip. -->
+                        <Border Classes="row" Padding="12,4" BorderBrush="#2A2D2E" BorderThickness="0,0,0,1"
+                                ToolTip.Tip="{Binding Tip}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding ShortHash}" FontSize="10.5"
+                                           FontFamily="Cascadia Mono, Consolas, Menlo, monospace"
+                                           Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Subject}" FontSize="12" Foreground="#E6E6E6"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="10.5" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Author, Mode=OneWay}" />
+                                        <Run Text=" · " />
+                                        <Run Text="{Binding Ago, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+    </Panel>
+    </Panel>
 </UserControl>

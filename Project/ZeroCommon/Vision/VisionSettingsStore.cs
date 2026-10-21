@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Vision;
@@ -21,13 +22,13 @@ public static class VisionSettingsStore
     private const string ReadyMarkerName = ".florence2-ready";
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "vision-settings.json");
+        AppPaths.DataRoot,
+        "vision-settings.json");
 
     /// <summary>Convention root for Florence-2 ONNX files when <see cref="VisionSettings.ModelDir"/> is empty.</summary>
     public static string DefaultModelDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "models", "florence2");
+        AppPaths.SharedRoot,
+        "models", "florence2");
 
     public static VisionSettings Load()
     {

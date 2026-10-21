@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Agent.Common;
@@ -19,7 +20,12 @@ public partial class MainWindow : Window
         // through the hotkey message instead, against the same table.
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
 
-        DataContextChanged += (_, _) => AttachBot(Vm);
+        DataContextChanged += (_, _) =>
+        {
+            AttachBot(Vm);
+            if (Vm is { } vm)
+                vm.ClipboardWriter = text => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
+        };
         BotSplitter.DragCompleted += (_, _) => RememberBotPaneHeight();
 
         // ShutdownMode.OnMainWindowClose closes the floating bot for us on exit. Its own

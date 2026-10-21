@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 using Agent.Common.Security;
 
@@ -8,8 +9,8 @@ public static class LlmSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "llm-settings.json");
+        AppPaths.DataRoot,
+        "llm-settings.json");
 
     public static LlmRuntimeSettings Load()
     {

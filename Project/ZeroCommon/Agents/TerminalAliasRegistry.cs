@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -72,8 +73,8 @@ public sealed class TerminalAliasRegistry
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "terminal-aliases.json");
+        AppPaths.DataRoot,
+        "terminal-aliases.json");
 
     private sealed class Dto
     {

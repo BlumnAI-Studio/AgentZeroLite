@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Wearable;
@@ -19,8 +20,8 @@ public static class WearableSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     public static string DefaultFilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "wearable-settings.json");
+        AppPaths.DataRoot,
+        "wearable-settings.json");
 
     public static WearableSettings Load() => Load(DefaultFilePath);
 

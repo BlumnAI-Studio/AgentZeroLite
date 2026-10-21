@@ -59,6 +59,19 @@
         <Style Selector="Button.sidex:pointerover">
             <Setter Property="Foreground" Value="#f14c4c" />
         </Style>
+        <!-- The sidebar's own hide / show chevron: small and quiet, part of the panel. -->
+        <Style Selector="Button.fold">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.fold:pointerover /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
         <!-- M0041: bot pane chrome -->
         <Style Selector="Button.chrome">
             <Setter Property="Background" Value="Transparent" />
@@ -87,6 +100,13 @@
         <Style Selector="Button.ptab.selected">
             <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
+        <!-- GIT LOG with no readable history: dimmed, not Fluent's grey slab. -->
+        <Style Selector="Button.ptab:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Button.ptab:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
         </Style>
     </Window.Styles>
 
@@ -119,8 +139,6 @@
                         <Button Classes="activity" Classes.selected="{Binding CodeVisible}"
                                 Content="📄" ToolTip.Tip="Code — the workspace's files (Ctrl+Alt+E)"
                                 Command="{Binding ToggleCodeCommand}" />
-                        <Button Classes="activity" Content="▤" ToolTip.Tip="Toggle sidebar"
-                                Command="{Binding ToggleSidebarCommand}" />
                         <Button Classes="activity" Classes.selected="{Binding IsWearablePage}"
                                 Content="⌚" ToolTip.Tip="Wearable" Command="{Binding ShowWearableCommand}"
                                 IsVisible="{Binding WearableSupported}" />
@@ -133,28 +151,51 @@
                 </DockPanel>
             </Border>
 
-            <!-- Sidebar: workspaces + the active workspace's sessions -->
+            <!-- Sidebar collapsed: a slim strip whose only job is to bring it back. -->
+            <Border Grid.Column="1" Grid.Row="0" Width="18" Background="{DynamicResource CyberBgPanel}"
+                    BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0"
+                    IsVisible="{Binding !SidebarExpanded}">
+                <Button Classes="fold" Content="›" VerticalAlignment="Top" HorizontalAlignment="Center"
+                        Margin="0,6,0,0" ToolTip.Tip="Show workspaces" Command="{Binding ToggleSidebarCommand}" />
+            </Border>
+
+            <!-- Sidebar: workspaces + the active workspace's sessions. The header stays put and
+                 the rest scrolls — the bottom dock (bot / code) shares this row, so a taller
+                 dock leaves the sidebar less height than its lists need. -->
             <Border Grid.Column="1" Grid.Row="0" Width="220" Background="{DynamicResource CyberBgPanel}"
                     BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0"
                     IsVisible="{Binding SidebarExpanded}">
-                <DockPanel Margin="0,6">
-                    <DockPanel DockPanel.Dock="Top" Margin="12,2,6,2">
+                <DockPanel Margin="0,6,0,0">
+                    <DockPanel DockPanel.Dock="Top" Margin="12,2,4,2">
+                        <Button DockPanel.Dock="Right" Classes="fold" Content="‹"
+                                ToolTip.Tip="Hide workspaces" Command="{Binding ToggleSidebarCommand}" />
                         <Button x:Name="AddWorkspaceButton" DockPanel.Dock="Right" Classes="sidex" Content="＋"
                                 FontSize="14" ToolTip.Tip="Add workspace folder" />
                         <TextBlock Text="WORKSPACES" FontSize="10" FontWeight="Bold"
                                    Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" />
                     </DockPanel>
-                    <TextBlock DockPanel.Dock="Top" IsVisible="{Binding HasNoWorkspaces}"
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,0,6">
+                    <TextBlock IsVisible="{Binding HasNoWorkspaces}"
                                Text="No workspace yet. Add a folder to open terminals in it."
                                TextWrapping="Wrap" FontSize="11"
                                Foreground="{DynamicResource TextDim}" Margin="12,4" />
-                    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Workspaces}">
+                    <ItemsControl ItemsSource="{Binding Workspaces}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:WorkspaceViewModel">
                                 <!-- A workspace that is a worktree of a repository another row hosts is
                                      drawn under that row (below), not here. -->
                                 <StackPanel IsVisible="{Binding !IsNested}">
                                     <Border Classes="ws" Classes.selected="{Binding IsActive}">
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Open folder" Command="{Binding OpenFolderCommand}" />
+                                                <Separator />
+                                                <MenuItem Header="{Binding CopyAbsoluteHeader}" Command="{Binding CopyAbsolutePathCommand}" />
+                                                <MenuItem Header="{Binding CopyRelativeHeader}" Command="{Binding CopyRelativePathCommand}"
+                                                          IsVisible="{Binding HasRelativePath}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Classes="sidex" Content="✕"
                                                     ToolTip.Tip="Remove workspace" Command="{Binding RemoveCommand}" />
@@ -174,6 +215,15 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:WorktreeEntryViewModel">
                                                 <Border Classes="ws" Classes.selected="{Binding Workspace.IsActive, FallbackValue=False}" Margin="14,0,0,0">
+                                                    <Border.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Open worktree folder" Command="{Binding OpenFolderCommand}" />
+                                                            <Separator />
+                                                            <MenuItem Header="{Binding CopyAbsoluteHeader}" Command="{Binding CopyAbsolutePathCommand}" />
+                                                            <MenuItem Header="{Binding CopyRelativeHeader}" Command="{Binding CopyRelativePathCommand}"
+                                                                      IsVisible="{Binding HasRelativePath}" />
+                                                        </ContextMenu>
+                                                    </Border.ContextMenu>
                                                     <DockPanel>
                                                         <Button DockPanel.Dock="Right" Classes="sidex" Content="✕" IsVisible="{Binding IsOpened}"
                                                                 ToolTip.Tip="Close this workspace (the worktree folder stays)" Command="{Binding CloseCommand}" />
@@ -192,10 +242,10 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
-                    <TextBlock DockPanel.Dock="Top" Text="SESSIONS" FontSize="10" FontWeight="Bold"
+                    <Border Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
+                    <TextBlock Text="SESSIONS" FontSize="10" FontWeight="Bold"
                                Foreground="{DynamicResource TextDim}" Margin="12,4" />
-                    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding ActiveWorkspace.Tabs}">
+                    <ItemsControl ItemsSource="{Binding ActiveWorkspace.Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TerminalTabViewModel">
                                 <Border Classes="ws session" Classes.selected="{Binding IsActive}">
@@ -208,13 +258,12 @@
 
                     <!-- ACTIVE SESSIONS: every running terminal of every workspace, with the agent
                          state detected on its screen (the WPF SESSIONS panel). Click = go there. -->
-                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding ActiveSessionsHeader}" FontSize="10" FontWeight="Bold"
+                    <Border Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
+                    <TextBlock Text="{Binding ActiveSessionsHeader}" FontSize="10" FontWeight="Bold"
                                Foreground="{DynamicResource TextDim}" Margin="12,4" />
-                    <TextBlock DockPanel.Dock="Top" IsVisible="{Binding HasNoActiveSessions}"
+                    <TextBlock IsVisible="{Binding HasNoActiveSessions}"
                                Text="No terminal is running yet." FontSize="11"
                                Foreground="{DynamicResource TextDim}" Margin="12,2" />
-                    <ScrollViewer DockPanel.Dock="Top" MaxHeight="320" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding ActiveSessions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ActiveSessionItem">
@@ -241,8 +290,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
                     </ScrollViewer>
-                    <Panel />
                 </DockPanel>
             </Border>
 
@@ -287,8 +336,13 @@
                         <StackPanel Orientation="Horizontal" Spacing="2">
                             <Button Classes="ptab" Classes.selected="{Binding ShowBotInDock}" Content="🤖 BOT"
                                     IsVisible="{Binding BotDockVisible}" Command="{Binding SelectBotTabCommand}" />
-                            <Button Classes="ptab" Classes.selected="{Binding ShowCodeInDock}" Content="📄 CODE"
+                            <Button Classes="ptab" Classes.selected="{Binding CodeFilesTabSelected}" Content="📄 CODE"
                                     IsVisible="{Binding CodeDockVisible}" Command="{Binding SelectCodeTabCommand}" />
+                            <!-- Enabled only when git can read the workspace's history. -->
+                            <Button Classes="ptab" Classes.selected="{Binding GitLogTabSelected}" Content="⎇ GIT LOG"
+                                    IsVisible="{Binding CodeDockVisible}" IsEnabled="{Binding Code.GitLog.IsAvailable}"
+                                    ToolTip.Tip="{Binding Code.GitLog.TabTip}" ToolTip.ShowOnDisabled="True"
+                                    Command="{Binding SelectGitLogTabCommand}" />
                         </StackPanel>
                     </DockPanel>
                     <Panel>

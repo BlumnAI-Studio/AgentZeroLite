@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.IO;
 using System.Text.Json;
 using Agent.Common.Data;
@@ -67,8 +68,7 @@ public sealed class SessionHeartbeatCollector
         string? Error);
 
     public static string SnapshotsDir { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite",
+        AppPaths.SharedRoot,
         "cc-hud-snapshots");
 
     /// <summary>Heartbeats older than this are pruned each tick.</summary>

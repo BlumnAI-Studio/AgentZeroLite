@@ -35,6 +35,25 @@ public partial class MainWindowViewModel
     public bool ShowBotInDock => BotDockVisible && (BottomTab == BottomTab.Bot || !CodeDockVisible);
     public bool ShowCodeInDock => CodeDockVisible && (BottomTab == BottomTab.Code || !BotDockVisible);
 
+    /// <summary>
+    /// ⎇ GIT LOG sits beside 📄 CODE and shares its pane: it is the code panel showing history
+    /// instead of files (<see cref="CodeViewModel.ShowGitLog"/>), so it floats and closes with it.
+    /// </summary>
+    public bool CodeFilesTabSelected => ShowCodeInDock && !Code.ShowGitLog;
+    public bool GitLogTabSelected => ShowCodeInDock && Code.ShowGitLog;
+
+    private void WireCodeTabs()
+        => Code.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CodeViewModel.ShowGitLog)) RaiseCodeTabs();
+        };
+
+    private void RaiseCodeTabs()
+    {
+        OnPropertyChanged(nameof(CodeFilesTabSelected));
+        OnPropertyChanged(nameof(GitLogTabSelected));
+    }
+
     partial void OnCodeVisibleChanged(bool value)
     {
         RaiseBottomPanel();
@@ -56,6 +75,7 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(BottomDockVisible));
         OnPropertyChanged(nameof(ShowBotInDock));
         OnPropertyChanged(nameof(ShowCodeInDock));
+        RaiseCodeTabs();
         if (!BottomDockVisible) BotMaximized = false;
     }
 
@@ -73,7 +93,20 @@ public partial class MainWindowViewModel
     }
 
     [RelayCommand] private void SelectBotTab() => BottomTab = BottomTab.Bot;
-    [RelayCommand] private void SelectCodeTab() => BottomTab = BottomTab.Code;
+    [RelayCommand]
+    private void SelectCodeTab()
+    {
+        BottomTab = BottomTab.Code;
+        Code.ShowGitLog = false;
+    }
+
+    [RelayCommand]
+    private void SelectGitLogTab()
+    {
+        if (!Code.GitLog.IsAvailable) return;
+        BottomTab = BottomTab.Code;
+        Code.ShowGitLog = true;
+    }
 
     [RelayCommand] public void EmbedCode() => CodeDocked = true;
 
@@ -114,10 +147,18 @@ public partial class MainWindowViewModel
                     return Agent.Common.Platform.CliIpcProtocol.ErrorJson("usage: code view preview|plain");
                 Code.MarkdownPreview = path == "preview";
                 break;
+            case "tab":
+                // The panel's two faces: the files, or the GIT LOG beside them.
+                if (path is not ("files" or "gitlog"))
+                    return Agent.Common.Platform.CliIpcProtocol.ErrorJson("usage: code tab files|gitlog");
+                if (path == "gitlog" && !Code.GitLog.IsAvailable)
+                    return Agent.Common.Platform.CliIpcProtocol.ErrorJson("git log unavailable: " + Code.GitLog.Note);
+                Code.ShowGitLog = path == "gitlog";
+                break;
             case "status" or "":
                 break;
             default:
-                return Agent.Common.Platform.CliIpcProtocol.ErrorJson($"unknown code verb '{verb}'. Use: open [path], close, status");
+                return Agent.Common.Platform.CliIpcProtocol.ErrorJson($"unknown code verb '{verb}'. Use: open [path], close, view, tab, status");
         }
         AppLogger.Log($"[Code] cli {verb} {path}");
         return Code.StatusJson(CodeVisible, CodeDocked);

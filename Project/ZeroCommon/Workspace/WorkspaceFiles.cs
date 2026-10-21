@@ -18,6 +18,10 @@ public enum FileViewKind
 /// <summary>One entry of a folder listing.</summary>
 public sealed record WorkspaceEntry(string Name, string FullPath, bool IsDirectory);
 
+/// <summary>One row of a folder listing (<see cref="WorkspaceFiles.ListDetailed"/>); Size is null for a folder.</summary>
+public sealed record FolderEntryInfo(string Name, string FullPath, bool IsDirectory, long? Size,
+    DateTime Created, DateTime Modified);
+
 /// <summary>What <see cref="WorkspaceFiles.ReadForView"/> hands the view.</summary>
 public sealed record FileViewContent(FileViewKind Kind, string Text, long Length, string? Note);
 
@@ -89,6 +93,29 @@ public static class WorkspaceFiles
                 if (!IsHidden(d.Name, patterns)) result.Add(new WorkspaceEntry(d.Name, d.FullName, true));
             foreach (var f in dir.EnumerateFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
                 if (!IsHidden(f.Name, patterns)) result.Add(new WorkspaceEntry(f.Name, f.FullName, false));
+        }
+        catch (UnauthorizedAccessException) { }
+        catch (IOException) { }
+        return result;
+    }
+
+    /// <summary>
+    /// One folder's visible entries with their details, for the code view's folder listing —
+    /// the same filter and order as <see cref="List"/>, so the listing and the tree agree. A
+    /// folder's size is not summed (that walks the whole subtree); it is null. Inaccessible → empty.
+    /// </summary>
+    public static IReadOnlyList<FolderEntryInfo> ListDetailed(string directory, IReadOnlySet<string> patterns)
+    {
+        var result = new List<FolderEntryInfo>();
+        try
+        {
+            var dir = new DirectoryInfo(directory);
+            foreach (var d in dir.EnumerateDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+                if (!IsHidden(d.Name, patterns))
+                    result.Add(new FolderEntryInfo(d.Name, d.FullName, true, null, d.CreationTime, d.LastWriteTime));
+            foreach (var f in dir.EnumerateFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+                if (!IsHidden(f.Name, patterns))
+                    result.Add(new FolderEntryInfo(f.Name, f.FullName, false, f.Length, f.CreationTime, f.LastWriteTime));
         }
         catch (UnauthorizedAccessException) { }
         catch (IOException) { }

@@ -32,6 +32,16 @@ public partial class WorkspaceViewModel : ObservableObject, ICliGroupInfo
 
     public Action<WorkspaceViewModel>? ActivateRequested { get; set; }
     public Action<WorkspaceViewModel>? RemoveRequested { get; set; }
+    public Action<string>? OpenFolderRequested { get; set; }
+    public Action<string>? CopyTextRequested { get; set; }
+
+    // Context menu "copy path": a workspace has no parent of its own, so its relative form is
+    // the home-relative one (~/code/x) — shown only when the folder is under home.
+    public string? AbsolutePathText => Agent.Common.Workspace.PathCopyText.Absolute(DirectoryPath);
+    public string? RelativePathText => Agent.Common.Workspace.PathCopyText.HomeRelative(DirectoryPath);
+    public bool HasRelativePath => RelativePathText is not null;
+    public string CopyAbsoluteHeader => $"Copy absolute path   {AbsolutePathText}";
+    public string CopyRelativeHeader => $"Copy relative path   {RelativePathText}";
 
     // ── git worktrees (sidebar nesting) ─────────────────────────────────────
 
@@ -94,4 +104,7 @@ public partial class WorkspaceViewModel : ObservableObject, ICliGroupInfo
 
     [RelayCommand] private void Activate() => ActivateRequested?.Invoke(this);
     [RelayCommand] private void Remove() => RemoveRequested?.Invoke(this);
+    [RelayCommand] private void OpenFolder() => OpenFolderRequested?.Invoke(DirectoryPath);
+    [RelayCommand] private void CopyAbsolutePath() { if (AbsolutePathText is { } t) CopyTextRequested?.Invoke(t); }
+    [RelayCommand] private void CopyRelativePath() { if (RelativePathText is { } t) CopyTextRequested?.Invoke(t); }
 }

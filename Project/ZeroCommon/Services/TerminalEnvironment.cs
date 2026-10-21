@@ -51,6 +51,11 @@ public static class TerminalEnvironment
         "TERM_PROGRAM_VERSION",
         "TERMINAL_EMULATOR",
         "FIG_TERM",
+
+        // A Debug GUI's data profile (AppPaths.UseProfile). It reaches the children the app
+        // starts on purpose; a tab is the user's shell, where a release exe must open the
+        // release's data.
+        Agent.Common.Platform.AppPaths.ProfileVariable,
     };
 
     /// <summary>

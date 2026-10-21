@@ -25,6 +25,18 @@ public sealed class PlatformSeamTests : IDisposable
     }
 
     [Fact]
+    public void FolderOpener_picks_this_os_and_refuses_a_missing_folder_without_launching()
+    {
+        var opener = FolderOpener.Create();
+        var expected = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "xdg";
+        Assert.Equal(expected, opener.Platform);
+
+        var missing = Path.Combine(_scratch, "no-such-folder");
+        Assert.StartsWith("folder not found", opener.Open(missing));
+        Assert.Equal("no folder", opener.Open("  "));
+    }
+
+    [Fact]
     public void AppPaths_resolve_under_the_root_and_create_folders()
     {
         Assert.Equal(_scratch, AppPaths.DataRoot);

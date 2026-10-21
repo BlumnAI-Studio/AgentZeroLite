@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Remote;
@@ -16,8 +17,8 @@ public static class RemoteSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "remote-settings.json");
+        AppPaths.DataRoot,
+        "remote-settings.json");
 
     public static RemoteSettings Load()
     {

@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 using Agent.Common.Security;
 
@@ -14,8 +15,8 @@ public static class VoiceSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "voice-settings.json");
+        AppPaths.DataRoot,
+        "voice-settings.json");
 
     public static VoiceSettings Load()
     {

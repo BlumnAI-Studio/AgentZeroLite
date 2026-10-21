@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Music;
@@ -13,16 +14,16 @@ public static class MusicSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "music-settings.json");
+        AppPaths.DataRoot,
+        "music-settings.json");
 
     /// <summary>
     /// Convention root for AST model files when MusicSettings paths are empty.
     /// Public so the Music tab can show the expected location in the UI.
     /// </summary>
     public static string DefaultModelDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "models", "ast-audioset");
+        AppPaths.SharedRoot,
+        "models", "ast-audioset");
 
     public static string DefaultModelPath => Path.Combine(DefaultModelDirectory, "model.onnx");
 

@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.IO;
 using Agent.Common.Data.Entities;
 using Agent.Common.Services;
@@ -27,9 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<Automation> Automations => Set<Automation>();
     public DbSet<YouTubePlaylistItem> YouTubePlaylistItems => Set<YouTubePlaylistItem>();
 
-    private static readonly string _dbDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite");
+    private static readonly string _dbDir = AppPaths.DataRoot;
 
     private static readonly string _dbPath = Path.Combine(_dbDir, "agentZeroLite.db");
 

@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Os;
@@ -19,7 +20,7 @@ public sealed class OsAuditLog
     {
         _caller = caller;
         _dir = directory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AgentZeroLite", "logs", "os-audit");
+            AppPaths.DataRoot, "logs", "os-audit");
     }
 
     public string Directory => _dir;

@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -112,8 +113,8 @@ public static class McpSettingsStore
 
     /// <summary>Overridable for tests; the hosts use the default.</summary>
     public static string FilePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "mcp-settings.json");
+        AppPaths.DataRoot,
+        "mcp-settings.json");
 
     /// <summary>Raised after <see cref="Save"/> so a host can drop connections built from the old settings.</summary>
     public static event Action<McpSettings>? Saved;

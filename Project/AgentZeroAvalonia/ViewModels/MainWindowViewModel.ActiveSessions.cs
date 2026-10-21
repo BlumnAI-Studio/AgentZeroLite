@@ -90,7 +90,7 @@ public partial class MainWindowViewModel
     public ObservableCollection<ActiveSessionItem> ActiveSessions { get; } = new();
 
     [ObservableProperty] private int _attentionCount;
-    [ObservableProperty] private string _windowTitle = "AgentZero Lite";
+    [ObservableProperty] private string _windowTitle = BuildFlavor.AppTitle;
 
     public bool HasActiveSessions => ActiveSessions.Count > 0;
     public bool HasNoActiveSessions => ActiveSessions.Count == 0;
@@ -102,7 +102,7 @@ public partial class MainWindowViewModel
     {
         OnPropertyChanged(nameof(ActiveSessionsHeader));
         // The WPF host's title-bar rollup, so a blocked agent shows from the taskbar too.
-        WindowTitle = value > 0 ? $"AgentZero Lite  ● {value} need attention" : "AgentZero Lite";
+        WindowTitle = value > 0 ? $"{BuildFlavor.AppTitle}  ● {value} need attention" : BuildFlavor.AppTitle;
     }
 
     /// <summary>Start the detection timer (App, once the window exists).</summary>

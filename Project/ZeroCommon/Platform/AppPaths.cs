@@ -1,29 +1,65 @@
 namespace Agent.Common.Platform;
 
 /// <summary>
-/// Where this app keeps its data, in one place (M0033). Today every store builds
-/// <c>%LOCALAPPDATA%\AgentZeroLite</c> by hand; they keep doing so (the WPF host is
-/// not touched by the Avalonia work), and the new host reads the same folder through
-/// this class so both GUIs share one database and one settings set on Windows.
+/// Where this app keeps its data, in one place (M0033). Both GUIs and every store read the
+/// folder through this class so they share one database and one settings set on Windows.
 ///
 /// <para>Phase 1 keeps <c>LocalApplicationData</c> on every OS — on macOS that is
 /// <c>~/.local/share/AgentZeroLite</c>, which is unusual for a Mac app but harmless.
-/// Moving to <c>~/Library/Application Support</c> is a one-line change here once the
-/// existing stores route through it too.</para>
+/// Moving to <c>~/Library/Application Support</c> is a one-line change here.</para>
+///
+/// <para><b>Profiles.</b> A Debug build runs beside the installed release (a worktree under
+/// development next to the copy in use), so it must not write the release's database and
+/// settings. <see cref="UseProfile"/> moves <see cref="DataRoot"/> — DB, settings, aliases,
+/// logs — to a sibling folder (<c>AgentZeroLite-Debug</c>), while <see cref="SharedRoot"/>
+/// keeps what is large and read-mostly — downloaded models, snapshots written by hooks outside
+/// the app — in the one place both read. The profile is also put in the environment
+/// (<see cref="ProfileVariable"/>) so a child this process starts (the wearable host) opens the
+/// same stores; terminal tabs drop it (<c>TerminalEnvironment</c>).</para>
 /// </summary>
 public static class AppPaths
 {
     public const string AppFolderName = "AgentZeroLite";
 
-    private static string? _override;
+    /// <summary>Environment variable that carries the profile name to child processes.</summary>
+    public const string ProfileVariable = "AGENTZEROLITE_PROFILE";
 
-    /// <summary>The data root; created on first use.</summary>
+    // Flow-local: a test's override must not leak into a store whose static path happens to be
+    // initialised on another test's thread while it is in force.
+    private static readonly AsyncLocal<string?> _override = new();
+    private static string? _profile = Normalize(Environment.GetEnvironmentVariable(ProfileVariable));
+
+    /// <summary>The profile in use, or null for the default (the release's) data.</summary>
+    public static string? Profile => _profile;
+
+    /// <summary>
+    /// Switch this process — and the children it starts — to a named profile. Call it first
+    /// thing in <c>Main</c>: stores read their paths into static fields on first use.
+    /// </summary>
+    public static void UseProfile(string? name)
+    {
+        _profile = Normalize(name);
+        Environment.SetEnvironmentVariable(ProfileVariable, _profile);
+    }
+
+    /// <summary>The folder every profile shares (models, external snapshots); created on first use.</summary>
+    public static string SharedRoot
+    {
+        get
+        {
+            var root = _override.Value ?? Path.Combine(LocalAppData, AppFolderName);
+            Directory.CreateDirectory(root);
+            return root;
+        }
+    }
+
+    /// <summary>The data root of the active profile (DB, settings, logs); created on first use.</summary>
     public static string DataRoot
     {
         get
         {
-            var root = _override ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppFolderName);
+            var root = _override.Value
+                ?? Path.Combine(LocalAppData, _profile is null ? AppFolderName : $"{AppFolderName}-{_profile}");
             Directory.CreateDirectory(root);
             return root;
         }
@@ -41,14 +77,33 @@ public static class AppPaths
     }
 
     public static string LogsDir => Dir("logs");
-    public static string ModelsDir => Dir("models");
+
+    /// <summary>Downloaded models live in the shared root — a profile must not download them again.</summary>
+    public static string ModelsDir
+    {
+        get
+        {
+            var dir = Path.Combine(SharedRoot, "models");
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
 
     /// <summary>Tests point the root at a scratch folder; disposing restores it.</summary>
     public static IDisposable OverrideRoot(string root)
     {
-        var previous = _override;
-        _override = root;
-        return new Restore(() => _override = previous);
+        var previous = _override.Value;
+        _override.Value = root;
+        return new Restore(() => _override.Value = previous);
+    }
+
+    private static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+    private static string? Normalize(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var clean = new string(name.Trim().Where(c => char.IsLetterOrDigit(c) || c is '-' or '_').ToArray());
+        return clean.Length == 0 ? null : clean;
     }
 
     private sealed class Restore(Action undo) : IDisposable

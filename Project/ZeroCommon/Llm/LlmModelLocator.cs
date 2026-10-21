@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 namespace Agent.Common.Llm;
 
 public static class LlmModelLocator
@@ -12,8 +13,8 @@ public static class LlmModelLocator
     private const string DevModelsDir = @"D:\Code\AI\GemmaNet\models";
 
     public static string UserModelsDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "AgentZeroLite", "models");
+        Path.Combine(AppPaths.SharedRoot,
+            "models");
 
     // Path resolution per catalog entry: dev-path wins if the file lives
     // there (developer workflow), otherwise the user-data path.

@@ -65,6 +65,13 @@ Project/AgentZeroAvalonia/bin/Debug/net10.0/AgentZeroLite.exe -cli selftest all 
 Rider/VS: `AgentZeroLite.slnx`를 열고 실행 프로필 **AgentZeroLite (Avalonia GUI)** 선택. Windows에서 WPF와 Avalonia GUI는
 단일 인스턴스 뮤텍스를 공유하므로 하나를 닫고 다른 하나를 띄웁니다.
 
+**Debug 빌드는 설치된 릴리즈 옆에서 함께 실행됩니다** (`BuildFlavor`): 자체 단일 인스턴스 뮤텍스(`AgentZeroLite-Debug`),
+자체 CLI 파이프(`AgentZeroLite.cli.debug` — Debug exe의 `-cli`는 Debug GUI를 조종), 모든 창 제목의 `-DEBUG`, 그리고 자체
+**데이터 프로필** `%LOCALAPPDATA%\AgentZeroLite-Debug`(DB·설정·로그·플러그인 — `AppPaths.UseProfile`)를 씁니다. 프로필은
+처음 한 번 릴리즈 데이터로 채워집니다(설정 JSON + DB의 `VACUUM INTO` 스냅샷 — 릴리즈가 DB를 열고 있어도 안전). 다시 채우려면
+폴더를 지우면 됩니다. 내려받은 모델은 공유합니다(`AppPaths.SharedRoot`). 프로필 이름은 `AGENTZEROLITE_PROFILE`로 웨어러블
+호스트에 전달되고, 터미널 탭에는 넘기지 않습니다.
+
 Releases(공식, `v*` 태그에서 `release.yml`): `AgentZeroLite-v<ver>-Setup.exe`(Inno Setup, `installer/AgentZeroLite.iss` —
 WPF 설치판이 쓰던 AppId를 그대로 써서 WPF 설치본을 그 자리에서 업그레이드하고, `wearable\`을 포함한다),
 `AgentZeroLite-v<ver>-win-x64.zip`. macOS zip은 같은 실행에서 만들어지지만 [macOS 스모크 체크리스트](Docs/avalonia-v2/macos-smoke.md)를
@@ -115,6 +122,9 @@ Microsoft Store(Windows): `Project/AgentZeroAvalonia/msix/build-msix.ps1` 가 MS
 | 사이드바 **ACTIVE SESSIONS**: 모든 워크스페이스의 실행 중인 터미널 전체, 클릭하면 그 세션으로 이동; 행마다 에이전트 상태(blocked / working / done / idle 점 + 칩), 헤더와 창 제목에 attention 수 | ✅ | WPF SESSIONS 패널의 herdr H1/H2 상태. 감지는 `ZeroCommon/Agents/AgentActivityTracker`로 내렸고(WPF `AgentStateMonitor`는 이제 타이머로 이것을 돌린다), 두 호스트가 같은 매니페스트와 "seen" 규칙으로 화면을 판정한다. `-cli agent-state`는 WPF 계약 그대로 응답. Claude Code 탭은 화면보다 Claude 자신의 상태 파일(`~/.claude/sessions/<pid>.json`: busy / waiting / idle)을, Codex 탭은 그 스레드 rollout의 턴 이벤트(`task_started` / `task_complete`)를 먼저 본다 — 끝난 턴은 1초 안에 **done**으로 표시 |
 | Claude / Codex 탭의 **세션 복원**: 프로세스 시작 전에 그 에이전트가 워크스페이스 폴더에 대해 기록해 둔 세션을 대화상자로 나열(최신이 위: 제목, 첫 프롬프트, 경과 시간, 크기) — *Resume selected*는 `claude --resume <id>` / `codex resume <id>`로 다시 띄우고, *New session*은 새로 시작; "Don't ask again"은 에이전트별로 질문을 끈다(Settings → Terminal → Session resume에서 다시 켬) | ✅ Avalonia 전용 | 에이전트 자신의 저장소에서 읽는다(`$CLAUDE_CONFIG_DIR`/`~/.claude/projects/<slug>`, `$CODEX_HOME`/`~/.codex/sessions` + `session_index.jsonl`), 앞/뒤 일부만 읽음 — `ZeroCommon/Agents/AgentSessionCatalog`, `AgentResumeLaunch`, `agent-resume.json`. Codex가 스스로 띄운 서브에이전트 스레드(guardian review)는 제외 |
 | 사이드바 **git 워크트리**: 저장소의 작업 트리인 워크스페이스는 브랜치를 표시하고, 그 저장소의 다른 워크트리를 하위(⎇)에 나열 — 열린 것은 전환, 감지만 된 것은 클릭하면 워크스페이스로 열리고 그 아래에 중첩 표시; 에이전트가 만든 워크트리는 5초 안에 나타나고 제거되면 사라진다 — Claude Code의 `<repo>/.claude/worktrees/<name>`(브랜치)과 Codex의 `$CODEX_HOME/worktrees/<id>/<repo>`(detached; `codex <id> (<commit>)`으로 표시되고 `<repo>`가 하나 더 생기지 않게 `<repo>-codex-<id>`로 열림)를 모두 인식 | ✅ Avalonia 전용 | `ZeroCommon/Workspace/GitWorktreeScanner`가 git 자체 파일(`.git/worktrees/*/gitdir`, `commondir`, `HEAD`)을 읽는다 — `git` 프로세스 없음 — UI 스레드 밖에서 `PathAvailability` 뒤로; 중첩 규칙은 `WorktreeNesting`(메인 트리가 호스트, 없으면 처음 나열된 트리). 표시만 중첩되고 평평한 워크스페이스 순서(CLI 그룹 인덱스, 저장된 행)는 그대로. `-cli worktree list \| open \| close <path\|branch>` |
+| 사이드바: 워크스페이스 우클릭 → **Open folder** / 워크트리 → **Open worktree folder**, 그리고 **절대·상대 경로 복사**(워크스페이스: `~/…`; 워크트리: 저장소 행 기준, 예 `.claude/worktrees/x`); 하단 패널이 높아지면 헤더는 고정된 채 사이드바가 스크롤된다; 패널의 작은 ‹ / ›로 접고 편다(액티비티 바 항목은 제거) | ✅ Windows · ⏳ macOS 확인 | `ZeroCommon/Platform/IFolderOpener` — `explorer.exe <folder>` / `/usr/bin/open <folder>` / `xdg-open`, 고정 프로그램에 인자 하나로 넘기고 경로를 ShellExecute하지 않으며, 존재 확인은 `PathAvailability`. 경로 문자열은 `ZeroCommon/Workspace/PathCopyText`(절대 경로는 OS 형식, 상대 경로는 `/`) |
+| 코드 뷰: **폴더 목록**(트리에서 폴더 선택 → 그 폴더의 파일을 크기·수정일·생성일과 함께; 읽기 전용, 하위 폴더는 트리에만), **⧉ path**는 상대/절대 선택 팝업, **↗ open**은 폴더를 탐색기/Finder로 연다 | ✅ Windows · ⏳ macOS 확인 | `WorkspaceFiles.ListDetailed` — 트리와 같은 필터·순서. 패널을 열면 워크스페이스 루트를 나열. `code status`가 `view: folder`를 알려 준다 |
+| 코드 뷰: 📄 CODE 옆 **⎇ GIT LOG** 탭 — 워크스페이스의 최근 커밋 100개를 최신순 단순 목록으로(제목; 작성자 · 경과 시간; 짧은 해시; 마우스를 올리면 전체 메시지) | ✅ Avalonia 전용 | `ZeroCommon/Workspace/GitLogReader`: 단위/레코드 구분자를 쓴 로컬 `git log`, 셸 없이, 프롬프트 끔, stdin 닫음, 10초 제한. git이 읽지 못하는 폴더면 탭이 비활성화되고 툴팁에 git의 이유가 나온다. 탭은 코드 패널의 다른 면이라 함께 떠 있고 함께 닫힌다(별도 창에도 같은 CODE \| GIT LOG 쌍). `-cli code tab files\|gitlog`; `code status`에 `gitLog` |
 | CLI: `plugin list` / `open` / `call` / `capture` | ✅ Avalonia 전용 | `call`은 `window.zero.invoke`를 페이지 **안에서** 실행하므로, 응답이 페이지 → shim → 브리지 → 디스패처를 거쳐 돌아온다 — 셸에서 하는 플러그인 종단 테스트 |
 | Browser 페이지(탭 웹뷰), OS 제어, Vision, Music, Remote, 노트/문서 뷰어, Scrap | ⏳ 미착수 | 2차; 그때까지 웹 도구는 headless |
 | macOS 로컬 LLM(Metal) | ⏳ 조사 | 당분간 External 공급자만 |

@@ -102,6 +102,7 @@ public partial class MainWindowViewModel : ObservableObject
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
         var plus = info.IndexOf('+');
         VersionLabel = "v" + (plus >= 0 ? info[..plus] : info);
+        WireCodeTabs();
         Workspaces.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasWorkspaces));
@@ -361,6 +362,39 @@ public partial class MainWindowViewModel : ObservableObject
         return ws;
     }
 
+    private readonly Agent.Common.Platform.IFolderOpener _folderOpener = Agent.Common.Platform.FolderOpener.Create();
+
+    /// <summary>Sidebar context menu: show a workspace's (or worktree's) folder in Explorer / Finder.</summary>
+    public void OpenFolder(string path)
+    {
+        var error = _folderOpener.Open(path);
+        if (error is null)
+        {
+            StatusText = $"Opened {path}";
+            return;
+        }
+        StatusText = $"Could not open the folder — {error}";
+        AppLogger.Log($"[Workspace] open folder failed ({_folderOpener.Platform}) | {error}");
+    }
+
+    /// <summary>The window's clipboard; set by MainWindow (the clipboard belongs to a TopLevel).</summary>
+    public Func<string, Task>? ClipboardWriter { get; set; }
+
+    /// <summary>Sidebar context menu: a workspace's or worktree's path onto the clipboard.</summary>
+    public async void CopyText(string text)
+    {
+        if (ClipboardWriter is null) return;
+        try
+        {
+            await ClipboardWriter(text);
+            StatusText = $"Copied {text}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not copy — {ex.Message}";
+        }
+    }
+
     public void RemoveWorkspace(WorkspaceViewModel ws)
     {
         if (!Workspaces.Remove(ws)) return;
@@ -377,6 +411,8 @@ public partial class MainWindowViewModel : ObservableObject
         {
             ActivateRequested = w => ActiveWorkspace = w,
             RemoveRequested = RemoveWorkspace,
+            OpenFolderRequested = OpenFolder,
+            CopyTextRequested = CopyText,
         };
         ws.PropertyChanged += OnWorkspacePropertyChanged;
         ws.LayoutChanged += () =>

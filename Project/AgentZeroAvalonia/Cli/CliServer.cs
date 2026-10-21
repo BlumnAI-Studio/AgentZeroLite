@@ -17,13 +17,13 @@ internal sealed class CliServer : IDisposable
 
     public static CliServer Start(CliCommandRouter router)
     {
-        var bridge = CliIpcBridge.Create();
+        var bridge = CliIpcBridge.Create(BuildFlavor.PipeName);
         var handle = bridge.StartServer(async (json, ct) =>
         {
             AppLogger.Log($"[IPC] pipe request | {Head(json, 200)}");
             return await Dispatcher.UIThread.InvokeAsync(() => router.HandleAsync(json, ct));
         });
-        AppLogger.Log($"[IPC] pipe server listening on '{CliIpcBridge.DefaultPipeName}'");
+        AppLogger.Log($"[IPC] pipe server listening on '{BuildFlavor.PipeName}'");
         return new CliServer(handle);
     }
 

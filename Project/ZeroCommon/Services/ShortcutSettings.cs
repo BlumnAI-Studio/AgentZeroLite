@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text;
 using System.Text.Json;
 
@@ -160,8 +161,8 @@ public static class ShortcutSettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     public static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "shortcut-settings.json");
+        AppPaths.DataRoot,
+        "shortcut-settings.json");
 
     public static ShortcutSettings Load()
     {

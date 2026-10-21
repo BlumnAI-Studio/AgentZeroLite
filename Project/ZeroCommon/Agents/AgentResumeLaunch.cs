@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -90,8 +91,8 @@ public static class AgentResumeSettingsStore
 
     /// <summary>Overridable for tests.</summary>
     public static string FilePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "agent-resume.json");
+        AppPaths.DataRoot,
+        "agent-resume.json");
 
     public static AgentResumeSettings Load()
     {

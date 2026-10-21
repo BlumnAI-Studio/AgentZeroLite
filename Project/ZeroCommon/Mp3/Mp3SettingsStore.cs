@@ -1,3 +1,4 @@
+using Agent.Common.Platform;
 using System.Text.Json;
 
 namespace Agent.Common.Mp3;
@@ -15,8 +16,8 @@ public static class Mp3SettingsStore
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     internal static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "AgentZeroLite", "mp3-settings.json");
+        AppPaths.DataRoot,
+        "mp3-settings.json");
 
     public static Mp3Settings Load()
     {
