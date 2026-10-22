@@ -309,6 +309,26 @@ GitHub 릴리스 `v0.25.8`. 패키지 157 MB, 업로드 약 60초, 첫 Save에 1
 이번에 바뀐 것: 멀티 OS CI(`avalonia-build.yml`)는 더 이상 push나 `v*` 태그로 돌지 않는다 — `ci-*` 태그나 수동 실행으로만.
 이번 릴리스는 macOS 점검 없이 냈다(필요할 때 `ci-<버전>` 태그).
 
+### 11차 제출 — 일곱 번째 업데이트 (1.25.9.0, 2026-10-22)
+
+내용: 코드 뷰의 **GIT LOG** 탭(CODE 옆 — 워크스페이스의 최근 커밋 100개를 GitHub Desktop처럼 단순 목록으로, 로컬
+`git log`로 읽음), 코드 뷰의 폴더 목록(크기·수정일·생성일, 상대/절대 경로 복사, 탐색기로 열기), 사이드바 우클릭(폴더
+열기·경로 복사), 사이드바 스크롤과 접기 화살표. Submission 8. 새 권한·네트워크 흐름은 없지만 GIT LOG가 PC의 `git`을
+워크스페이스 폴더에서 실행하므로 개인정보 처리방침 문단에 한 줄을 더하고(`doc-v1.47.0`) 반영을 확인한 뒤 제출했다.
+같은 날 GitHub 릴리스 `v0.25.9` — 이번에는 태그 **전에** `ci-0.25.9`로 멀티 OS CI(macOS 포함)가 초록인 것을 먼저
+봤다. 패키지 157 MB(149.87 MB), 업로드 약 60초, 첫 Save에 1.25.8.0이 빠지고 1.25.9.0만 Validated, 첫 Submit 클릭에
+In certification. Features는 Code view 줄만 고쳤다(`feature-7`, 12줄 그대로).
+
+이번에 확인한 것:
+
+- **업로드가 시작되면 `input[type=file]`이 바로 비워진다.** `DOM.setFileInputFiles` 직후 `files[0]`을 읽으면 null이라
+  크기 확인이 "실패"로 보였지만, 페이지에는 이미 `149.87 MB · Uploading`이 떠 있었다. 크기는 넣기 전에(빈 입력으로)
+  보거나, 업로드 행의 표시 크기로 확인한다.
+- **Git Bash에서 `node script.mjs /packages`처럼 `/`로 시작하는 인자는 Git 설치 경로로 바뀐다**(MSYS 경로 변환) —
+  탭을 고르는 키는 슬래시 없이 넘긴다.
+- 자동화 Edge(`%LOCALAPPDATA%\pw-edge-partner`)는 **9333** 포트로 떠 있었고 세션이 살아 있어 로그인이 필요 없었다.
+  9222는 다른 브라우저가 쓰고 있었다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
