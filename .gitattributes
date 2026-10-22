@@ -1,0 +1,5 @@
+# Files that run inside Linux/macOS (Docker, CI runners, the .deb) must keep LF even in a
+# Windows working copy: a CRLF shebang script fails in bash ("$'\r': command not found").
+*.sh                                   text eol=lf
+Project/AgentZeroAvalonia/linux/**     text eol=lf
+Project/AgentZeroAvalonia/linux/icons/** binary
