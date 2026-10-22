@@ -24,7 +24,14 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.8.0 — submission 10)
+## What's new in this version (1.25.9.0 — submission 11)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Git log: a GIT LOG tab beside CODE lists the workspace's recent commits — subject, author and age, the full message on hover. Read with your local git; the tab is off for folders git cannot read.
+- Code view: select a folder to see its files with size, modified and created dates. The path button copies a relative or an absolute path; open shows the folder in File Explorer.
+- Sidebar: right-click a workspace or worktree to open its folder or copy its path. The sidebar now scrolls when the bottom panel is tall, and a small arrow on the panel hides and shows it.
+
+## What's new in version 1.25.8.0 (submission 10)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Agent status you can trust: ACTIVE SESSIONS now reads what Claude Code and Codex record about themselves, not only the screen. A working agent stays "working" for the whole turn, a question to you shows as "waiting", and a finished turn shows "done" within a second — until you look at it.
@@ -68,7 +75,7 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
 - Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status
-- Code view: the workspace's files with VS Code syntax highlighting, Markdown rendered with Mermaid diagrams
+- Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, and its git log
 - Resume a Claude Code or Codex conversation when its terminal opens
 - Git worktrees listed under their workspace, including those Claude Code and Codex create
 - No account, no telemetry — settings and history stay on your PC
