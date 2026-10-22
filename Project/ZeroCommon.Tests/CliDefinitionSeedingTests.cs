@@ -127,7 +127,24 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         Assert.Equal(new[] { "bash", "Claude", "Codex", "AgentOne", "Netclaw" }, posix.Select(d => d.Name));
         var claude = posix.Single(d => d.Name == "Claude");
         Assert.Equal("/bin/bash", claude.ExePath);
-        Assert.Equal("-l -c \"claude; exec bash -l\"", claude.Arguments);
+        Assert.Equal("-l -i -c \"claude; exec bash -l\"", claude.Arguments);
+    }
+
+    [Fact]
+    public void An_existing_non_interactive_agent_row_is_upgraded_in_place()
+    {
+        // A database seeded by v0.25.9 has "-l -c": an agent installed under nvm is not on that
+        // shell's PATH (Ubuntu's ~/.bashrc returns early for a non-interactive shell).
+        using var db = Open();
+        db.CliDefinitions.Add(new CliDefinition { Name = "Codex", ExePath = "/bin/bash", Arguments = "-l -c \"codex; exec bash -l\"", IsBuiltIn = true });
+        db.CliDefinitions.Add(new CliDefinition { Name = "Mine", ExePath = "/bin/bash", Arguments = "-l -c \"codex; exec bash -l\"", IsBuiltIn = false });
+        db.SaveChanges();
+
+        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, new PosixShell(p => p is "/bin/bash", "/bin/bash"));
+
+        Assert.Equal("-l -i -c \"codex; exec bash -l\"", db.CliDefinitions.Single(d => d.Name == "Codex").Arguments);
+        Assert.Equal("-l -c \"codex; exec bash -l\"", db.CliDefinitions.Single(d => d.Name == "Mine").Arguments);   // user rows are theirs
+        Assert.Single(db.CliDefinitions.Where(d => d.Name == "Codex"));
     }
 
     [Theory]

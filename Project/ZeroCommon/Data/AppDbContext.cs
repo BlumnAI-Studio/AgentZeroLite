@@ -170,6 +170,20 @@ public class AppDbContext : DbContext
                     Add(new CliDefinition { Name = PosixShell.NameOf(shell), ExePath = shell, Arguments = "-l" });
         }
 
+        if (!windows)
+        {
+            // Built-in agent rows seeded before the launch became interactive ("-l -c") cannot
+            // find an agent installed under nvm; move them to the current form in place.
+            foreach (var row in db.CliDefinitions.Where(d => d.IsBuiltIn && !d.IsRemote).AsEnumerable())
+                foreach (var tool in AgentCliTools.All)
+                {
+                    var name = PosixShell.NameOf(row.ExePath ?? "");
+                    if (row.Arguments != $"-l -c \"{tool.Launch}; exec {name} -l\"") continue;
+                    row.Arguments = PosixAgentArguments(tool.Launch, name);
+                    changed = true;
+                }
+        }
+
         foreach (var profile in DefaultAgentCliProfiles(windows, shells.Default()))
         {
             // Name alone is not the key: a row can exist for the other OS (an .exe
@@ -219,8 +233,18 @@ public class AppDbContext : DbContext
                 {
                     Name = tool.Name,
                     ExePath = posixShell,
-                    Arguments = $"-l -c \"{tool.Launch}; exec {shellName} -l\"",
+                    Arguments = PosixAgentArguments(tool.Launch, shellName),
                 };
         }
     }
+
+    /// <summary>
+    /// A POSIX agent row's arguments: an <em>interactive</em> login shell runs the agent, then
+    /// stays as a login shell. Interactive matters: Node under nvm (and Volta/fnm set-ups) puts
+    /// its bin folder on PATH from ~/.bashrc / ~/.zshrc, and Ubuntu's ~/.bashrc returns at once
+    /// for a non-interactive shell — measured, <c>bash -l -c</c> could not find an npm-installed
+    /// codex that <c>bash -l -i -c</c> (and every terminal the user opens) finds.
+    /// </summary>
+    internal static string PosixAgentArguments(string launch, string shellName)
+        => $"-l -i -c \"{launch}; exec {shellName} -l\"";
 }
