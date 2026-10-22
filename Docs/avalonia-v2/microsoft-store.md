@@ -317,7 +317,10 @@ GitHub 릴리스 `v0.25.8`. 패키지 157 MB, 업로드 약 60초, 첫 Save에 1
 워크스페이스 폴더에서 실행하므로 개인정보 처리방침 문단에 한 줄을 더하고(`doc-v1.47.0`) 반영을 확인한 뒤 제출했다.
 같은 날 GitHub 릴리스 `v0.25.9` — 이번에는 태그 **전에** `ci-0.25.9`로 멀티 OS CI(macOS 포함)가 초록인 것을 먼저
 봤다. 패키지 157 MB(149.87 MB), 업로드 약 60초, 첫 Save에 1.25.8.0이 빠지고 1.25.9.0만 Validated, 첫 Submit 클릭에
-In certification. Features는 Code view 줄만 고쳤다(`feature-7`, 12줄 그대로).
+In certification. Features는 Code view 줄만 고쳤다(`feature-7`, 12줄 그대로). 당일 인증 통과, 게시는 운영자가 눌렀다.
+
+**게시(Publish now)는 운영자가 한다.** 에이전트는 Submit for certification까지 하고 "인증 대기 중"으로 보고를
+마친다. 인증 통과 후 운영자가 Partner Center에서 직접 게시하고 알려 준다 — 에이전트가 게시 버튼을 누르지 않는다.
 
 이번에 확인한 것:
 
