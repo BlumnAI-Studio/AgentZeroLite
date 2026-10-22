@@ -87,6 +87,10 @@ Linux(Ubuntu 데스크톱, 테스트 빌드): `Project/AgentZeroAvalonia/linux/b
 linux-x64 publish를 `AgentZeroLite-v<ver>-linux-x64.deb`(`/opt/agentzerolite`에 설치, PATH에 `agentzerolite`, 앱 메뉴
 항목 + 아이콘; `Depends`는 WebKitGTK 4.1·GTK 3·ICU·OpenSSL·fontconfig — `sudo apt install ./….deb`가 함께 설치)와 포터블
 `.tar.gz`로 만든다. 두 CI 워크플로가 모두 이것을 만들고, 작업 안에서 자기가 만든 `.deb`를 설치해 실행해 본다.
+사용자는 `curl -fsSL https://psmon.github.io/AgentZeroLite/Home/install-linux.sh | bash`로 설치한다(`Home/install-linux.sh`:
+최신 `v*` 릴리스의 `.deb`를 `/tmp`에 받아 apt로 설치). `~/Downloads`에서 바로 `.deb`를 설치하면 apt가
+*"couldn't be accessed by user '_apt' … (13: Permission denied)"*를 띄운다 — Ubuntu 홈 폴더가 `0750`이라 apt의 샌드박스
+사용자가 읽지 못해서다. 해는 없지만 실패처럼 보이므로 `/tmp`를 쓴다.
 **Linux 장비 없이 GUI 시험하기**(Windows 11 + Docker Desktop, WSLg로 표시 — X 서버 설치 불필요):
 `docker build -t azl-ubuntu-gui Project/AgentZeroAvalonia/linux/test` 후
 `bash Project/AgentZeroAvalonia/linux/test/run-gui.sh publish-avalonia/linux-x64`(직접 조작),

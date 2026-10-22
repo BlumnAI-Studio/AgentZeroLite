@@ -90,6 +90,10 @@ Linux (Ubuntu desktop, test build): `Project/AgentZeroAvalonia/linux/build-deb.s
 turns a linux-x64 publish into `AgentZeroLite-v<ver>-linux-x64.deb` (installs to `/opt/agentzerolite`, `agentzerolite`
 on PATH, app-menu entry + icons; `Depends` WebKitGTK 4.1, GTK 3, ICU, OpenSSL, fontconfig — `sudo apt install ./….deb`
 pulls them) and a portable `.tar.gz`. Both CI workflows build them; the job installs its own `.deb` and runs it.
+Users install with `curl -fsSL https://psmon.github.io/AgentZeroLite/Home/install-linux.sh | bash` (`Home/install-linux.sh`:
+newest `v*` release's `.deb`, downloaded into `/tmp` and installed with apt). A `.deb` installed straight from `~/Downloads`
+makes apt print *"couldn't be accessed by user '_apt' … (13: Permission denied)"* — Ubuntu homes are `0750`, so apt's
+sandbox user cannot read it; harmless, but it reads like a failure, hence `/tmp`.
 **Trying the GUI without a Linux machine** (Windows 11 + Docker Desktop, shown through WSLg — no X server to install):
 `docker build -t azl-ubuntu-gui Project/AgentZeroAvalonia/linux/test`, then
 `bash Project/AgentZeroAvalonia/linux/test/run-gui.sh publish-avalonia/linux-x64` (interactive),

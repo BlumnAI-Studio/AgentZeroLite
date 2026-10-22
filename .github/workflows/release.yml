@@ -270,7 +270,7 @@ jobs:
           if [ -f "$deb" ] && [ -f "$tgz" ]; then
             echo "deb=$deb" >> "$GITHUB_OUTPUT"
             echo "tgz=$tgz" >> "$GITHUB_OUTPUT"
-            echo "row_deb=| \`$(basename "$deb")\` | Ubuntu 22.04+ / Debian 12 x64 (desktop) — \`sudo apt install ./$(basename "$deb")\` installs it with its dependencies (WebKitGTK, GTK 3) and adds **AgentZero Lite** to the app menu. Test build. |" >> "$GITHUB_OUTPUT"
+            echo "row_deb=| \`$(basename "$deb")\` | Ubuntu 22.04+ / Debian 12 x64 (desktop), test build — easiest: \`curl -fsSL https://psmon.github.io/AgentZeroLite/Home/install-linux.sh \\| bash\`. By hand: copy the .deb to /tmp, then \`sudo apt install /tmp/$(basename "$deb")\` (from ~/Downloads apt prints a harmless '_apt … Permission denied' notice). Installs WebKitGTK/GTK 3 with it and adds **AgentZero Lite** to the app menu. |" >> "$GITHUB_OUTPUT"
             echo "row_tgz=| \`$(basename "$tgz")\` | Linux x64 portable — extract and run \`AgentZeroLite\`; needs the same system libraries as the .deb. |" >> "$GITHUB_OUTPUT"
           else
             echo "row_deb=" >> "$GITHUB_OUTPUT"; echo "row_tgz=" >> "$GITHUB_OUTPUT"
