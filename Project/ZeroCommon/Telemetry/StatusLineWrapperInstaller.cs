@@ -29,8 +29,8 @@ namespace Agent.Common.Telemetry;
 /// </summary>
 public static class StatusLineWrapperInstaller
 {
-    private static readonly string LocalAppData =
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    // Created when missing: on a fresh Unix account the plain lookup is "" (see AppPaths.LocalAppData).
+    private static readonly string LocalAppData = Agent.Common.Platform.AppPaths.LocalAppData;
 
     private static readonly string UserProfile =
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

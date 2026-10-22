@@ -374,6 +374,14 @@ What differs from the WPF host, and why:
   slot 30, via `IWindowsWebView2PlatformHandle`). A macOS port implements those two interfaces and nothing
   above them. `-cli plugin list|open|call|capture` drives the page; `call` runs `window.zero.invoke` inside
   it, so it is an end-to-end check of shim + bridge + dispatcher.
+- **Linux (Ubuntu desktop x64)** builds from the same project (`-r linux-x64`; also cross-publishes from Windows) and
+  ships as `.deb` + `.tar.gz` (`Project/AgentZeroAvalonia/linux/build-deb.sh`; CI job C and release.yml's `linux` job,
+  which installs its own `.deb`). The web view is the **system** WebKitGTK 4.1 (+ GTK 3, libsoup 3) — `Depends` of the
+  .deb, not bundled. Two Unix traps the code now handles: POSIX rows must not assume `/bin/zsh` (stock Ubuntu has bash
+  only — `ZeroCommon/Platform/PosixShell` picks `$SHELL` / the installed shells, testable with an injected file check),
+  and `GetFolderPath(LocalApplicationData)` is `""` until `~/.local/share` exists — use `AppPaths.LocalAppData`
+  (created), never the bare lookup. Local GUI check on Windows: Docker Desktop exposes WSLg's X socket at
+  `/run/desktop/mnt/host/wslg/.X11-unix`; `linux/test/run-gui.sh` / `install-test.sh` / `run-tests.sh` use it.
 - **Local LLM is Windows-only** (LLamaSharp DLLs); macOS uses External providers. Gemma 4's native tool-call syntax is converted to the JSON envelope by `GemmaNativeToolCall` (ZeroCommon, benefits both hosts).
 - CI: `.github/workflows/avalonia-build.yml` (windows-latest + macos-14, `.app` bundle via `macos/build-app.sh`) runs **on request
   only**: a `ci-*` tag (push `ci-<version>` when macOS compatibility needs checking) or the Run workflow button — not

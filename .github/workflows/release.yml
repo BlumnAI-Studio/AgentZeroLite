@@ -11,8 +11,11 @@ name: Build & Release
 #   macos    → AgentZeroLite-v<ver>-osx-arm64.pkg — Developer ID signed + notarized, attached to the
 #              release — when the MACOS_DEVID_* / ASC_* secrets exist (Docs/avalonia-v2/macos-distribution.md);
 #              without them only an ad-hoc .app zip as a workflow artifact
-#   release  → one GitHub release with the two Windows files (+ the macOS .pkg), marked Latest;
-#              a failed macos job does not hold back the Windows release
+#   linux    → AgentZeroLite-v<ver>-linux-x64.deb (Ubuntu/Debian, apt resolves WebKitGTK/GTK)
+#              AgentZeroLite-v<ver>-linux-x64.tar.gz (portable) — linux/build-deb.sh; the job
+#              installs its own .deb and runs it before uploading
+#   release  → one GitHub release with the two Windows files (+ the macOS .pkg, + the Linux
+#              .deb/.tar.gz), marked Latest; a failed macos or linux job does not hold back Windows
 #
 # A manual run with publish=false builds and uploads the files as workflow artifacts only —
 # the way to check the installer before tagging.
@@ -200,10 +203,47 @@ jobs:
             publish-avalonia/AgentZeroLite-${{ needs.version.outputs.tag }}-osx-arm64.pkg
           if-no-files-found: error
 
-  # Waits for macOS too, but only Windows has to succeed: a notarization hiccup must not hold
-  # back the Windows release. The notarized .pkg is attached when the macos job produced one.
+  linux:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+      - name: Stamp version
+        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/AgentZeroWpf/version.txt
+      - name: Publish linux-x64
+        run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --self-contained true -p:UseAppHost=true -o publish-avalonia/linux-x64
+      - name: Check the published build (no display)
+        run: |
+          chmod +x publish-avalonia/linux-x64/AgentZeroLite publish-avalonia/linux-x64/AgentZeroLite.sh
+          publish-avalonia/linux-x64/AgentZeroLite -cli version
+          publish-avalonia/linux-x64/AgentZeroLite -cli selftest all
+      - name: Package .deb + tar.gz
+        run: bash Project/AgentZeroAvalonia/linux/build-deb.sh publish-avalonia/linux-x64 publish-avalonia/dist '${{ needs.version.outputs.version }}'
+      # Installed as a user would: apt resolves the Depends, then the command runs.
+      - name: Install the .deb and run it
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ./publish-avalonia/dist/*.deb desktop-file-utils
+          desktop-file-validate /usr/share/applications/agentzerolite.desktop
+          agentzerolite -cli version
+          agentzerolite -cli selftest all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            publish-avalonia/dist/AgentZeroLite-${{ needs.version.outputs.tag }}-linux-x64.deb
+            publish-avalonia/dist/AgentZeroLite-${{ needs.version.outputs.tag }}-linux-x64.tar.gz
+          if-no-files-found: error
+
+  # Waits for macOS and Linux too, but only Windows has to succeed: a notarization hiccup or a
+  # Linux packaging failure must not hold back the Windows release. Their files are attached
+  # when their jobs produced them.
   release:
-    needs: [version, windows, macos]
+    needs: [version, windows, macos, linux]
     if: always() && needs.windows.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -222,6 +262,19 @@ jobs:
           else
             echo "row=" >> "$GITHUB_OUTPUT"
           fi
+      - name: Linux packages (when built)
+        id: linux
+        run: |
+          deb="dist/AgentZeroLite-${{ needs.version.outputs.tag }}-linux-x64.deb"
+          tgz="dist/AgentZeroLite-${{ needs.version.outputs.tag }}-linux-x64.tar.gz"
+          if [ -f "$deb" ] && [ -f "$tgz" ]; then
+            echo "deb=$deb" >> "$GITHUB_OUTPUT"
+            echo "tgz=$tgz" >> "$GITHUB_OUTPUT"
+            echo "row_deb=| \`$(basename "$deb")\` | Ubuntu 22.04+ / Debian 12 x64 (desktop) — \`sudo apt install ./$(basename "$deb")\` installs it with its dependencies (WebKitGTK, GTK 3) and adds **AgentZero Lite** to the app menu. Test build. |" >> "$GITHUB_OUTPUT"
+            echo "row_tgz=| \`$(basename "$tgz")\` | Linux x64 portable — extract and run \`AgentZeroLite\`; needs the same system libraries as the .deb. |" >> "$GITHUB_OUTPUT"
+          else
+            echo "row_deb=" >> "$GITHUB_OUTPUT"; echo "row_tgz=" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -231,6 +284,8 @@ jobs:
             dist/AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe
             dist/AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip
             ${{ steps.mac.outputs.file }}
+            ${{ steps.linux.outputs.deb }}
+            ${{ steps.linux.outputs.tgz }}
           body: |
             **AgentZero Lite** — the official build is now the cross-platform (Avalonia) host, released for Windows.
 
@@ -239,6 +294,8 @@ jobs:
             | `AgentZeroLite-${{ needs.version.outputs.tag }}-Setup.exe` | Windows 10/11 x64 installer (recommended). Includes the **wearable** host. Upgrades an earlier install in place; your workspaces and settings are kept. |
             | `AgentZeroLite-${{ needs.version.outputs.tag }}-win-x64.zip` | Windows portable — unzip and run. Includes the wearable host. |
             ${{ steps.mac.outputs.row }}
+            ${{ steps.linux.outputs.row_deb }}
+            ${{ steps.linux.outputs.row_tgz }}
 
             Also on the **Microsoft Store** (automatic updates, no wearable): https://apps.microsoft.com/detail/9NRHDFMD38H7
 

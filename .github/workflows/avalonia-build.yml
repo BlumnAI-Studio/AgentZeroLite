@@ -4,7 +4,8 @@ name: Avalonia host — build & self-test
 # This is the on-request multi-OS check (tests + self-test); release.yml builds the files a release
 # ships (installer, portable zip, macOS .app) from the same commands. Job A proves the Windows build + the headless suites; job B proves the macOS build,
 # the .app bundle, and everything a runner without a display can still exercise
-# (PTY spawn, named-pipe IPC, secret protection, the ZeroCommon suite on macOS).
+# (PTY spawn, named-pipe IPC, secret protection, the ZeroCommon suite on macOS); job C does the
+# same on Ubuntu and also installs the .deb it built, so apt has resolved its Depends.
 
 # Requested, not automatic: it ran on every push to main (a 4-minute Windows + macOS pair per
 # commit, most of them docs or small fixes). Now it runs only when asked —
@@ -91,3 +92,46 @@ jobs:
         with:
           name: AgentZeroLite-Avalonia-osx-arm64
           path: publish-avalonia/*.zip
+
+  linux:
+    name: C · ubuntu-24.04 (build + linux-x64 .deb + self-test + install)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          dotnet-quality: preview
+      - name: Restore
+        run: dotnet restore Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -r linux-x64
+      - name: Build
+        run: dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --no-restore
+      # Same exclusions as macOS: those fixtures assert Windows path semantics.
+      - name: Headless tests on Linux (ZeroCommon)
+        run: dotnet test Project/ZeroCommon.Tests/ZeroCommon.Tests.csproj -c Release --filter "FullyQualifiedName!~Mp3ScannerTests&FullyQualifiedName!~SshCommandBuilderTests&FullyQualifiedName!~WhisperModelStoreTests"
+      - name: Host tests on Linux (codec, asset server, Porta.Pty)
+        run: dotnet test Project/AgentZeroAvalonia.Tests/AgentZeroAvalonia.Tests.csproj -c Release
+      - name: Publish linux-x64
+        run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --self-contained true -p:UseAppHost=true -o publish-avalonia/linux-x64
+      - name: CLI self-test (no display)
+        run: |
+          chmod +x publish-avalonia/linux-x64/AgentZeroLite publish-avalonia/linux-x64/AgentZeroLite.sh
+          publish-avalonia/linux-x64/AgentZeroLite -cli version
+          publish-avalonia/linux-x64/AgentZeroLite -cli selftest all
+      - name: Package .deb + tar.gz
+        run: |
+          v=$(tr -d '[:space:]' < Project/AgentZeroWpf/version.txt)
+          bash Project/AgentZeroAvalonia/linux/build-deb.sh publish-avalonia/linux-x64 publish-avalonia/dist "$v"
+      # The package as a user gets it: apt resolves Depends (WebKitGTK, GTK, ICU…), then the
+      # installed command runs and the .desktop entry validates.
+      - name: Install the .deb and run it
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ./publish-avalonia/dist/*.deb desktop-file-utils
+          desktop-file-validate /usr/share/applications/agentzerolite.desktop
+          agentzerolite -cli version
+          agentzerolite -cli selftest all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentZeroLite-Avalonia-linux-x64
+          path: publish-avalonia/dist/*

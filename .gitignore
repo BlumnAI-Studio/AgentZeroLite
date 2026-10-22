@@ -486,3 +486,6 @@ Project/AgentOne/native/_cache/
 # macOS Avalonia publish output (dotnet publish -r osx-arm64 -o publish-avalonia/osx-arm64,
 # then macos/build-app.sh → publish-avalonia/AgentZeroLite.app) — the paths release.yml uses.
 /publish-avalonia/
+
+# Linux GUI smoke-test captures (linux/test/run-gui.sh, install-test.sh)
+/Project/AgentZeroAvalonia/linux/test/out/

@@ -584,7 +584,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void NewCli()
     {
-        var item = new CliDefinitionItem(new CliDefinition { Name = "New CLI", ExePath = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/zsh" });
+        var item = new CliDefinitionItem(new CliDefinition { Name = "New CLI", ExePath = OperatingSystem.IsWindows() ? "cmd.exe" : Agent.Common.Platform.PosixShell.Current.Default() });
         CliDefinitions.Add(item);
         SelectedCli = item;
         CliStatus = "Fill in the definition and click Save.";

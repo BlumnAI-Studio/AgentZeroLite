@@ -241,8 +241,26 @@ public static class AgentCliTools
                 yield return Path.Combine(home, ".local", "bin");
                 yield return Path.Combine(home, ".npm-global", "bin");
                 yield return Path.Combine(home, ".netclaw", "bin");
+                // Where Node usually lives on Linux when it is not apt's: a GUI started from the
+                // desktop session does not read ~/.bashrc, so nvm / Volta / linuxbrew are not on
+                // its PATH even though every terminal the user opens has them.
+                yield return Path.Combine(home, ".volta", "bin");
+                yield return "/home/linuxbrew/.linuxbrew/bin";
+                yield return "/snap/bin";
+                foreach (var nvm in NvmBins(home)) yield return nvm;
             }
         }
+    }
+
+    /// <summary>nvm's installed Node versions, newest first (<c>~/.nvm/versions/node/v*/bin</c>).</summary>
+    private static IEnumerable<string> NvmBins(string home)
+    {
+        var root = Path.Combine(home, ".nvm", "versions", "node");
+        string[] dirs;
+        try { dirs = Directory.Exists(root) ? Directory.GetDirectories(root) : []; }
+        catch { yield break; }
+        foreach (var d in dirs.OrderByDescending(d => Version.TryParse(Path.GetFileName(d).TrimStart('v'), out var v) ? v : new Version(0, 0)))
+            yield return Path.Combine(d, "bin");
     }
 
     /// <summary>

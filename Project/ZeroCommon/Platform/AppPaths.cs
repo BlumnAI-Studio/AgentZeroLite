@@ -97,7 +97,14 @@ public static class AppPaths
         return new Restore(() => _override.Value = previous);
     }
 
-    private static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    /// <summary>
+    /// <c>%LOCALAPPDATA%</c> / <c>$XDG_DATA_HOME</c> / <c>~/.local/share</c>, created when missing.
+    /// The default lookup returns <c>""</c> on Unix when that folder does not exist yet, so a
+    /// fresh account (a new Ubuntu user, a container) got a relative <c>AgentZeroLite</c> and the
+    /// database landed in whatever folder the app was started from (measured: <c>~/AgentZeroLite</c>).
+    /// </summary>
+    public static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+        Environment.SpecialFolderOption.Create);
 
     private static string? Normalize(string? name)
     {

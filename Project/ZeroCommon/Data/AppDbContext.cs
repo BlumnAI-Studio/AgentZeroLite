@@ -151,9 +151,11 @@ public class AppDbContext : DbContext
     /// Codex to any database in the field — the new built-in would only ever appear for
     /// people who installed the app fresh.</para>
     /// </summary>
-    internal static void EnsureDefaultCliDefinitions(AppDbContext db, bool? isWindows = null)
+    internal static void EnsureDefaultCliDefinitions(AppDbContext db, bool? isWindows = null, PosixShell? shells = null)
     {
         var windows = isWindows ?? OperatingSystem.IsWindows();
+        // A simulated POSIX run on Windows (tests) keeps the Mac picture the seeding was written for.
+        shells ??= OperatingSystem.IsWindows() ? PosixShell.MacLike : PosixShell.Current;
         var changed = false;
         var sort = db.CliDefinitions.Any() ? db.CliDefinitions.Max(d => d.SortOrder) : -1;
 
@@ -162,14 +164,13 @@ public class AppDbContext : DbContext
             var hasPosixShell = db.CliDefinitions.AsEnumerable()
                 .Any(d => !d.IsRemote && !string.IsNullOrEmpty(d.ExePath)
                           && !d.ExePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            // Only the shells this machine has: stock Ubuntu has bash and no zsh.
             if (!hasPosixShell)
-            {
-                Add(new CliDefinition { Name = "zsh", ExePath = "/bin/zsh", Arguments = "-l" });
-                Add(new CliDefinition { Name = "bash", ExePath = "/bin/bash", Arguments = "-l" });
-            }
+                foreach (var shell in shells.Installed())
+                    Add(new CliDefinition { Name = PosixShell.NameOf(shell), ExePath = shell, Arguments = "-l" });
         }
 
-        foreach (var profile in DefaultAgentCliProfiles(windows))
+        foreach (var profile in DefaultAgentCliProfiles(windows, shells.Default()))
         {
             // Name alone is not the key: a row can exist for the other OS (an .exe
             // definition on a mac), which this host hides — so it would be invisible and
@@ -195,14 +196,16 @@ public class AppDbContext : DbContext
     /// The built-in agent CLI rows for this OS. Both launch through a shell rather than
     /// invoking the agent directly: PowerShell 5 on Windows (<c>powershell.exe</c> — the
     /// one shell every Windows install has, so the definition works before anyone has
-    /// installed PowerShell 7), zsh elsewhere. <c>-NoExit</c> / <c>exec zsh -l</c> keep
+    /// installed PowerShell 7), the user's login shell elsewhere (<see cref="PosixShell.Default"/>:
+    /// zsh on a Mac, bash on stock Ubuntu). <c>-NoExit</c> / <c>exec &lt;shell&gt; -l</c> keep
     /// the shell alive when the agent quits, so the tab stays usable instead of closing
     /// on exit. Whether the agent itself is installed is
     /// <see cref="AgentCliTools"/>' question — a row for a missing tool is still the
     /// right row, and the settings page offers to fetch it.
     /// </summary>
-    private static IEnumerable<CliDefinition> DefaultAgentCliProfiles(bool windows)
+    private static IEnumerable<CliDefinition> DefaultAgentCliProfiles(bool windows, string posixShell)
     {
+        var shellName = PosixShell.NameOf(posixShell);
         foreach (var tool in AgentCliTools.All)
         {
             yield return windows
@@ -215,8 +218,8 @@ public class AppDbContext : DbContext
                 : new CliDefinition
                 {
                     Name = tool.Name,
-                    ExePath = "/bin/zsh",
-                    Arguments = $"-l -c \"{tool.Launch}; exec zsh -l\"",
+                    ExePath = posixShell,
+                    Arguments = $"-l -c \"{tool.Launch}; exec {shellName} -l\"",
                 };
         }
     }

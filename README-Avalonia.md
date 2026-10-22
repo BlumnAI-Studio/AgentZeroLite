@@ -56,6 +56,7 @@ Rules that keep the two hosts honest:
 ```bash
 dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Debug                 # Windows
 dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r osx-arm64  # macOS cross-compile
+dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --self-contained true -p:UseAppHost=true -o publish-avalonia/linux-x64  # Linux, also from Windows
 dotnet test  Project/AgentZeroAvalonia.Tests/AgentZeroAvalonia.Tests.csproj             # headless, both OSes
 
 Project/AgentZeroAvalonia/bin/Debug/net10.0/AgentZeroLite.exe                            # GUI
@@ -84,6 +85,18 @@ macOS (testers): download the `macos` artifact of a *Build & Release* run (or `A
 of an *Avalonia host* run), unzip, then
 `xattr -dr com.apple.quarantine AgentZeroLite.app` (the bundle is ad-hoc signed) and open it. The CLI wrapper is
 `AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh`. Hand checklist: [Docs/avalonia-v2/macos-smoke.md](Docs/avalonia-v2/macos-smoke.md).
+
+Linux (Ubuntu desktop, test build): `Project/AgentZeroAvalonia/linux/build-deb.sh <publish-dir> <out-dir> <version>`
+turns a linux-x64 publish into `AgentZeroLite-v<ver>-linux-x64.deb` (installs to `/opt/agentzerolite`, `agentzerolite`
+on PATH, app-menu entry + icons; `Depends` WebKitGTK 4.1, GTK 3, ICU, OpenSSL, fontconfig — `sudo apt install ./….deb`
+pulls them) and a portable `.tar.gz`. Both CI workflows build them; the job installs its own `.deb` and runs it.
+**Trying the GUI without a Linux machine** (Windows 11 + Docker Desktop, shown through WSLg — no X server to install):
+`docker build -t azl-ubuntu-gui Project/AgentZeroAvalonia/linux/test`, then
+`bash Project/AgentZeroAvalonia/linux/test/run-gui.sh publish-avalonia/linux-x64` (interactive),
+`… --terminal` (seeds a workspace, opens a bash tab, types and reads it back, saves a screenshot) or
+`install-test.sh <deb>` (apt-installs the package into a fresh `ubuntu:24.04`). `run-tests.sh` runs the headless
+suites in the .NET SDK container. What Linux lacks today: audio capture, OS control, plugin frame capture, local LLM,
+SSH definitions, the wearable host — the same fences as macOS.
 
 Microsoft Store (Windows): `Project/AgentZeroAvalonia/msix/build-msix.ps1` builds the MSIX (x64, the Store signs
 it). The Store edition keeps its own data (database, settings) isolated in the package — by design; it does
@@ -117,6 +130,7 @@ Procedure, local checks and paste-ready listing text (in Korean):
 | CLI: status, terminal-list/send/key/read/wait/alias (`--alias`), layout, bot-chat, bot-ask, web, mcp, selftest | ✅ | pipe `AgentZeroLite.cli`; `.ps1` / `.sh` wrappers |
 | Remote shell (SSH) definitions: composed `ssh` launch + stored-password autofill | ✅ Windows / ⏳ macOS | composition moved into `TerminalLaunchPlanner` (WPF composes at its own call sites, unchanged); autofill is `ZeroCommon/Services/SshPasswordWatcher`. The password column is shared with WPF, so this host seals it with `Security/SshPasswordVault` (same DPAPI entropy, no marker). On macOS remote definitions stay hidden — `ComposeArguments` only knows cmd/PowerShell wrappers |
 | CI: windows-latest + macos-14, win-x64 zip, `.app` bundle | ✅ | `.github/workflows/avalonia-build.yml` |
+| **Linux (Ubuntu desktop x64)**: build, headless suites, self-test, `.deb` + `.tar.gz`, release assets | ✅ build · ⏳ desktop check by a person | Job C in `avalonia-build.yml` and a `linux` job in `release.yml` (does not hold back Windows). Measured in Docker + WSLg on Ubuntu 24.04: the GUI maps, a bash tab runs through Porta.Pty and the WebKitGTK renderer (send + screen read-back), the code view renders Markdown, `-cli` answers over its Unix-socket pipe. Fixed on the way: POSIX rows assumed `/bin/zsh` (stock Ubuntu has none) — now `ZeroCommon/Platform/PosixShell` seeds the shells that exist and launches agents through `$SHELL` or bash; and `LocalApplicationData` is `""` on a fresh Unix account, which put the data folder in the working directory — `AppPaths.LocalAppData` now creates it |
 | Settings: Voice (STT Whisper.net / OpenAI, TTS Supertonic / OpenAI, model downloads, mic-free Speak + Round trip test) | ✅ | Same `voice-settings.json` as WPF and the wearable host. Portable pieces moved to ZeroCommon: `Voice/WhisperNetStt` (the WPF `WhisperLocalStt` minus the WMI GPU pick), `Voice/WavPcm` (WAV → 16 kHz mono without NAudio), `Voice/PortableVoiceRuntime` (builds the providers a non-WPF host can run). Playback is `Services/WavPlayer`: winmm `PlaySound` (async, so Stop is immediate) on Windows, `afplay` on macOS. A save writes only the page's fields and keeps a WPF-only provider (SAPI, LocalGemma) selected; with Supertonic it writes the voice to both `TtsVoice` and `SupertonicVoice` — measured, they had drifted (desktop M2, watch F1). Mic capture is still the AgentBot-voice row below |
 | Wearable page: link / brain / allowed folders / on-connect settings, Start / Stop / Test brain / Test HUD, live host log | ✅ Windows | `ZeroCommon/Wearable/WearableHostLauncher` (WPF's `WearableHostProcess` + the kill-on-close Job Object, moved down) and `WearableDiagnostics`; activity-bar ⌚, hidden off Windows because the host is WinRT BLE. The page also shows the built-in **`home`** work folder and the **OS control** switch (the watch's desktop tools, with an audit-log link); the rules live in ZeroCommon (`Wearable/Actors/OsToolActor`, `Os/IOsControl`). The csproj builds `ZeroWearable` and copies/publishes it into `wearable\` on Windows builds only. **Not in the Store MSIX yet** (`build-msix.ps1` passes `-p:IncludeWearableHost=false`): a BLE child process in the package is its own certification question |
 | AgentBot skills: SkillSync, starter-pack import, `.agent-zero/` cache, slash autocomplete | ⏳ not yet | one dependency chain — the slash list is empty without SkillSync, which drives the Claude CLI through a Windows-only shell probe |

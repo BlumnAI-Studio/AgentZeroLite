@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AgentZero Lite
+GenericName=AI CLI Terminal
+Comment=Multi-tab terminal for Claude Code, Codex and other AI command-line tools
+Exec=/opt/agentzerolite/AgentZeroLite
+Icon=agentzerolite
+Terminal=false
+Categories=Development;TerminalEmulator;
+Keywords=terminal;claude;codex;ai;agent;
+StartupNotify=true
+StartupWMClass=AgentZeroLite

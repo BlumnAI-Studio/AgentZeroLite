@@ -55,6 +55,7 @@ WPF를 걷어내지 않습니다. Windows에서 무언가를 가장 빨리 시�
 ```bash
 dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Debug                 # Windows
 dotnet build Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r osx-arm64  # macOS 크로스 컴파일
+dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --self-contained true -p:UseAppHost=true -o publish-avalonia/linux-x64  # Linux, Windows에서도 가능
 dotnet test  Project/AgentZeroAvalonia.Tests/AgentZeroAvalonia.Tests.csproj             # 헤드리스, 양 OS
 
 Project/AgentZeroAvalonia/bin/Debug/net10.0/AgentZeroLite.exe                            # GUI
@@ -81,6 +82,18 @@ Mac에서 돌릴 때까지 `macos` 아티팩트로만 남긴다. WPF 레퍼런�
 macOS(테스트용): *Build & Release* 실행의 `macos` 아티팩트(또는 *Avalonia host* 실행의 `AgentZeroLite-Avalonia-osx-arm64`)를 받아 풀고
 `xattr -dr com.apple.quarantine AgentZeroLite.app`(ad-hoc 서명) 후 실행. CLI 래퍼는
 `AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh`. 손 점검표: [Docs/avalonia-v2/macos-smoke.md](Docs/avalonia-v2/macos-smoke.md).
+
+Linux(Ubuntu 데스크톱, 테스트 빌드): `Project/AgentZeroAvalonia/linux/build-deb.sh <publish-dir> <out-dir> <version>`이
+linux-x64 publish를 `AgentZeroLite-v<ver>-linux-x64.deb`(`/opt/agentzerolite`에 설치, PATH에 `agentzerolite`, 앱 메뉴
+항목 + 아이콘; `Depends`는 WebKitGTK 4.1·GTK 3·ICU·OpenSSL·fontconfig — `sudo apt install ./….deb`가 함께 설치)와 포터블
+`.tar.gz`로 만든다. 두 CI 워크플로가 모두 이것을 만들고, 작업 안에서 자기가 만든 `.deb`를 설치해 실행해 본다.
+**Linux 장비 없이 GUI 시험하기**(Windows 11 + Docker Desktop, WSLg로 표시 — X 서버 설치 불필요):
+`docker build -t azl-ubuntu-gui Project/AgentZeroAvalonia/linux/test` 후
+`bash Project/AgentZeroAvalonia/linux/test/run-gui.sh publish-avalonia/linux-x64`(직접 조작),
+`… --terminal`(워크스페이스를 넣고 bash 탭을 열어 입력·화면 읽기, 스크린샷 저장) 또는
+`install-test.sh <deb>`(새 `ubuntu:24.04`에 apt로 패키지 설치). `run-tests.sh`는 .NET SDK 컨테이너에서 헤드리스
+스위트를 돌린다. 현재 Linux에 없는 것: 오디오 캡처, OS 제어, 플러그인 프레임 캡처, 로컬 LLM, SSH 정의, 웨어러블 호스트 —
+macOS와 같은 울타리다.
 
 Microsoft Store(Windows): `Project/AgentZeroAvalonia/msix/build-msix.ps1` 가 MSIX(x64, 서명은 Store가 함)를 만든다.
 스토어판은 자기 데이터(DB·설정)를 패키지 안에 격리해서 쓴다 — 의도된 동작이며 일반 설치판과 공유하지 않는다. 대신
@@ -112,6 +125,7 @@ Microsoft Store(Windows): `Project/AgentZeroAvalonia/msix/build-msix.ps1` 가 MS
 | 설정: AI 모드용 **MCP 서버** — stdio / Streamable HTTP / SSE, 헤더·환경변수 값 암호화 저장, 툴별 허용 스위치, 테스트 호출, `mcpServers` JSON 가져오기 | ✅ Avalonia 먼저 · ⏳ WPF | `ZeroCommon/Mcp` (자체 클라이언트: `McpClient` + 트랜스포트 3종, `McpSettingsStore` → `mcp-settings.json`, `McpHub`). 에이전트는 허용된 툴을 `server.tool`(`memorizer.search`)로 본다: `AgentLoopOptions.DynamicTools`가 그 이름을 루프의 알려진 툴 집합, 로컬 GBNF, 시스템 프롬프트에 더하고, 호출은 `IAgentToolbelt.CallDynamicToolAsync`로 간다. 프롬프트는 *Load tools* 때 캐시한 툴 목록으로 만들어서 세션 시작이 서버를 기다리지 않으며, 허용 목록은 호출 시점에 다시 강제된다. 로컬 문법은 문자열만 내보내므로 인자는 툴 스키마에 맞게 변환한다(`"5"` → 5, `"a, b"` → 배열). 변경은 다음 AI 세션(↻ New session)부터 적용된다. WPF는 툴벨트·옵션 팩토리를 `McpHub`에 연결하고 설정 탭만 더하면 된다 |
 | CLI: status, terminal-list/send/key/read/wait/alias(`--alias`), layout, bot-chat, bot-ask, web, mcp, selftest | ✅ | 파이프 `AgentZeroLite.cli`; `.ps1` / `.sh` 래퍼 |
 | CI: windows-latest + macos-14, win-x64 zip, `.app` 번들 | ✅ | `.github/workflows/avalonia-build.yml` |
+| **Linux(Ubuntu 데스크톱 x64)**: 빌드, 헤드리스 스위트, 자체 테스트, `.deb` + `.tar.gz`, 릴리스 첨부 | ✅ 빌드 · ⏳ 사람이 데스크톱 확인 | `avalonia-build.yml`의 작업 C와 `release.yml`의 `linux` 작업(Windows를 붙잡지 않음). Docker + WSLg의 Ubuntu 24.04에서 측정: GUI 창이 뜨고, bash 탭이 Porta.Pty와 WebKitGTK 렌더러로 돌고(입력 + 화면 읽기), 코드 뷰가 마크다운을 렌더링하고, `-cli`가 Unix 소켓 파이프로 응답. 그 과정에서 고친 것: POSIX 행이 `/bin/zsh`를 가정했다(기본 Ubuntu에는 없음) — 이제 `ZeroCommon/Platform/PosixShell`이 실제로 있는 셸만 넣고 에이전트는 `$SHELL` 또는 bash로 실행; 새 Unix 계정에서 `LocalApplicationData`가 `""`라 데이터 폴더가 작업 폴더에 생겼다 — `AppPaths.LocalAppData`가 이제 폴더를 만든다 |
 | 설정: Voice(STT Whisper.net / OpenAI, TTS Supertonic / OpenAI, 모델 다운로드, 마이크 없는 Speak + Round trip 테스트) | ✅ | WPF·웨어러블 호스트와 같은 `voice-settings.json`. 이식 가능한 부분은 ZeroCommon으로 내렸다: `Voice/WhisperNetStt`(WPF `WhisperLocalStt`에서 WMI GPU 선택만 뺀 것), `Voice/WavPcm`(NAudio 없이 WAV → 16 kHz 모노), `Voice/PortableVoiceRuntime`(WPF가 아닌 호스트가 돌릴 수 있는 공급자 생성). 재생은 `Services/WavPlayer`: Windows는 winmm `PlaySound` (비동기라 Stop이 즉시 먹음), macOS는 `afplay`. 저장은 이 화면의 필드만 쓰고, WPF 전용 공급자(SAPI, LocalGemma)는 선택된 채로 둔다. Supertonic이면 목소리를 `TtsVoice`와 `SupertonicVoice` 둘 다에 쓴다 — 실측에서 둘이 어긋나 있었다(데스크톱 M2, 워치 F1). 마이크 캡처는 아래 AgentBot 음성 행에 남아 있다 |
 | Wearable 페이지: 링크 / 브레인 / 허용 폴더 / 연결 시 설정, Start / Stop / Test brain / Test HUD, 호스트 로그 실시간 | ✅ Windows | `ZeroCommon/Wearable/WearableHostLauncher`(WPF `WearableHostProcess`와 종료 시 함께 죽이는 Job Object를 내린 것)와 `WearableDiagnostics`. 액티비티 바 ⌚, 호스트가 WinRT BLE라 Windows가 아니면 숨긴다. 페이지에는 기본 작업공간 **`home`**과 **OS 제어** 스위치(워치의 데스크톱 도구, 감사 로그 링크)도 있으며, 규칙은 ZeroCommon(`Wearable/Actors/OsToolActor`, `Os/IOsControl`)에 있다. csproj는 Windows 빌드에서만 `ZeroWearable`을 빌드하고 `wearable\`로 복사·publish한다. **Store MSIX에는 아직 넣지 않았다** (`build-msix.ps1`가 `-p:IncludeWearableHost=false`를 넘김): 패키지 안의 BLE 자식 프로세스는 별도의 인증 문제다 |
 | AgentBot 스킬: SkillSync, 스타터팩 임포트, `.agent-zero/` 캐시, 슬래시 자동완성 | ⏳ 미착수 | 하나의 의존 사슬 — SkillSync 없이는 슬래시 목록이 항상 비고, SkillSync는 Windows 전용 셸 탐색으로 Claude CLI를 구동한다 |

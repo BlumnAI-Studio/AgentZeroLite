@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using Agent.Common.Data;
 using Agent.Common.Data.Entities;
+using Agent.Common.Platform;
 using Microsoft.EntityFrameworkCore;
 
 namespace ZeroCommon.Tests;
@@ -97,7 +98,7 @@ public sealed class CliDefinitionSeedingTests : IDisposable
     public void Posix_seed_adds_the_shells_and_both_agents_once_and_keeps_windows_rows()
     {
         using var db = Open();
-        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false);
+        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, PosixShell.MacLike);
         var posix = db.CliDefinitions.AsEnumerable().Where(d => !d.ExePath.EndsWith(".exe")).OrderBy(d => d.SortOrder).ToList();
         Assert.Equal(new[] { "zsh", "bash", "Claude", "Codex", "AgentOne", "Netclaw" }, posix.Select(d => d.Name));
         Assert.All(posix, d => Assert.True(d.IsBuiltIn));
@@ -110,9 +111,38 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         }
         Assert.Equal(9, db.CliDefinitions.Count());   // 3 migrated + 6 seeded
 
-        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false);
+        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, PosixShell.MacLike);
         Assert.Equal(9, db.CliDefinitions.Count());
     }
+
+    [Fact]
+    public void Stock_ubuntu_without_zsh_gets_bash_rows_and_agents_through_bash()
+    {
+        // Ubuntu ships bash and no zsh: a /bin/zsh row (or an agent launched through it) never starts.
+        using var db = Open();
+        var ubuntu = new PosixShell(p => p is "/bin/bash" or "/bin/sh", "/bin/bash");
+        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, ubuntu);
+
+        var posix = db.CliDefinitions.AsEnumerable().Where(d => !d.ExePath.EndsWith(".exe")).OrderBy(d => d.SortOrder).ToList();
+        Assert.Equal(new[] { "bash", "Claude", "Codex", "AgentOne", "Netclaw" }, posix.Select(d => d.Name));
+        var claude = posix.Single(d => d.Name == "Claude");
+        Assert.Equal("/bin/bash", claude.ExePath);
+        Assert.Equal("-l -c \"claude; exec bash -l\"", claude.Arguments);
+    }
+
+    [Theory]
+    [InlineData("/usr/bin/fish", true, "/usr/bin/fish")]    // the user's own shell wins when it exists
+    [InlineData("/usr/bin/fish", false, "/bin/bash")]       // a $SHELL that is gone does not
+    [InlineData(null, false, "/bin/bash")]
+    public void The_default_shell_is_SHELL_when_real_else_the_first_installed(string? shellVar, bool shellExists, string expected)
+    {
+        var shells = new PosixShell(p => p is "/bin/bash" || (shellExists && p == shellVar), shellVar);
+        Assert.Equal(expected, shells.Default());
+    }
+
+    [Fact]
+    public void No_candidate_shell_falls_back_to_sh()
+        => Assert.Equal(new[] { "/bin/sh" }, new PosixShell(_ => false, null).Installed());
 
     [Fact]
     public void A_windows_agent_row_does_not_satisfy_the_posix_seed()
@@ -121,7 +151,7 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         // host with an agent entry it cannot run and no runnable one.
         using var db = Open();
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: true);
-        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false);
+        AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, PosixShell.MacLike);
 
         var claude = db.CliDefinitions.Where(d => d.Name == "Claude").ToList();
         Assert.Equal(2, claude.Count);
