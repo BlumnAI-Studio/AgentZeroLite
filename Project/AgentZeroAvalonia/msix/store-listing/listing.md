@@ -24,7 +24,14 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.25.9.0 — submission 11)
+## What's new in this version (1.26.1.0 — submission 12)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Agent Stage (new official plugin): see your workspaces as stages and every terminal as an agent — Claude, Codex, AgentOne, Netclaw or a shell. While an agent works it animates (thinking ring, rising code, typing bars); it pulses red when it needs you and bursts when it finishes. Click an agent to jump to its terminal. Plugins page → Install official plugin → Agent Stage.
+- The workspace you are in is now marked in teal in the sidebar — apart from the focused terminal's blue — and the sessions list names its workspace.
+- Fix: long worktree names end in "…" and their close button no longer sits on the sidebar edge.
+
+## What's new in version 1.25.9.0 (submission 11)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Git log: a GIT LOG tab beside CODE lists the workspace's recent commits — subject, author and age, the full message on hover. Read with your local git; the tab is off for folders git cannot read.
@@ -73,7 +80,7 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Agent CLI check and one-click install for Claude Code, Codex, agent-one and netclaw
 - Built-in assistant that can read and drive your terminals, on a local model or any OpenAI-compatible API
 - Scriptable from any shell: AgentZeroLite.exe -cli
-- Web plugins: Voice Note, live music recognition and token dashboards, installed from the official list
+- Web plugins: Agent Stage, Voice Note, live music recognition and token dashboards, installed from the official list
 - Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status
 - Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, and its git log
 - Resume a Claude Code or Codex conversation when its terminal opens
