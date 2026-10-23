@@ -332,6 +332,24 @@ In certification. Features는 Code view 줄만 고쳤다(`feature-7`, 12줄 그�
 - 자동화 Edge(`%LOCALAPPDATA%\pw-edge-partner`)는 **9333** 포트로 떠 있었고 세션이 살아 있어 로그인이 필요 없었다.
   9222는 다른 브라우저가 쓰고 있었다.
 
+### 12차 제출 — 여덟 번째 업데이트 (1.26.1.0, 2026-10-23)
+
+내용: 공식 플러그인 **Agent Stage**(워크스페이스는 존, 터미널은 움직이는 에이전트 아바타 — 일하는 중·확인 필요·완료,
+클릭하면 그 터미널로)와 이를 위한 브리지 `sessions.list` / `sessions.focus`, 사이드바의 활성 워크스페이스 틸 표시와
+`SESSIONS · <워크스페이스>` 헤더. Submission 9. 플러그인이 워크스페이스 목록과 터미널 상태를 읽을 수 있게 됐으므로
+개인정보 처리방침에 "What plugins can see" 문단을 더하고(`doc-v1.49.0`) 반영을 확인한 뒤 제출했다. 같은 날 GitHub
+릴리스 `v0.26.1`(Linux `.deb`/`.tar.gz` 포함). 그 사이 `v0.26.0`(Linux 첫 릴리스)은 Store 없이 GitHub에만 냈으므로
+Store 버전은 1.25.9.0 → 1.26.1.0으로 건너뛴다. 패키지 157 MB, 첫 Save에 1.25.9.0이 빠지고 1.26.1.0만 Validated,
+첫 Submit 클릭에 In certification. Features는 Web plugins 줄에 Agent Stage를 더했다(`feature-5`).
+
+이번에 확인한 것:
+
+- **워크트리에서 빌드할 때는 `.secret`이 없다**(git에 올리지 않는 폴더). 원래 체크아웃의
+  `.secret/msstore-identity.json`을 읽어 `-IdentityName/-Publisher/-PublisherDisplayName`으로 넘겼다.
+- 태그 전 `ci-0.26.1`에서 Ubuntu 작업이 기존부터 가끔 실패하던 타이밍 테스트(`Mode_toast_appears_and_then_clears`,
+  약 1초 대기)에 걸렸다. 대기를 5초 시간 기준으로 바꾸고 다시 돌려 세 OS 모두 초록인 것을 본 뒤 제출·태그했다.
+  MSIX는 테스트만 바뀐 커밋 이전 것으로, 기능상 같다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
