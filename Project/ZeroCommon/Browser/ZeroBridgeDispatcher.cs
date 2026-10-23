@@ -115,6 +115,26 @@ public sealed class ZeroBridgeDispatcher
 
         switch (op)
         {
+            // Workspaces and their running terminals with each agent's detected state — what the
+            // sidebar's ACTIVE SESSIONS shows. Published by the GUI host (WorkspaceSessionsFeed);
+            // a host that does not publish says so rather than reporting an empty desk.
+            case "sessions.list":
+            {
+                var snap = Agents.WorkspaceSessionsFeed.Current;
+                return new
+                {
+                    supported = snap is not null,
+                    updatedAt = snap?.UpdatedAt,
+                    workspaces = snap?.Workspaces ?? (IReadOnlyList<Agents.WorkspaceView>)Array.Empty<Agents.WorkspaceView>(),
+                };
+            }
+            case "sessions.focus":
+            {
+                var g = TryGetInt(args, "group");
+                var t = TryGetInt(args, "tab");
+                if (g is null || t is null) throw new ArgumentException("sessions.focus needs { group, tab }");
+                return new { ok = Agents.WorkspaceSessionsFeed.Focus(g.Value, t.Value) };
+            }
             case "version":
                 return new { version = _core.GetAppVersion() };
 

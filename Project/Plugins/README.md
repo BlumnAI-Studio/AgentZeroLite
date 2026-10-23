@@ -218,6 +218,20 @@ refresh();
 > this surface — cards, vanilla-canvas chart, alias inline rename, and
 > the `tokens.tick` auto-refresh wiring.
 
+### 5) Workspaces & sessions (`sessions.*`) — Avalonia host
+
+What the sidebar's ACTIVE SESSIONS shows: every workspace, its running terminals, which agent
+each one runs and the state detected for it. There is no `zero.sessions` helper in
+`zero-bridge.js` yet — call the ops through `zero.invoke`.
+
+| Call | Returns | Notes |
+|---|---|---|
+| `zero.invoke('sessions.list')` | `{ supported, updatedAt, workspaces: [{ group, name, path, active, sessions: [{ group, tab, title, agent, state, focused, needsAttention }] }] }` | `agent`: `claude` · `codex` · `agentone` · `netclaw` · `shell` (from the tab title). `state`: `working` · `blocked` · `done` (not seen yet) · `done-seen` · `idle` · `running` (nothing detected). Refreshed every ~1.5 s — poll. `supported: false` on a host that does not publish (the WPF host, for now). |
+| `zero.invoke('sessions.focus', { group, tab })` | `{ ok }` | Jumps to that terminal (switches workspace, shows the Terminals page) — what clicking its ACTIVE SESSIONS row does. |
+
+> The **`agent-stage`** plugin (shipped) is the reference: a canvas stage with a zone per
+> workspace and an animated avatar per terminal, `sessions.focus` on click.
+
 ---
 
 ## Shipped plugins (catalogue)
@@ -226,6 +240,7 @@ refresh();
 |---|---|---|
 | `voice-note/` | shipped (M0008) | `note.*` VAD-gated capture + `summarize` chunked recursion. 3-tier IndexedDB storage (raw timeline / summary / meta). Per-utterance auto-transcript stream. |
 | `token-monitor/` | shipped (M0009) | `tokens.*` read-only dashboard. Cards, vanilla-canvas time-series chart, by-vendor/account/project tables, alias inline rename, Reset & Re-scan, `tokens.tick` auto-refresh. |
+| `agent-stage/` | shipped | `sessions.list` / `sessions.focus`. A zone per workspace (hue from its path, the active one framed in teal) and an avatar per terminal (Claude ✳, Codex ◆, AgentOne ❖, Netclaw ✦, shell ›_) whose motion follows the detected state — thinking ring, orbiting sparks, rising code glyphs and typing bars while working; a red pulse when it needs you; a burst when it finishes. Click → that terminal. `?demo` (or opened outside the app) runs on simulated sessions. Avalonia host only. |
 | `agent-band/` | shipped (M0025) | `music.*` live AST AudioSet classifier + log-banded spectrum. Vanilla Canvas 2D stage with performer sprite registry (4-frame idle/play animation), label→sprite regex mapping (19 performers: strings/woodwinds/brass/keys/percussion/vocals), 3 selectable backgrounds. ~330 LOC plugin code, ~250 LOC host bridge. |
 
 ## Built-in reference samples (in-app, not in `Project/Plugins/`)

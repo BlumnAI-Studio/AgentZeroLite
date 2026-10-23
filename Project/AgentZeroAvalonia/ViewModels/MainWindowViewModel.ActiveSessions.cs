@@ -112,7 +112,46 @@ public partial class MainWindowViewModel
         _agentTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
         _agentTimer.Tick += (_, _) => RefreshActiveSessions();
         _agentTimer.Start();
+        WorkspaceSessionsFeed.SetFocusHandler(FocusFromPlugin);
         RefreshActiveSessions();
+    }
+
+    /// <summary>
+    /// Hand web plugins (<c>sessions.list</c>) the same picture as the sidebar: every workspace,
+    /// its started terminals, each one's agent and detected state. Every pass, not only on change —
+    /// the plugin polls, and a snapshot is a handful of small records.
+    /// </summary>
+    private void PublishSessionsFeed((int G, int T)? active)
+    {
+        var views = new List<WorkspaceView>(Workspaces.Count);
+        for (int g = 0; g < Workspaces.Count; g++)
+        {
+            var ws = Workspaces[g];
+            var sessions = new List<WorkspaceSessionView>();
+            for (int t = 0; t < ws.Tabs.Count; t++)
+            {
+                var tab = ws.Tabs[t];
+                if (!tab.IsTerminalStarted) continue;
+                var s = _agentTracker.Lookup(g, t);
+                sessions.Add(new WorkspaceSessionView(g, t, tab.Title, WorkspaceSessionsFeed.AgentOf(tab.Title),
+                    WorkspaceSessionsFeed.StateOf(s), active is { } a && a.G == g && a.T == t, s?.NeedsAttention == true));
+            }
+            views.Add(new WorkspaceView(g, ws.DisplayName, ws.DirectoryPath, ReferenceEquals(ws, ActiveWorkspace), sessions));
+        }
+        WorkspaceSessionsFeed.Publish(views);
+    }
+
+    /// <summary>A plugin's "go to this terminal" — the same jump as clicking its ACTIVE SESSIONS row.</summary>
+    private bool FocusFromPlugin(int group, int tab)
+    {
+        if (group < 0 || group >= Workspaces.Count || tab < 0 || tab >= Workspaces[group].Tabs.Count) return false;
+        var target = Workspaces[group].Tabs[tab];
+        Dispatcher.UIThread.Post(() =>
+        {
+            Page = AppPage.Terminals;   // the plugin is on the Plugins page; the jump shows the terminal
+            SelectTab(target);
+        });
+        return true;
     }
 
     public void StopAgentStateMonitor()
@@ -140,6 +179,8 @@ public partial class MainWindowViewModel
                 for (int t = 0; t < Workspaces[g].Tabs.Count; t++)
                     if (Workspaces[g].Tabs[t].IsTerminalStarted)
                         running.Add((g, t, Workspaces[g], Workspaces[g].Tabs[t]));
+
+            PublishSessionsFeed(active);
 
             var signature = string.Join("|", running.Select(r =>
                 $"{r.W.DisplayName}/{r.Tab.Title}/{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(r.Tab)}"))

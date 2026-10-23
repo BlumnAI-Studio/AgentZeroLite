@@ -1,0 +1,8 @@
+{
+  "id": "agent-stage",
+  "name": "Agent Stage",
+  "entry": "index.html",
+  "version": "0.1.0",
+  "icon": "🎬",
+  "description": "Live stage of your workspaces: every running terminal as an agent avatar, with motion graphics while Claude, Codex & co. are working. Click an agent to jump to its terminal."
+}

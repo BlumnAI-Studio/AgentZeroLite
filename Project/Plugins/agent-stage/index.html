@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Agent Stage · AgentZero Lite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="stage.css" />
+  <!-- The host mounts every plugin under https://plugin.local/<id>/ and the bridge at zero.local. -->
+  <script src="https://zero.local/common/zero-bridge.js"></script>
+</head>
+<body>
+  <header class="as-head">
+    <div class="as-brand">
+      <span class="as-logo">🎬</span>
+      <span class="as-title">Agent Stage</span>
+      <span id="as-mode" class="as-mode"></span>
+    </div>
+    <div class="as-stats">
+      <span class="as-stat working"><i></i><b id="as-n-working">0</b> working</span>
+      <span class="as-stat waiting"><i></i><b id="as-n-waiting">0</b> need you</span>
+      <span class="as-stat done"><i></i><b id="as-n-done">0</b> done</span>
+      <span class="as-stat total"><b id="as-n-total">0</b> sessions · <b id="as-n-ws">0</b> workspaces</span>
+    </div>
+    <div class="as-tools">
+      <label class="as-toggle" title="Also show workspaces with no running terminal">
+        <input id="as-all" type="checkbox" /> all workspaces
+      </label>
+      <label class="as-toggle" title="Fewer particles, no screen shake">
+        <input id="as-calm" type="checkbox" /> calm
+      </label>
+    </div>
+  </header>
+
+  <main id="as-stage" class="as-stage">
+    <canvas id="as-canvas"></canvas>
+    <div id="as-empty" class="as-empty" hidden></div>
+    <div id="as-tip" class="as-tip" hidden></div>
+  </main>
+
+  <script src="stage.js"></script>
+</body>
+</html>
