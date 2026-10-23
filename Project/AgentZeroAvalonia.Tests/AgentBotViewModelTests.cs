@@ -256,9 +256,12 @@ public class AgentBotViewModelTests
         Assert.Contains(vm.Items, i => i.Kind == ChatItemKind.User && i.Text == "list my terminals");
     }
 
+    // A time budget, not an iteration count: 200 × Sleep(5) was ~1 s, and on a busy 2-core CI
+    // runner (ubuntu-24.04, ci-0.26.1) the pool continuation that clears the toast came later.
     private static bool SpinUntil(Func<bool> condition)
     {
-        for (var i = 0; i < 200 && !condition(); i++) Thread.Sleep(5);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!condition() && sw.Elapsed < TimeSpan.FromSeconds(5)) Thread.Sleep(5);
         return condition();
     }
 
