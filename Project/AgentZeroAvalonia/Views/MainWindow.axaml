@@ -18,23 +18,24 @@
         <Style Selector="Border.ws.selected">
             <Setter Property="Background" Value="{DynamicResource CyberBgDeep}" />
         </Style>
-        <!-- The workspace the focused terminal is in: the same accent bar, tint and accent-coloured
-             name as the focused session below, so the two lists point at the same place. A row
-             whose nested worktree is the active workspace gets the bar only, dimmed. -->
+        <!-- The workspace the focused terminal is in: an accent bar, a tint and the name in teal —
+             the same shape as the focused session below, in its own colour so "which workspace"
+             and "which terminal" read apart. A row whose nested worktree is the active workspace
+             gets the bar only, dimmed. -->
         <Style Selector="Border.ws.wsrow">
             <Setter Property="BorderThickness" Value="3,0,0,0" />
             <Setter Property="BorderBrush" Value="Transparent" />
         </Style>
         <Style Selector="Border.ws.wsrow.selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
-            <Setter Property="Background" Value="#263794FF" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberTealBrush}" />
+            <Setter Property="Background" Value="#224EC9B0" />
         </Style>
         <Style Selector="Border.ws.wsrow.selected TextBlock.wsname">
-            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource CyberTealBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="Border.ws.wsrow.holds">
-            <Setter Property="BorderBrush" Value="#803794FF" />
+            <Setter Property="BorderBrush" Value="#804EC9B0" />
         </Style>
         <Style Selector="Border.ws.wsrow.holds TextBlock.wsname">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
