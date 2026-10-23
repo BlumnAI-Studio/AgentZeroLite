@@ -215,11 +215,24 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is not null) newValue.IsActive = true;
+        RefreshActiveWorkspaceMarks();
         OnPropertyChanged(nameof(HasActiveWorkspace));
         OnPropertyChanged(nameof(EmptyStateHint));
         // The code view shows the active workspace's files (loaded only while it is open).
         if (CodeVisible) Code.FollowWorkspace(newValue);
         RaiseActiveTerminalChanged();
+    }
+
+    /// <summary>
+    /// Re-mark which top-level row holds the active workspace when that workspace is a worktree
+    /// nested under it — after a switch, and after the worktree lists are rebuilt.
+    /// </summary>
+    internal void RefreshActiveWorkspaceMarks()
+    {
+        var active = ActiveWorkspace;
+        foreach (var ws in Workspaces)
+            ws.HoldsActiveWorktree = active is not null && !ReferenceEquals(ws, active)
+                                     && ws.Worktrees.Any(e => ReferenceEquals(e.Workspace, active));
     }
 
     [RelayCommand] private void ShowTerminals() => Page = AppPage.Terminals;

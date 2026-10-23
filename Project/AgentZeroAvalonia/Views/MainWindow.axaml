@@ -18,6 +18,27 @@
         <Style Selector="Border.ws.selected">
             <Setter Property="Background" Value="{DynamicResource CyberBgDeep}" />
         </Style>
+        <!-- The workspace the focused terminal is in: the same accent bar, tint and accent-coloured
+             name as the focused session below, so the two lists point at the same place. A row
+             whose nested worktree is the active workspace gets the bar only, dimmed. -->
+        <Style Selector="Border.ws.wsrow">
+            <Setter Property="BorderThickness" Value="3,0,0,0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.ws.wsrow.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="Background" Value="#263794FF" />
+        </Style>
+        <Style Selector="Border.ws.wsrow.selected TextBlock.wsname">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.ws.wsrow.holds">
+            <Setter Property="BorderBrush" Value="#803794FF" />
+        </Style>
+        <Style Selector="Border.ws.wsrow.holds TextBlock.wsname">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
         <Style Selector="Button.side">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -186,7 +207,7 @@
                                 <!-- A workspace that is a worktree of a repository another row hosts is
                                      drawn under that row (below), not here. -->
                                 <StackPanel IsVisible="{Binding !IsNested}">
-                                    <Border Classes="ws" Classes.selected="{Binding IsActive}">
+                                    <Border Classes="ws wsrow" Classes.selected="{Binding IsActive}" Classes.holds="{Binding HoldsActiveWorktree}">
                                         <Border.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Open folder" Command="{Binding OpenFolderCommand}" />
@@ -205,7 +226,7 @@
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding BranchLabel}" IsVisible="{Binding HasBranchLabel}"
                                                                FontSize="9" Margin="6,0,0,0" VerticalAlignment="Center" MaxWidth="80"
                                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextDim}" />
-                                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <TextBlock Classes="wsname" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 </DockPanel>
                                             </Button>
                                         </DockPanel>
@@ -214,7 +235,7 @@
                                     <ItemsControl ItemsSource="{Binding Worktrees}" IsVisible="{Binding HasWorktrees}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:WorktreeEntryViewModel">
-                                                <Border Classes="ws" Classes.selected="{Binding Workspace.IsActive, FallbackValue=False}" Margin="14,0,0,0">
+                                                <Border Classes="ws wsrow" Classes.selected="{Binding Workspace.IsActive, FallbackValue=False}" Margin="20,1,6,1">
                                                     <Border.ContextMenu>
                                                         <ContextMenu>
                                                             <MenuItem Header="Open worktree folder" Command="{Binding OpenFolderCommand}" />
@@ -228,10 +249,11 @@
                                                         <Button DockPanel.Dock="Right" Classes="sidex" Content="✕" IsVisible="{Binding IsOpened}"
                                                                 ToolTip.Tip="Close this workspace (the worktree folder stays)" Command="{Binding CloseCommand}" />
                                                         <Button Classes="side" ToolTip.Tip="{Binding Tip}" Command="{Binding GoCommand}">
-                                                            <StackPanel Orientation="Horizontal" Spacing="5" Opacity="{Binding LabelOpacity}">
-                                                                <TextBlock Text="⎇" FontSize="11" Foreground="{DynamicResource CyberTealBrush}" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                            </StackPanel>
+                                                            <!-- A DockPanel, not a horizontal StackPanel: only a bounded width lets a long branch name end in "…". -->
+                                                            <DockPanel Opacity="{Binding LabelOpacity}">
+                                                                <TextBlock DockPanel.Dock="Left" Text="⎇" FontSize="11" Margin="0,0,5,0" Foreground="{DynamicResource CyberTealBrush}" VerticalAlignment="Center" />
+                                                                <TextBlock Classes="wsname" Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                            </DockPanel>
                                                         </Button>
                                                     </DockPanel>
                                                 </Border>
@@ -243,7 +265,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Border Height="1" Background="{DynamicResource BorderColor}" Margin="10,8" />
-                    <TextBlock Text="SESSIONS" FontSize="10" FontWeight="Bold"
+                    <TextBlock Text="{Binding ActiveWorkspace.DisplayName, StringFormat='SESSIONS · {0}', FallbackValue=SESSIONS}" FontSize="10" FontWeight="Bold" TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource TextDim}" Margin="12,4" />
                     <ItemsControl ItemsSource="{Binding ActiveWorkspace.Tabs}">
                         <ItemsControl.ItemTemplate>

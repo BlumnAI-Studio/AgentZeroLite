@@ -180,6 +180,7 @@ public partial class MainWindowViewModel
             ws.IsNested = rows[i].IsNested;
             SyncEntries(ws, rows[i].Children, sets);
         }
+        RefreshActiveWorkspaceMarks();
     }
 
     private void SyncEntries(WorkspaceViewModel host, IReadOnlyList<GitWorktreeInfo> trees,

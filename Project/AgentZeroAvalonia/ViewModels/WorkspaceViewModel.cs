@@ -58,6 +58,13 @@ public partial class WorkspaceViewModel : ObservableObject, ICliGroupInfo
     /// <summary>The checked-out branch when the folder is a git working tree root, shown beside the name.</summary>
     [ObservableProperty] private string _branchLabel = "";
 
+    /// <summary>
+    /// The active workspace is one of the worktrees listed under this row. The worktree's own
+    /// sub-row carries the full "you are here" mark; this row gets a quieter one, so a glance at
+    /// the top-level list still says which repository the focused terminal is in.
+    /// </summary>
+    [ObservableProperty] private bool _holdsActiveWorktree;
+
     public bool HasWorktrees => Worktrees.Count > 0;
     public bool HasBranchLabel => BranchLabel.Length > 0;
     partial void OnBranchLabelChanged(string value) => OnPropertyChanged(nameof(HasBranchLabel));
