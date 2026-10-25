@@ -350,6 +350,26 @@ Store 버전은 1.25.9.0 → 1.26.1.0으로 건너뛴다. 패키지 157 MB, 첫 
   약 1초 대기)에 걸렸다. 대기를 5초 시간 기준으로 바꾸고 다시 돌려 세 OS 모두 초록인 것을 본 뒤 제출·태그했다.
   MSIX는 테스트만 바뀐 커밋 이전 것으로, 기능상 같다.
 
+### 13차 제출 — 아홉 번째 업데이트 (1.26.2.0, 2026-10-25)
+
+내용: Agent Stage의 **서브에이전트 크루** — Claude가 Agent / Task 도구로 띄운 서브에이전트를 아바타 위의 크루로(역할별
+색·이름, 작업 중 연결선 흐름, 중첩은 바깥으로, 끝나면 부모로 혜성), 호버로 맡은 일·마지막 도구·도구 수·경과 시간.
+ZeroCommon `ClaudeSubagentReader`가 Claude Code의 `projects/<slug>/<session>/subagents/`를 이어 읽기로 읽는다.
+Submission 10(Partner Center 표기). 플러그인이 서브에이전트의 맡은 일과 마지막 도구 힌트(파일 이름·명령 설명)를 볼 수
+있게 됐으므로 개인정보 처리방침 "What plugins can see" 문단을 넓히고(`doc-v1.50.0`) 반영을 확인한 뒤 제출했다.
+패키지 157 MB, 첫 Save에 1.26.1.0이 빠지고 1.26.2.0만 Validated, 첫 Submit 클릭에 In certification. Features는
+Active-sessions 줄에 크루를 더했다(`feature-6`). 같은 날 GitHub 릴리스 `v0.26.2`(Setup.exe · win-x64 zip ·
+Linux .deb/.tar.gz · macOS .pkg, Latest).
+
+이번에 확인한 것:
+
+- 태그 전 `ci-0.26.2`가 **macOS·Ubuntu에서 실패**했다 — 테스트가 아니라 제품 버그였다. `Path.GetFileName`은
+  macOS/Linux에서 `\`를 구분자로 보지 않아, Windows에서 쓴 기록의 파일 힌트가 경로째 나왔다. 고친 뒤 Run workflow로
+  세 OS 초록을 보고 MSIX도 그 커밋으로 다시 빌드해 제출했다. 멀티 OS CI를 태그 전에 먼저 돌리는 순서가 이번에 값을 했다.
+- 개요 페이지의 링크에 `…/listings`가 없을 때가 있다(언어 링크만 `managelanguages`). 제출 ID는 `…/packages` 링크에서 읽는다.
+- Bash 도구에서 heredoc으로 쓴 `.mjs`의 `/\\/g`가 `/\/g`로 바뀌어 문법 오류가 났다 — 경로 정리는
+  `split(String.fromCharCode(92)).join('/')`로 쓰면 이스케이프를 타지 않는다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
