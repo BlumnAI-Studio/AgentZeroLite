@@ -131,8 +131,21 @@
     for (const id of [...kids.keys()]) if (!seen.has(id)) kids.delete(id);
   }
 
-  function kidColor(type) { return `hsl(${hueOf((type || 'agent').toLowerCase())},62%,62%)`; }
-  function kidGlyph(type) { const t = (type || '').toLowerCase(); return KIND_GLYPH[t] || (type || '?').charAt(0).toUpperCase(); }
+  // What tells one crew member from another. A typed sub-agent (Explore, Plan, …) is its type;
+  // general-purpose ones are told apart by the task's first word — measured: a harness spawned
+  // eight general-purpose reviewers ("lyricist review of …", "genre-scout review of …"), and by
+  // type alone they were eight identical dots.
+  function kidRole(sub) {
+    const type = sub.type || 'agent';
+    if (type.toLowerCase() !== 'general-purpose') return type;
+    const m = /^[\p{L}\p{N}][\p{L}\p{N}_-]*/u.exec((sub.description || '').trim());
+    return m ? m[0].slice(0, 18) : type;
+  }
+  function kidColor(sub) { return `hsl(${hueOf(kidRole(sub).toLowerCase())},62%,62%)`; }
+  function kidGlyph(sub) {
+    const known = KIND_GLYPH[(sub.type || '').toLowerCase()];
+    return known && sub.type.toLowerCase() !== 'general-purpose' ? known : kidRole(sub).charAt(0).toUpperCase();
+  }
 
   function transition(a, from, to) {
     if (!isFinite(a.x)) return;
@@ -202,6 +215,7 @@
         a.tx = z.x + cw * (j % per + 0.5);
         a.ty = innerTop + (innerH / lines) * (row + (crewed ? 0.6 : 0.42));
         a.r = crewed ? Math.min(r0, 24) : r0;
+        a.zoneTop = z.y;
         if (!isFinite(a.x)) { a.x = a.tx; a.y = a.ty + 30; }
       });
       z.counts = {
@@ -411,10 +425,17 @@
     const top = [...kids.values()].filter(k => !k.parentId || !kids.has(k.parentId));
     const n = top.length, ring2 = n > 5;
     const spread = Math.min(Math.PI * 0.9, (n - 1) * (ring2 ? 0.42 : 0.78));
+    // Fit the halo under the zone header: when the space above the avatar is short, flatten it and
+    // spread it sideways instead of running into the header; with room to spare, open it up a
+    // little so a big crew is not packed around the avatar.
+    const outer = r + 62 + (ring2 ? cr * 3 : 0);
+    const room = y - ((a.zoneTop ?? 0) + 34) - cr - 16;
+    const squeeze = Math.max(0.45, Math.min(ring2 ? 1.45 : 1.15, room / (outer * 0.8)));
+    const vk = 0.8 * squeeze, hk = squeeze >= 1 ? squeeze : 1 + (1 - squeeze) * 0.7;
     top.forEach((k, i) => {
       const ang = -Math.PI / 2 - spread / 2 + (n > 1 ? spread * i / (n - 1) : 0);
       const R = r + 62 + (ring2 && i % 2 ? cr * 3 : 0);
-      Object.assign(k, { ang, R, cr, depth: 0, tx: x + Math.cos(ang) * R, ty: y + Math.sin(ang) * R * 0.8 });
+      Object.assign(k, { ang, R, cr, depth: 0, tx: x + Math.cos(ang) * R * hk, ty: y + Math.sin(ang) * R * vk });
     });
     // Nested ones fan out beyond the sub-agent that started them (a depth or two at most in practice).
     for (let pass = 0; pass < 3; pass++)
@@ -424,7 +445,7 @@
         brood.forEach((k, i) => {
           const ang = p.ang + (i - (brood.length - 1) / 2) * 0.36;
           const R = p.R + cr * 4.2;
-          Object.assign(k, { ang, R, cr: cr * 0.85, depth: pass + 1, tx: x + Math.cos(ang) * R, ty: y + Math.sin(ang) * R * 0.8 });
+          Object.assign(k, { ang, R, cr: cr * 0.85, depth: pass + 1, tx: x + Math.cos(ang) * R * hk, ty: y + Math.sin(ang) * R * vk });
         });
       }
   }
@@ -443,7 +464,7 @@
       if (!isFinite(k.x)) { k.x = src.x; k.y = src.y; }          // launched from its parent: flies out to its seat
       k.x += (k.tx - k.x) * Math.min(1, dt * 4);
       k.y += (k.ty - k.y) * Math.min(1, dt * 4);
-      const color = kidColor(k.sub.type), fade = kidFade(k, wall);
+      const color = kidColor(k.sub), fade = kidFade(k, wall);
       const mx = (src.x + k.x) / 2 + (k.y - src.y) * 0.15, my = (src.y + k.y) / 2 - (k.x - src.x) * 0.15;
       ctx.globalAlpha = 0.35 * fade;
       ctx.strokeStyle = color; ctx.lineWidth = 1.3;
@@ -464,11 +485,11 @@
     ctx.globalAlpha = 1;
 
     // Labels sit above each node (the crew is above its parent, so below would run into it):
-    // the type while the crew is small enough to read, the task too when it is alone (two collide).
-    const showType = kids.size <= 5, showDesc = kids.size === 1;
+    // the role always (smaller in a big crew), the whole task too when it is alone (two collide).
+    const showRole = kids.size <= 14, small = kids.size > 5, showDesc = kids.size === 1;
     for (const k of kids.values()) {
       if (!isFinite(k.ang)) continue;
-      const sub = k.sub, color = kidColor(sub.type), fade = kidFade(k, wall);
+      const sub = k.sub, color = kidColor(sub), fade = kidFade(k, wall);
       const working = k.state === 'working';
       const grow = Math.min(1, (now() - k.born) * 3);
       const cr = k.cr * (0.4 + 0.6 * grow) * (working ? 1 + 0.06 * Math.sin(t * 7 + k.spin) : 1);
@@ -485,7 +506,7 @@
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
       ctx.fillStyle = '#0d0f14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = `700 ${Math.round(cr * 1.1)}px "Segoe UI Symbol", "Segoe UI", system-ui, sans-serif`;
-      ctx.fillText(kidGlyph(sub.type), k.x, k.y + 0.5);
+      ctx.fillText(kidGlyph(sub), k.x, k.y + 0.5);
       if (!working) {
         const bx = k.x + cr * 0.75, by = k.y - cr * 0.75, br = Math.max(4, cr * 0.42);
         ctx.fillStyle = (KIDS[k.state] || KIDS.stopped).color;
@@ -493,11 +514,11 @@
         ctx.fillStyle = '#0d0f14'; ctx.font = `800 ${Math.round(br * 1.5)}px "Segoe UI", sans-serif`;
         ctx.fillText(k.state === 'done' ? '✓' : '×', bx, by + 0.5);
       }
-      if (showType) {
-        const above = k.y - cr - 8;
-        ctx.font = '600 10px "Segoe UI", system-ui, sans-serif';
+      if (showRole) {
+        const above = k.y - cr - (small ? 6 : 8);
+        ctx.font = `600 ${small ? 9 : 10}px "Segoe UI", system-ui, sans-serif`;
         ctx.fillStyle = working ? '#e8d3a6' : '#9aa3b2';
-        ctx.fillText(sub.type, k.x, above);
+        ctx.fillText(clip(kidRole(sub), small ? 64 : 110), k.x, above);
         if (showDesc && sub.description) {
           ctx.font = '10px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#8a93a3';
           ctx.fillText(clip(sub.description, 130), k.x, above - 12);
@@ -685,7 +706,9 @@
   // A working Claude launches sub-agents now and then; they call tools, sometimes start one of
   // their own, and hand back. The host's keep window applies, so finished ones fade and leave.
   const DEMO_TYPES = [['Explore', 'Survey the voice settings'], ['Explore', 'Find every caller of Publish'],
-    ['Plan', 'Design the crew layout'], ['general-purpose', 'Run the test suite and report'], ['code-reviewer', 'Review the diff']];
+    ['Plan', 'Design the crew layout'], ['general-purpose', 'Run the test suite and report'], ['code-reviewer', 'Review the diff'],
+    ['general-purpose', 'lyricist review of Comma'], ['general-purpose', 'genre-scout review of Comma'],
+    ['general-purpose', 'choreographer review of Comma stage'], ['general-purpose', 'lore-scout review of Comma']];
   const DEMO_TOOLS = ['Read · Program.cs', 'Grep · WorkspaceView', 'Glob · **/*.cs', 'Bash · dotnet test', 'Read · stage.js', 'WebFetch · docs'];
   let demoSeq = 0;
   function demoCrew(s) {
