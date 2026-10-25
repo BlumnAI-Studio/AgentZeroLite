@@ -16,6 +16,8 @@ Windows 쪽 선례는 `Docs/avalonia-v2/microsoft-store.md` §6(4차 만에 통�
 | 출시 방식 | **MANUAL** — 승인돼도 운영자가 출시를 눌러야 공개 |
 | 남은 일 | 대한민국 연락처 확인(App Store Connect → 비즈니스) — Apple 측 오류로 미완. 제출은 막지 않았다 |
 
+확인 기록: 2026-10-25 웹(App Store Connect → 앱 심사)으로 확인 — 여전히 `심사 대기 중`, 메시지 없음.
+
 `.secret/apple-asc.json`에 모든 ID가 있다. `asc`는 `agentzero` 프로필로 로그인돼 있다(시스템 키체인).
 
 ## 1. 상태 확인
@@ -27,6 +29,9 @@ asc submit status --app 6825237056 2>/dev/null || true
 반려 사유 본문은 App Store Connect 웹 → 앱 → **앱 심사(Resolution Center)** 에 있다(메일은 요약만). 웹은
 Playwright로 연다: 스크래치패드의 `apple-pw/browser.mjs`(정식 Chrome `channel: 'chrome'` + 별도 프로필 —
 번들 Chromium은 패스키를 USB 키로만 받는다). 로그인은 운영자가 직접.
+**Windows PC**(asc·Apple 키 없음): Playwright `launchPersistentContext` + `channel: 'msedge'` 전용 프로필로
+`https://appstoreconnect.apple.com/apps/6825237056/distribution/reviewsubmissions`를 열고 운영자 로그인 후
+본문 텍스트를 읽는다 — 2026-10-25 이 방식으로 확인했다.
 
 ## 2. 승인됐을 때
 
