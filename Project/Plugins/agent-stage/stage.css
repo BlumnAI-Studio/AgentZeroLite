@@ -58,6 +58,7 @@ body { display: flex; flex-direction: column; }
 .as-stat.working i { background: var(--working); box-shadow: 0 0 8px var(--working); }
 .as-stat.waiting i { background: var(--waiting); box-shadow: 0 0 8px var(--waiting); }
 .as-stat.done i { background: var(--done); box-shadow: 0 0 8px var(--done); }
+.as-stat.crew i { background: var(--working); border-radius: 2px; transform: rotate(45deg); box-shadow: 0 0 6px var(--working); }
 
 .as-tools { margin-left: auto; display: flex; gap: 12px; font-size: 11px; color: var(--dim); }
 .as-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }

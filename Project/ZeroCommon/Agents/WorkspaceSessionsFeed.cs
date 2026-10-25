@@ -1,8 +1,10 @@
 namespace Agent.Common.Agents;
 
 /// <summary>One running terminal as a web plugin sees it (<c>sessions.list</c>).</summary>
+/// <param name="Subagents">Sub-agents its Claude session is running or just ran (<see cref="ClaudeSubagentReader"/>); null for other agents.</param>
 public sealed record WorkspaceSessionView(
-    int Group, int Tab, string Title, string Agent, string State, bool Focused, bool NeedsAttention);
+    int Group, int Tab, string Title, string Agent, string State, bool Focused, bool NeedsAttention,
+    IReadOnlyList<SubagentView>? Subagents = null);
 
 /// <summary>One workspace with its running terminals, in sidebar order.</summary>
 public sealed record WorkspaceView(

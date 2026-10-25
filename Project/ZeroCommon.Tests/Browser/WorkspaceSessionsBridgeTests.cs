@@ -53,6 +53,27 @@ public sealed class WorkspaceSessionsBridgeTests : IDisposable
         Assert.Equal("working", s.GetProperty("state").GetString());
         Assert.Equal(1, s.GetProperty("tab").GetInt32());
         Assert.False(s.GetProperty("needsAttention").GetBoolean());
+        Assert.False(s.TryGetProperty("subagents", out _));   // not a Claude tab: left out, not []
+    }
+
+    [Fact]
+    public async Task A_claude_tab_carries_its_subagents()
+    {
+        WorkspaceSessionsFeed.Publish([
+            new WorkspaceView(0, "proj", "/p", Active: true, [
+                new WorkspaceSessionView(0, 0, "Claude", "claude", "working", Focused: false, NeedsAttention: false, [
+                    new SubagentView("a1", null, "Explore", "Survey", 1, true, "working", "Read · x.cs", 3, 1000, null),
+                    new SubagentView("c1", "a1", "Plan", "Nested", 2, true, "done", null, 0, 2000, 3000)])]),
+        ]);
+
+        var subs = (await Call("sessions.list")).GetProperty("result").GetProperty("workspaces")[0]
+            .GetProperty("sessions")[0].GetProperty("subagents");
+        Assert.Equal(2, subs.GetArrayLength());
+        Assert.Equal("Explore", subs[0].GetProperty("type").GetString());
+        Assert.Equal("Read · x.cs", subs[0].GetProperty("tool").GetString());
+        Assert.False(subs[0].TryGetProperty("parentId", out _));
+        Assert.Equal("a1", subs[1].GetProperty("parentId").GetString());
+        Assert.Equal(3000, subs[1].GetProperty("endedAt").GetInt64());
     }
 
     [Fact]

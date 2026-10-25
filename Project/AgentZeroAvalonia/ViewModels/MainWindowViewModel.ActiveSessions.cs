@@ -83,6 +83,7 @@ public sealed partial class ActiveSessionItem : ObservableObject
 public partial class MainWindowViewModel
 {
     private readonly AgentActivityTracker _agentTracker = new();
+    private readonly ClaudeSubagentReader _subagents = new();
     private DispatcherTimer? _agentTimer;
     private string _sessionsSignature = "";
 
@@ -118,8 +119,9 @@ public partial class MainWindowViewModel
 
     /// <summary>
     /// Hand web plugins (<c>sessions.list</c>) the same picture as the sidebar: every workspace,
-    /// its started terminals, each one's agent and detected state. Every pass, not only on change —
-    /// the plugin polls, and a snapshot is a handful of small records.
+    /// its started terminals, each one's agent and detected state, and for a Claude tab the
+    /// sub-agents its session is running (read incrementally from its transcripts). Every pass, not
+    /// only on change — the plugin polls, and a snapshot is a handful of small records.
     /// </summary>
     private void PublishSessionsFeed((int G, int T)? active)
     {
@@ -134,7 +136,8 @@ public partial class MainWindowViewModel
                 if (!tab.IsTerminalStarted) continue;
                 var s = _agentTracker.Lookup(g, t);
                 sessions.Add(new WorkspaceSessionView(g, t, tab.Title, WorkspaceSessionsFeed.AgentOf(tab.Title),
-                    WorkspaceSessionsFeed.StateOf(s), active is { } a && a.G == g && a.T == t, s?.NeedsAttention == true));
+                    WorkspaceSessionsFeed.StateOf(s), active is { } a && a.G == g && a.T == t, s?.NeedsAttention == true,
+                    s?.Session is { Agent: "claude" } claude ? _subagents.Read(claude) : null));
             }
             views.Add(new WorkspaceView(g, ws.DisplayName, ws.DirectoryPath, ReferenceEquals(ws, ActiveWorkspace), sessions));
         }

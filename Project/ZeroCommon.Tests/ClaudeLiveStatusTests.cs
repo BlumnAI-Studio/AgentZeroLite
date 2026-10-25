@@ -59,7 +59,10 @@ public sealed class ClaudeLiveStatusTests : IDisposable
         var src = Source();
         src.BeginPass();
 
-        Assert.Equal(new AgentLiveStatus(AgentActivity.Working, "claude-status:busy"), src.StatusOf("a", 100, @"C:\work", false));
+        var a = src.StatusOf("a", 100, @"C:\work", false)!;
+        Assert.Equal((AgentActivity.Working, "claude-status:busy"), (a.Activity, a.Rule));
+        // It names the conversation, so the stage can find its sub-agents.
+        Assert.Equal(new AgentSessionRef("claude", Path.GetDirectoryName(_dir)!, "s-200", @"C:\work"), a.Session);
         Assert.Equal(AgentActivity.Blocked, src.StatusOf("b", 300, @"C:\work", false)!.Activity);
         Assert.Null(src.StatusOf("c", 900 + 50, @"C:\work", false));   // a shell with no claude below it
     }

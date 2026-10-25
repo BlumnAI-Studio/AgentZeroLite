@@ -3,7 +3,9 @@ using Agent.Common.Module;
 namespace Agent.Common.Agents;
 
 /// <summary>Detected state of one running terminal (herdr H1/H2). <see cref="Group"/>/<see cref="Tab"/> are indexes.</summary>
-public sealed record TerminalAgentState(int Group, int Tab, string Title, AgentActivity Activity, bool Seen, string? Rule)
+/// <param name="Session">The agent conversation behind the tab, when its live status names one.</param>
+public sealed record TerminalAgentState(int Group, int Tab, string Title, AgentActivity Activity, bool Seen, string? Rule,
+    AgentSessionRef? Session = null)
 {
     /// <summary>Blocked, or done and not looked at yet — "this agent needs me".</summary>
     public bool NeedsAttention => Activity == AgentActivity.Blocked || (Activity == AgentActivity.Done && !Seen);
@@ -159,7 +161,7 @@ public sealed class AgentActivityTracker
                 if (prev is null || prev.Activity != activity)
                     LogTransition(groups[gi].DisplayName, tab.Title, prev?.Activity, activity, rule, lines, title);
 
-                _states[key] = new TerminalAgentState(gi, ti, tab.Title, activity, seen, rule);
+                _states[key] = new TerminalAgentState(gi, ti, tab.Title, activity, seen, rule, reported?.Session);
             }
         }
 

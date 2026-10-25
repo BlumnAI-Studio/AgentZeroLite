@@ -7,7 +7,8 @@ namespace Agent.Common.Agents;
 /// <summary>What an agent reports about itself, mapped to the tracker's states.</summary>
 /// <param name="Activity">Working, Blocked or Idle — the tracker turns Working → Idle into Done.</param>
 /// <param name="Rule">Shown where a screen rule's id would be (log, <c>agent-state</c>): <c>claude-status:busy</c>.</param>
-public sealed record AgentLiveStatus(AgentActivity Activity, string Rule);
+/// <param name="Session">The conversation behind it, when the agent names one (Claude's status file does).</param>
+public sealed record AgentLiveStatus(AgentActivity Activity, string Rule, AgentSessionRef? Session = null);
 
 /// <summary>
 /// A source of agent-reported state, consulted by <see cref="AgentActivityTracker"/> before the
@@ -31,6 +32,13 @@ public interface IAgentLiveStatusSource
 /// <summary>One <c>~/.claude/sessions/&lt;pid&gt;.json</c>.</summary>
 public sealed record ClaudeStatusFile(int Pid, string? SessionId, string? Cwd, string Status, string? WaitingFor, long StatusUpdatedAt)
 {
+    /// <summary>The profile folder the file was read from (the parent of <c>sessions/</c>).</summary>
+    public string? ConfigDir { get; init; }
+
+    public AgentSessionRef? Session => ConfigDir is { } d && SessionId is { Length: > 0 } id && Cwd is { Length: > 0 } cwd
+        ? new AgentSessionRef("claude", d, id, cwd)
+        : null;
+
     /// <summary>busy → Working, waiting → Blocked, idle → Idle; anything else is not ours to guess.</summary>
     public AgentActivity? Activity => Status switch
     {
@@ -123,7 +131,7 @@ public sealed class ClaudeLiveStatusSource : IAgentLiveStatusSource
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
                 if (ClaudeStatusFile.Parse(json) is { } f
                     && (!files.TryGetValue(f.Pid, out var other) || other.StatusUpdatedAt < f.StatusUpdatedAt))
-                    files[f.Pid] = f;
+                    files[f.Pid] = f with { ConfigDir = Path.GetDirectoryName(dir) };
             }
         }
         _files = files;
@@ -185,6 +193,6 @@ public sealed class ClaudeLiveStatusSource : IAgentLiveStatusSource
     }
 
     private static AgentLiveStatus? Map(ClaudeStatusFile f) => f.Activity is { } a
-        ? new AgentLiveStatus(a, "claude-status:" + f.Status + (string.IsNullOrEmpty(f.WaitingFor) ? "" : $" ({f.WaitingFor})"))
+        ? new AgentLiveStatus(a, "claude-status:" + f.Status + (string.IsNullOrEmpty(f.WaitingFor) ? "" : $" ({f.WaitingFor})"), f.Session)
         : null;
 }

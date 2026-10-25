@@ -2,7 +2,7 @@
   "id": "agent-stage",
   "name": "Agent Stage",
   "entry": "index.html",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "icon": "🎬",
-  "description": "Live stage of your workspaces: every running terminal as an agent avatar, with motion graphics while Claude, Codex & co. are working. Click an agent to jump to its terminal."
+  "description": "Live stage of your workspaces: every running terminal as an agent avatar, with motion graphics while Claude, Codex & co. are working, and Claude's sub-agents as a crew around it. Click an agent to jump to its terminal."
 }

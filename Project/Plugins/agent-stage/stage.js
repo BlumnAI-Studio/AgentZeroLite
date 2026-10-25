@@ -8,7 +8,10 @@
  *   · an avatar per terminal — Claude ✳, Codex ◆, AgentOne ❖, Netclaw ✦, a shell ›_ —
  *     whose motion says what it is doing: orbiting sparks, a thinking ring and typing bars while
  *     working, a red pulse when it needs you, a burst when it finishes;
- *   · click an avatar → sessions.focus jumps to that terminal.
+ *   · a Claude session's sub-agents (the Agent / Task tool) as a crew around its avatar — each
+ *     launched from its parent along a tether, nested ones further out from theirs, a comet back
+ *     to the parent when one hands its report in;
+ *   · click an avatar (or one of its crew) → sessions.focus jumps to that terminal.
  * Outside the app (no bridge) or with ?demo in the URL it runs on simulated sessions.
  */
 (() => {
@@ -32,6 +35,15 @@
     idle:        { color: '#7F848E', label: 'idle' },
     running:     { color: '#A06CFF', label: 'running' },
   };
+  // Sub-agent types: a glyph each, the colour from the type's name so any custom type gets one too.
+  const KIND_GLYPH = { explore: '⌕', plan: '▦', 'general-purpose': '✲', 'claude-code-guide': '?', 'statusline-setup': '▭' };
+  const KIDS = {
+    working: { color: '#E5C07B', label: 'working' },
+    done:    { color: '#98C379', label: 'done' },
+    stopped: { color: '#7F848E', label: 'stopped' },
+  };
+  const KEEP_MS = 120000;   // the host keeps a finished sub-agent this long; it fades over it
+
   const CODE_CHARS = ['{', '}', '<', '/>', ';', '()', '=>', '01', '#', '*', '[]', 'fn', '∑', 'λ'];
 
   // ── DOM ──────────────────────────────────────────────────────────────────
@@ -88,12 +100,39 @@
         }
         Object.assign(a, { ws, session: s, agent: AGENTS[s.agent] ? s.agent : 'shell',
                            state: s.state, title: s.title, focused: !!s.focused, attention: !!s.needsAttention });
+        syncKids(a, s.subagents || []);
       }
     }
     for (const k of [...avatars.keys()]) if (!seen.has(k)) avatars.delete(k);
     updateStats();
     layout();
   }
+
+  // The crew of one avatar, kept by id across polls so a sub-agent keeps its place and motion.
+  function syncKids(a, list) {
+    const kids = a.kids || (a.kids = new Map());
+    const seen = new Set();
+    for (const sub of list) {
+      seen.add(sub.id);
+      let k = kids.get(sub.id);
+      if (!k) {
+        k = { id: sub.id, x: NaN, y: NaN, tx: 0, ty: 0, born: now(), spin: Math.random() * 6.28, state: sub.state };
+        kids.set(sub.id, k);   // no position yet: drawCrew starts it at its parent, so it flies out
+      } else if (k.state !== sub.state && isFinite(k.x)) {
+        if (sub.state === 'done') {
+          burst(k.x, k.y, [KIDS.done.color, '#ffffff'], 16, 2.2);
+          k.handback = true;   // drawn next frame: a comet back to whoever started it
+        } else if (sub.state === 'stopped') {
+          burst(k.x, k.y, [KIDS.stopped.color], 8, 1.4);
+        }
+      }
+      Object.assign(k, { sub, state: sub.state, parentId: sub.parentId || null });
+    }
+    for (const id of [...kids.keys()]) if (!seen.has(id)) kids.delete(id);
+  }
+
+  function kidColor(type) { return `hsl(${hueOf((type || 'agent').toLowerCase())},62%,62%)`; }
+  function kidGlyph(type) { const t = (type || '').toLowerCase(); return KIND_GLYPH[t] || (type || '?').charAt(0).toUpperCase(); }
 
   function transition(a, from, to) {
     if (!isFinite(a.x)) return;
@@ -110,11 +149,12 @@
   }
 
   function updateStats() {
-    let working = 0, waiting = 0, done = 0, total = 0, wsWith = 0;
+    let working = 0, waiting = 0, done = 0, total = 0, wsWith = 0, crew = 0;
     for (const ws of data.workspaces || []) {
       if ((ws.sessions || []).length) wsWith++;
       for (const s of ws.sessions || []) {
         total++;
+        crew += (s.subagents || []).filter(k => k.state === 'working').length;
         if (s.state === 'working') working++;
         else if (s.state === 'blocked') waiting++;
         else if (s.state === 'done') done++;
@@ -125,6 +165,8 @@
     $('as-n-done').textContent = done;
     $('as-n-total').textContent = total;
     $('as-n-ws').textContent = wsWith;
+    $('as-n-crew').textContent = crew;
+    $('as-crew').hidden = crew === 0;
   }
 
   // ── layout: a grid of zones, avatars in rows inside each ─────────────────
@@ -148,7 +190,9 @@
       const z = { ws, x: pad + c * (zw + gap), y: pad + r * (zh + gap), w: zw, h: zh, hue: hueOf(ws.path || ws.name) };
       const list = (ws.sessions || []).map(s => avatars.get(keyOf(ws, s))).filter(Boolean);
       const innerTop = z.y + 40, innerH = z.h - 52;
-      const per = Math.max(1, Math.floor(z.w / 120));
+      // An avatar with a crew needs a wider seat and room above it for the halo.
+      const crewed = list.some(a => a.kids && a.kids.size);
+      const per = Math.max(1, Math.floor(z.w / (crewed ? 190 : 120)));
       const lines = Math.max(1, Math.ceil(list.length / per));
       const cell = Math.min(z.w / Math.min(per, Math.max(1, list.length)), innerH / lines);
       const r0 = Math.max(12, Math.min(30, cell * 0.24));
@@ -156,8 +200,8 @@
         const row = Math.floor(j / per), inRow = Math.min(per, list.length - row * per);
         const cw = z.w / inRow;
         a.tx = z.x + cw * (j % per + 0.5);
-        a.ty = innerTop + (innerH / lines) * (row + 0.42);
-        a.r = r0;
+        a.ty = innerTop + (innerH / lines) * (row + (crewed ? 0.6 : 0.42));
+        a.r = crewed ? Math.min(r0, 24) : r0;
         if (!isFinite(a.x)) { a.x = a.tx; a.y = a.ty + 30; }
       });
       z.counts = {
@@ -283,6 +327,8 @@
     glow.addColorStop(1, hexA(ag.color, 0));
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, glowR, 0, 6.29); ctx.fill();
 
+    if (a.kids && a.kids.size) drawCrew(a, x, y, r, t, dt);
+
     if (working) {
       // thinking ring: two arcs counter-rotating
       ctx.lineWidth = 2.4; ctx.lineCap = 'round';
@@ -358,10 +404,150 @@
     a.hit = { x, y, r: Math.max(r + 10, 26), top: y - r - 14, bottom: ly + 20 };
   }
 
+  // ── the crew: a Claude session's sub-agents ──────────────────────────────
+  function seatCrew(a, x, y, r) {
+    const kids = a.kids;
+    const cr = Math.max(7, Math.min(11, r * 0.42));
+    const top = [...kids.values()].filter(k => !k.parentId || !kids.has(k.parentId));
+    const n = top.length, ring2 = n > 5;
+    const spread = Math.min(Math.PI * 0.9, (n - 1) * (ring2 ? 0.42 : 0.78));
+    top.forEach((k, i) => {
+      const ang = -Math.PI / 2 - spread / 2 + (n > 1 ? spread * i / (n - 1) : 0);
+      const R = r + 62 + (ring2 && i % 2 ? cr * 3 : 0);
+      Object.assign(k, { ang, R, cr, depth: 0, tx: x + Math.cos(ang) * R, ty: y + Math.sin(ang) * R * 0.8 });
+    });
+    // Nested ones fan out beyond the sub-agent that started them (a depth or two at most in practice).
+    for (let pass = 0; pass < 3; pass++)
+      for (const p of kids.values()) {
+        if (p.depth !== pass || !isFinite(p.ang)) continue;
+        const brood = [...kids.values()].filter(k => k.parentId === p.id);
+        brood.forEach((k, i) => {
+          const ang = p.ang + (i - (brood.length - 1) / 2) * 0.36;
+          const R = p.R + cr * 4.2;
+          Object.assign(k, { ang, R, cr: cr * 0.85, depth: pass + 1, tx: x + Math.cos(ang) * R, ty: y + Math.sin(ang) * R * 0.8 });
+        });
+      }
+  }
+
+  function drawCrew(a, x, y, r, t, dt) {
+    seatCrew(a, x, y, r);
+    const kids = a.kids, wall = Date.now();
+    const sourceOf = (k) => {
+      const p = k.parentId && kids.get(k.parentId);
+      return p && isFinite(p.x) ? { x: p.x, y: p.y } : { x, y };
+    };
+    // Tethers first, so the nodes sit on top of them.
+    for (const k of kids.values()) {
+      if (!isFinite(k.ang)) continue;
+      const src = sourceOf(k);
+      if (!isFinite(k.x)) { k.x = src.x; k.y = src.y; }          // launched from its parent: flies out to its seat
+      k.x += (k.tx - k.x) * Math.min(1, dt * 4);
+      k.y += (k.ty - k.y) * Math.min(1, dt * 4);
+      const color = kidColor(k.sub.type), fade = kidFade(k, wall);
+      const mx = (src.x + k.x) / 2 + (k.y - src.y) * 0.15, my = (src.y + k.y) / 2 - (k.x - src.x) * 0.15;
+      ctx.globalAlpha = 0.35 * fade;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.3;
+      if (k.state !== 'working') ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(src.x, src.y); ctx.quadraticCurveTo(mx, my, k.x, k.y); ctx.stroke();
+      ctx.setLineDash([]);
+      if (k.state === 'working') {
+        // work flowing out along the tether
+        for (let i = 0; i < 2; i++) {
+          const u = (t * 0.9 + i / 2 + k.spin) % 1, v = 1 - u;
+          const px = v * v * src.x + 2 * v * u * mx + u * u * k.x, py = v * v * src.y + 2 * v * u * my + u * u * k.y;
+          ctx.globalAlpha = 0.9 * fade; ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(px, py, 1.8, 0, 6.29); ctx.fill();
+        }
+      }
+      if (k.handback) { k.handback = false; comet(k.x, k.y, src.x, src.y, KIDS.done.color); }
+    }
+    ctx.globalAlpha = 1;
+
+    // Labels sit above each node (the crew is above its parent, so below would run into it):
+    // the type while the crew is small enough to read, the task too when it is alone (two collide).
+    const showType = kids.size <= 5, showDesc = kids.size === 1;
+    for (const k of kids.values()) {
+      if (!isFinite(k.ang)) continue;
+      const sub = k.sub, color = kidColor(sub.type), fade = kidFade(k, wall);
+      const working = k.state === 'working';
+      const grow = Math.min(1, (now() - k.born) * 3);
+      const cr = k.cr * (0.4 + 0.6 * grow) * (working ? 1 + 0.06 * Math.sin(t * 7 + k.spin) : 1);
+      ctx.globalAlpha = fade;
+      if (working) {
+        const g = ctx.createRadialGradient(k.x, k.y, cr * 0.4, k.x, k.y, cr * 2.4);
+        g.addColorStop(0, 'rgba(229,192,123,0.35)'); g.addColorStop(1, 'rgba(229,192,123,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(k.x, k.y, cr * 2.4, 0, 6.29); ctx.fill();
+        ctx.strokeStyle = KIDS.working.color; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(k.x, k.y, cr + 4, t * 4 + k.spin, t * 4 + k.spin + 2.2); ctx.stroke();
+      }
+      ctx.fillStyle = k.state === 'stopped' ? '#4a4f5a' : color;
+      ctx.beginPath(); ctx.arc(k.x, k.y, cr, 0, 6.29); ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
+      ctx.fillStyle = '#0d0f14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `700 ${Math.round(cr * 1.1)}px "Segoe UI Symbol", "Segoe UI", system-ui, sans-serif`;
+      ctx.fillText(kidGlyph(sub.type), k.x, k.y + 0.5);
+      if (!working) {
+        const bx = k.x + cr * 0.75, by = k.y - cr * 0.75, br = Math.max(4, cr * 0.42);
+        ctx.fillStyle = (KIDS[k.state] || KIDS.stopped).color;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, 6.29); ctx.fill();
+        ctx.fillStyle = '#0d0f14'; ctx.font = `800 ${Math.round(br * 1.5)}px "Segoe UI", sans-serif`;
+        ctx.fillText(k.state === 'done' ? '✓' : '×', bx, by + 0.5);
+      }
+      if (showType) {
+        const above = k.y - cr - 8;
+        ctx.font = '600 10px "Segoe UI", system-ui, sans-serif';
+        ctx.fillStyle = working ? '#e8d3a6' : '#9aa3b2';
+        ctx.fillText(sub.type, k.x, above);
+        if (showDesc && sub.description) {
+          ctx.font = '10px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#8a93a3';
+          ctx.fillText(clip(sub.description, 130), k.x, above - 12);
+        }
+      }
+      k.hit = { x: k.x, y: k.y, r: cr + 5 };
+    }
+    ctx.globalAlpha = 1;
+
+    // the parent's working-crew count, top-left of its avatar
+    const busy = [...kids.values()].filter(k => k.state === 'working').length;
+    if (busy) {
+      const label = `⑂ ${busy}`;
+      ctx.font = '700 10px "Segoe UI", system-ui, sans-serif';
+      const w = ctx.measureText(label).width + 10, bx = x - r * 0.9, by = y - r * 0.85;
+      roundRect(bx - w / 2, by - 8, w, 16, 8); ctx.fillStyle = 'rgba(229,192,123,0.92)'; ctx.fill();
+      ctx.fillStyle = '#0d0f14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, bx, by + 0.5);
+    }
+  }
+
+  /** A finished one fades over the time the host keeps it; a working one is solid. */
+  function kidFade(k, wall) {
+    if (k.state === 'working' || !k.sub.endedAt) return 1;
+    return Math.max(0.3, 1 - (wall - k.sub.endedAt) / KEEP_MS);
+  }
+
+  function comet(x0, y0, x1, y1, color) {
+    particles.push({ comet: true, x0, y0, x1, y1, x: x0, y: y0, life: 0, max: 40, color, size: 3 });
+  }
+
+  function fmtAge(ms) {
+    const sec = Math.max(0, Math.round(ms / 1000));
+    return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m${String(sec % 60).padStart(2, '0')}s`;
+  }
+
   function drawParticles(dt) {
     const step = dt * 60;
     particles = particles.filter(p => (p.life += step) < p.max);
     for (const p of particles) {
+      if (p.comet) {
+        // eased flight with a short trail
+        const u = p.life / p.max, e = u * u * (3 - 2 * u);
+        const px = p.x, py = p.y;
+        p.x = p.x0 + (p.x1 - p.x0) * e; p.y = p.y0 + (p.y1 - p.y0) * e;
+        ctx.globalAlpha = 0.9; ctx.strokeStyle = p.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(p.x, p.y); ctx.stroke();
+        ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.29); ctx.fill();
+        continue;
+      }
       p.vy += p.g * step; p.x += p.vx * step; p.y += p.vy * step;
       const a = 1 - p.life / p.max;
       ctx.globalAlpha = a;
@@ -417,6 +603,12 @@
   function pick(ev) {
     const rect = canvas.getBoundingClientRect();
     const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    // a crew member first — it sits over its parent's hit area
+    for (const a of avatars.values())
+      for (const k of (a.kids ? a.kids.values() : [])) {
+        const h = k.hit; if (!h || !isFinite(k.ang)) continue;
+        if (Math.hypot(mx - h.x, my - h.y) <= h.r) return { ...a, kid: k, hit: { ...a.hit, x: h.x, y: h.y, top: h.y - h.r - 4 } };
+      }
     for (const a of avatars.values()) {
       const h = a.hit; if (!h) continue;
       if (Math.hypot(mx - h.x, my - h.y) <= h.r || (Math.abs(mx - h.x) < 60 && my >= h.top && my <= h.bottom)) return a;
@@ -429,8 +621,18 @@
     if (!hover) { tipEl.hidden = true; return; }
     const ag = AGENTS[hover.agent] || AGENTS.shell, st = STATES[hover.state] || STATES.running;
     tipEl.innerHTML = '';
-    const line = document.createElement('div'); line.textContent = `${hover.ws.name} / ${hover.title}`;
-    const sub = document.createElement('small'); sub.textContent = `${ag.name} · ${st.label}${hover.focused ? ' · focused' : ''} — click to open`;
+    const line = document.createElement('div');
+    const sub = document.createElement('small');
+    if (hover.kid) {
+      const k = hover.kid.sub;
+      const tool = k.tool ? ` · ${k.tool}` : '';
+      line.textContent = `${k.type} · ${k.description || 'sub-agent'}`;
+      sub.textContent = `${(KIDS[k.state] || KIDS.stopped).label} ${fmtAge((k.endedAt || Date.now()) - k.startedAt)}`
+        + ` · ${k.tools} tool${k.tools === 1 ? '' : 's'}${tool} — ${hover.title} in ${hover.ws.name}${k.parentId ? ' (nested)' : ''}`;
+    } else {
+      line.textContent = `${hover.ws.name} / ${hover.title}`;
+      sub.textContent = `${ag.name} · ${st.label}${hover.focused ? ' · focused' : ''} — click to open`;
+    }
     tipEl.append(line, sub);
     tipEl.style.left = `${hover.hit.x}px`; tipEl.style.top = `${hover.hit.top}px`;
     tipEl.hidden = false;
@@ -467,6 +669,8 @@
         { name: 'research', path: '/demo/research', tabs: [['Netclaw', 'netclaw'], ['Claude-3', 'claude']] },
       ].map((w, g) => ({ group: g, name: w.name, path: w.path, active: g === 0,
         sessions: w.tabs.map(([title, agent], t) => ({ group: g, tab: t, title, agent, state: agent === 'shell' ? 'running' : 'idle', focused: g === 0 && t === 0, needsAttention: false })) }));
+      // The first Claude opens at work, so the preview shows a crew from the start.
+      demo[0].sessions[0].state = 'working';
     }
     const pool = ['working', 'working', 'working', 'blocked', 'done', 'done-seen', 'idle'];
     for (const w of demo)
@@ -475,8 +679,33 @@
           s.state = pool[(Math.random() * pool.length) | 0];
           s.needsAttention = s.state === 'blocked' || s.state === 'done';
         }
+    for (const w of demo) for (const s of w.sessions) if (s.agent === 'claude') demoCrew(s);
     return { supported: true, workspaces: JSON.parse(JSON.stringify(demo)) };
   }
+  // A working Claude launches sub-agents now and then; they call tools, sometimes start one of
+  // their own, and hand back. The host's keep window applies, so finished ones fade and leave.
+  const DEMO_TYPES = [['Explore', 'Survey the voice settings'], ['Explore', 'Find every caller of Publish'],
+    ['Plan', 'Design the crew layout'], ['general-purpose', 'Run the test suite and report'], ['code-reviewer', 'Review the diff']];
+  const DEMO_TOOLS = ['Read · Program.cs', 'Grep · WorkspaceView', 'Glob · **/*.cs', 'Bash · dotnet test', 'Read · stage.js', 'WebFetch · docs'];
+  let demoSeq = 0;
+  function demoCrew(s) {
+    const t = Date.now();
+    const crew = (s.subagents ||= []);
+    s.subagents = crew.filter(k => !k.endedAt || t - k.endedAt < KEEP_MS);
+    const live = s.subagents.filter(k => k.state === 'working');
+    if (s.state === 'working' && live.length < 4 && Math.random() < 0.22) {
+      const [type, description] = DEMO_TYPES[(Math.random() * DEMO_TYPES.length) | 0];
+      const parent = live.length && Math.random() < 0.3 ? live[(Math.random() * live.length) | 0] : null;
+      s.subagents.push({ id: 'demo' + ++demoSeq, parentId: parent ? parent.id : undefined, type, description,
+        depth: parent ? parent.depth + 1 : 1, background: true, state: 'working', tool: undefined, tools: 0, startedAt: t });
+    }
+    for (const k of live) {
+      if (Math.random() < 0.5) { k.tools++; k.tool = DEMO_TOOLS[(Math.random() * DEMO_TOOLS.length) | 0]; }
+      const kidsWorking = s.subagents.some(c => c.parentId === k.id && c.state === 'working');
+      if (!kidsWorking && k.tools > 2 && Math.random() < 0.12) { k.state = Math.random() < 0.9 ? 'done' : 'stopped'; k.endedAt = t; }
+    }
+  }
+
   function demoFocus(a) {
     for (const w of demo) { w.active = w.group === a.session.group; for (const s of w.sessions) s.focused = w.active && s.tab === a.session.tab; }
     apply({ supported: true, workspaces: JSON.parse(JSON.stringify(demo)) });
