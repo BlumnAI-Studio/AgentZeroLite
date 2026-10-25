@@ -24,7 +24,12 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.26.1.0 — submission 12)
+## What's new in this version (1.26.2.0 — submission 13)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Agent Stage: when Claude splits a job into sub-agents, they now appear as a crew around its avatar — each with its own colour and role name (lyricist, Explore, Plan …), work flowing along its tether while it runs, nested sub-agents fanned out beyond the one that started them, and a comet back to the parent when one hands in its report. Hover a crew member for its task, last tool, tool count and elapsed time. Read from Claude Code's own session records — nothing to set up.
+
+## What's new in version 1.26.1.0 (submission 12)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Agent Stage (new official plugin): see your workspaces as stages and every terminal as an agent — Claude, Codex, AgentOne, Netclaw or a shell. While an agent works it animates (thinking ring, rising code, typing bars); it pulses red when it needs you and bursts when it finishes. Click an agent to jump to its terminal. Plugins page → Install official plugin → Agent Stage.
@@ -81,7 +86,7 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Built-in assistant that can read and drive your terminals, on a local model or any OpenAI-compatible API
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Agent Stage, Voice Note, live music recognition and token dashboards, installed from the official list
-- Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status
+- Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status, and Agent Stage showing Claude's sub-agents as a crew
 - Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, and its git log
 - Resume a Claude Code or Codex conversation when its terminal opens
 - Git worktrees listed under their workspace, including those Claude Code and Codex create
