@@ -1,6 +1,6 @@
 # AgentZero Lite — Privacy Policy
 
-_Last updated: 2026-10-19._
+_Last updated: 2026-10-26._
 
 Published page: <https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html>
 (this Markdown file is its source — keep the two in step).
@@ -27,7 +27,8 @@ encrypted at rest with Windows DPAPI (tied to your Windows account).
 
 **Files of other programs the app reads, on your computer only:** to offer resuming a
 conversation and to show whether an agent is working, the app reads the session and status
-files Claude Code and Codex keep in your user folder (`.claude`, `.codex`) and the list of
+files Claude Code and Codex keep in your user folder (`.claude` and Claude's profile folders such
+as `.claude-<name>`, `.codex`) and the list of
 running processes (to find which terminal an agent runs in); to show git worktrees, it reads
 a workspace's `.git` folder. Nothing from them leaves your computer.
 

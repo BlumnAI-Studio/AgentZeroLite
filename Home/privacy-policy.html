@@ -30,7 +30,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
 <body>
 <main>
   <h1>AgentZero Lite — Privacy Policy</h1>
-  <p class="updated">Last updated: 2026-10-25</p>
+  <p class="updated">Last updated: 2026-10-26</p>
 
   <p>AgentZero Lite (“the app”) is a desktop shell for command-line AI tools. It is open source:
     <a href="https://github.com/psmon/AgentZeroLite">github.com/psmon/AgentZeroLite</a>.</p>
@@ -51,7 +51,8 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
   </ul>
   <p><strong>Files of other programs the app reads, on your computer only:</strong> to offer resuming a
     conversation and to show whether an agent is working, the app reads the session and status files Claude Code
-    and Codex keep in your user folder (<code>.claude</code>, <code>.codex</code>) and the list of running processes
+    and Codex keep in your user folder (<code>.claude</code> and Claude’s profile folders such as
+    <code>.claude-&lt;name&gt;</code>, <code>.codex</code>) and the list of running processes
     (to find which terminal an agent runs in); to show git worktrees, it reads a workspace’s <code>.git</code>
     folder; and the code view’s GIT LOG tab runs your installed <code>git</code> program in the workspace folder
     (<code>git log</code>, read-only, no network) to list its recent commits — subject, message, author and date.
