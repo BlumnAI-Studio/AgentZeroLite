@@ -107,12 +107,35 @@ public sealed class ClaudeLiveStatusSource : IAgentLiveStatusSource
         _selfPid = selfPid ?? Environment.ProcessId;
     }
 
-    /// <summary><c>~/.claude/sessions</c>, and <c>$CLAUDE_CONFIG_DIR/sessions</c> when this process has one.</summary>
-    public static IEnumerable<string> DefaultDirs()
+    /// <summary>
+    /// The <c>sessions</c> folder of every Claude profile: <c>~/.claude</c>, its siblings
+    /// <c>~/.claude-&lt;name&gt;</c>, <c>~/.claude-profiles/&lt;name&gt;</c>, and this process's
+    /// <c>$CLAUDE_CONFIG_DIR</c>. A second account is a profile (a <c>claude-sam</c> function sets
+    /// <c>CLAUDE_CONFIG_DIR=~/.claude-sam</c> and runs claude), and its status file lives there —
+    /// measured: with only <c>~/.claude</c> read, a claude-sam tab fell back to the screen rules
+    /// (idle → working on the title spinner, then idle, never done). Folders without a
+    /// <c>sessions</c> subfolder cost one Directory.Exists per pass.
+    /// </summary>
+    public static IEnumerable<string> DefaultDirs() => ProfileDirs(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        Environment.GetEnvironmentVariable("CLAUDE_CONFIG_DIR"));
+
+    internal static IEnumerable<string> ProfileDirs(string home, string? configDir)
     {
-        yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "sessions");
-        var custom = Environment.GetEnvironmentVariable("CLAUDE_CONFIG_DIR");
-        if (!string.IsNullOrWhiteSpace(custom)) yield return Path.Combine(custom.Trim().Trim('"'), "sessions");
+        var dirs = new List<string> { Path.Combine(home, ".claude", "sessions") };
+        try
+        {
+            foreach (var sibling in Directory.EnumerateDirectories(home, ".claude-*"))
+            {
+                if (string.Equals(Path.GetFileName(sibling), ".claude-profiles", StringComparison.OrdinalIgnoreCase))
+                    dirs.AddRange(Directory.EnumerateDirectories(sibling).Select(p => Path.Combine(p, "sessions")));
+                else
+                    dirs.Add(Path.Combine(sibling, "sessions"));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        if (!string.IsNullOrWhiteSpace(configDir)) dirs.Add(Path.Combine(configDir.Trim().Trim('"'), "sessions"));
+        return dirs;
     }
 
     public void BeginPass()

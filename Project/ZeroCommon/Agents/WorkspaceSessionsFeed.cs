@@ -43,14 +43,11 @@ public static class WorkspaceSessionsFeed
         _focus = null;
     }
 
-    /// <summary>Which agent a tab runs, from its title — the built-in rows are named after the tool ("Codex", "Claude-2").</summary>
-    public static string AgentOf(string title)
-    {
-        foreach (var tool in Services.AgentCliTools.All)
-            if (title.StartsWith(tool.Name, StringComparison.OrdinalIgnoreCase))
-                return tool.Name.ToLowerInvariant();
-        return "shell";
-    }
+    /// <summary>
+    /// Which agent a tab runs, from its title alone — the last resort of <see cref="AgentKindDetector"/>,
+    /// which hosts use (a renamed tab or a profile like claude-sam is not named after its tool).
+    /// </summary>
+    public static string AgentOf(string title) => AgentKindDetector.FromTitle(title);
 
     /// <summary>The wire name of a detected state; "running" when nothing was detected.</summary>
     public static string StateOf(TerminalAgentState? s) => s is null

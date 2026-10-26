@@ -123,6 +123,9 @@ public partial class MainWindowViewModel
     /// sub-agents its session is running (read incrementally from its transcripts). Every pass, not
     /// only on change — the plugin polls, and a snapshot is a handful of small records.
     /// </summary>
+    /// <summary>Which agent each tab runs — not from the title alone (a renamed tab, a claude-sam profile).</summary>
+    private readonly AgentKindDetector _agentKinds = new();
+
     private void PublishSessionsFeed((int G, int T)? active)
     {
         var views = new List<WorkspaceView>(Workspaces.Count);
@@ -135,7 +138,9 @@ public partial class MainWindowViewModel
                 var tab = ws.Tabs[t];
                 if (!tab.IsTerminalStarted) continue;
                 var s = _agentTracker.Lookup(g, t);
-                sessions.Add(new WorkspaceSessionView(g, t, tab.Title, WorkspaceSessionsFeed.AgentOf(tab.Title),
+                var kind = _agentKinds.KindOf(tab.Title, s?.Session,
+                    (tab.Session as Agent.Common.Services.ITerminalProcessSource)?.ProcessId, tab.Definition);
+                sessions.Add(new WorkspaceSessionView(g, t, tab.Title, kind,
                     WorkspaceSessionsFeed.StateOf(s), active is { } a && a.G == g && a.T == t, s?.NeedsAttention == true,
                     s?.Session is { Agent: "claude" } claude ? _subagents.Read(claude) : null));
             }
