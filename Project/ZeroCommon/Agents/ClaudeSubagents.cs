@@ -195,27 +195,27 @@ public sealed class ClaudeSubagentReader
             }
             catch (JsonException) { /* a torn line — skipped, the rest still folds */ }
         }
+    }
 
-        /// <summary>The argument that says what a call is about, cut short.</summary>
-        private static string? Hint(JsonElement input)
+    /// <summary>The argument that says what a call is about, cut short (shared with <see cref="HermesSubagentReader"/>).</summary>
+    internal static string? Hint(JsonElement input)
+    {
+        if (input.ValueKind != JsonValueKind.Object) return null;
+        foreach (var key in new[] { "description", "file_path", "path", "pattern", "url", "query", "command", "prompt" })
         {
-            if (input.ValueKind != JsonValueKind.Object) return null;
-            foreach (var key in new[] { "description", "file_path", "path", "pattern", "url", "query", "command", "prompt" })
+            if (Str(input, key) is not { Length: > 0 } v) continue;
+            // Split on both separators by hand: Path.GetFileName on macOS/Linux does not treat '\' as
+            // one, and a transcript holds the paths of the OS Claude ran on, not this one.
+            if (key is "file_path" or "path")
             {
-                if (Str(input, key) is not { Length: > 0 } v) continue;
-                // Split on both separators by hand: Path.GetFileName on macOS/Linux does not treat '\' as
-                // one, and a transcript holds the paths of the OS Claude ran on, not this one.
-                if (key is "file_path" or "path")
-                {
-                    var trimmed = v.TrimEnd('/', '\\');
-                    var name = trimmed[(trimmed.LastIndexOfAny(['/', '\\']) + 1)..];
-                    if (name.Length > 0) v = name;
-                }
-                v = v.ReplaceLineEndings(" ").Trim();
-                return v.Length > 48 ? v[..48] + "…" : v;
+                var trimmed = v.TrimEnd('/', '\\');
+                var name = trimmed[(trimmed.LastIndexOfAny(['/', '\\']) + 1)..];
+                if (name.Length > 0) v = name;
             }
-            return null;
+            v = v.ReplaceLineEndings(" ").Trim();
+            return v.Length > 48 ? v[..48] + "…" : v;
         }
+        return null;
     }
 
     private static string? Str(JsonElement e, string name) =>

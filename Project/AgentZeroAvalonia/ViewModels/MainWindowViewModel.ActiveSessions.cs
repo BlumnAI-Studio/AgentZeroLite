@@ -84,6 +84,8 @@ public partial class MainWindowViewModel
 {
     private readonly AgentActivityTracker _agentTracker = new();
     private readonly ClaudeSubagentReader _subagents = new();
+    private readonly HermesSubagentReader _hermesSubagents = new();
+    private readonly CodexSubagentReader _codexSubagents = new();
     private DispatcherTimer? _agentTimer;
     private string _sessionsSignature = "";
 
@@ -142,7 +144,13 @@ public partial class MainWindowViewModel
                     (tab.Session as Agent.Common.Services.ITerminalProcessSource)?.ProcessId, tab.Definition);
                 sessions.Add(new WorkspaceSessionView(g, t, tab.Title, kind,
                     WorkspaceSessionsFeed.StateOf(s), active is { } a && a.G == g && a.T == t, s?.NeedsAttention == true,
-                    s?.Session is { Agent: "claude" } claude ? _subagents.Read(claude) : null));
+                    s?.Session switch
+                    {
+                        { Agent: "claude" } claude => _subagents.Read(claude),
+                        { Agent: "hermes" } hermes => _hermesSubagents.Read(hermes),
+                        { Agent: "codex" } codex => _codexSubagents.Read(codex),
+                        _ => null,
+                    }));
             }
             views.Add(new WorkspaceView(g, ws.DisplayName, ws.DirectoryPath, ReferenceEquals(ws, ActiveWorkspace), sessions));
         }

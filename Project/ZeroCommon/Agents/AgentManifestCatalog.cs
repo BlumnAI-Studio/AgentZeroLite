@@ -89,6 +89,24 @@ public static class AgentManifestCatalog
     });
 
     /// <summary>
+    /// Hermes Agent. Its turn comes from its own database (<see cref="HermesLiveStatusSource"/>);
+    /// what the screen adds is the question in the middle of one — a boxed "⚠️  Dangerous Command"
+    /// with "❯ 1. Allow once … 4. Deny" and "↑/↓ to select, Enter to confirm (45s)" a few lines above
+    /// the status bar and the input line (measured), and the same footer under a clarify question.
+    /// </summary>
+    public static AgentManifest Hermes { get; } = new("hermes", new DetectRule[]
+    {
+        new("blocked_select", AgentActivity.Blocked, 960, ScreenRegion.BottomLines,
+            new MatchGroup
+            {
+                Contains = new[] { "enter to confirm" },
+                Any = new[] { C("to select"), C("allow once") },
+            }) { BottomLines = 12 },
+        new("blocked_dangerous", AgentActivity.Blocked, 950, ScreenRegion.BottomLines,
+            new MatchGroup { Contains = new[] { "dangerous command" }, Any = new[] { C("allow once"), C("deny") } }) { BottomLines = 24 },
+    });
+
+    /// <summary>
     /// Generic fallback for any CLI. Conservative: blocked on common approval
     /// phrasings, working on explicit interrupt/progress markers, else idle.
     /// </summary>
@@ -121,12 +139,13 @@ public static class AgentManifestCatalog
 
     private static readonly Dictionary<string, AgentManifest> _cache = new();
 
-    /// <summary>Maps an agent/tab name to its manifest id (claude/codex/generic).</summary>
+    /// <summary>Maps an agent/tab name to its manifest id (claude/codex/hermes/generic).</summary>
     public static string ResolveId(string? name)
     {
         var n = (name ?? "").ToLowerInvariant();
         if (n.Contains("claude")) return "claude";
         if (n.Contains("codex")) return "codex";
+        if (n.Contains("hermes")) return "hermes";
         return "generic";
     }
 
@@ -134,6 +153,7 @@ public static class AgentManifestCatalog
     {
         "claude" => Claude,
         "codex" => Codex,
+        "hermes" => Hermes,
         _ => Generic,
     };
 

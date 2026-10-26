@@ -15,7 +15,7 @@ namespace Agent.Common.Services;
 /// <para>Two install routes, decided by the tool's publisher rather than by us: an npm
 /// package (Claude, Codex, agent-one — the winget packages lagged releases and exist for
 /// Windows only, so npm is the route on every OS for these), or the vendor's own install
-/// script when the tool is not on npm (netclaw). Exactly one of
+/// script when the tool is not on npm (netclaw, hermes). Exactly one of
 /// <paramref name="NpmPackage"/> and the two scripts is set.</para>
 /// </summary>
 /// <param name="Name">The built-in definition's name, and what the UI calls the tool.</param>
@@ -135,7 +135,21 @@ public static class AgentCliTools
         WindowsInstallScript: "iwr -useb https://releases.netclaw.dev/install.ps1 | iex",
         PosixInstallScript: "curl -sSL https://releases.netclaw.dev/install.sh | bash");
 
-    public static IReadOnlyList<AgentCliTool> All { get; } = new[] { Claude, Codex, AgentOne, Netclaw };
+    /// <summary>
+    /// Hermes Agent (Nous Research) — a Python agent shipped with its own runtime. Not on npm:
+    /// the vendor's installer puts everything under <c>%LOCALAPPDATA%\hermes</c> (<c>hermes.exe</c>
+    /// in its <c>bin</c>) on Windows and <c>~/.hermes</c> elsewhere. The bare command is the
+    /// interactive agent.
+    /// </summary>
+    public static readonly AgentCliTool Hermes = new(
+        Name: "Hermes",
+        Command: "hermes",
+        NpmPackage: null,
+        DocsUrl: "https://github.com/NousResearch/hermes-agent",
+        WindowsInstallScript: "iex (irm https://hermes-agent.nousresearch.com/install.ps1)",
+        PosixInstallScript: "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash");
+
+    public static IReadOnlyList<AgentCliTool> All { get; } = new[] { Claude, Codex, AgentOne, Netclaw, Hermes };
 
     /// <summary>
     /// The tool a definition drives, or null for a plain shell. Matched on the same
@@ -232,6 +246,7 @@ public static class AgentCliTools
                 yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WinGet", "Links");
                 yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm");
                 yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "netclaw");
+                yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "hermes", "bin");
                 yield return Path.Combine(home, ".local", "bin");
             }
             else

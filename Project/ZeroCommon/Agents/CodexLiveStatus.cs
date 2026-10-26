@@ -25,10 +25,10 @@ namespace Agent.Common.Agents;
 /// </summary>
 public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
 {
-    private const int TailBytes = 64 * 1024;
     private const int HeadBytes = 64 * 1024;
     private static readonly TimeSpan StartSlack = TimeSpan.FromSeconds(3);
 
+    private readonly string _home;
     private readonly string _sessions;
     private readonly Func<ProcessTable> _snapshot;
     private readonly Func<long> _now;
@@ -41,6 +41,7 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
     private long _indexAt = long.MinValue;
     private readonly Dictionary<int, DateTime?> _starts = new();
     private readonly Dictionary<string, Rollout?> _head = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TurnTail> _turns = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>How old the process table and the rollout listing may be.</summary>
     public long RefreshMs { get; init; } = 3_000;
@@ -53,6 +54,7 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
         codexHome ??= Environment.GetEnvironmentVariable("CODEX_HOME") is { Length: > 0 } h
             ? h.Trim().Trim('"')
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+        _home = codexHome;
         _sessions = Path.Combine(codexHome, "sessions");
         _snapshot = snapshot ?? ProcessTable.Snapshot;
         _now = nowMs ?? (() => Environment.TickCount64);
@@ -88,9 +90,12 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
             .FirstOrDefault();
         if (mine is null) return null;
 
-        return ReadState(mine.Path) is { } activity
-            ? new AgentLiveStatus(activity.State, "codex-rollout:" + activity.Event)
-            : new AgentLiveStatus(AgentActivity.Idle, "codex-rollout:no turn yet");
+        // The thread is named so its sub-agents can be found (CodexSubagentReader) and the tab is known as Codex.
+        var session = new AgentSessionRef("codex", _home, mine.Id, mine.Cwd);
+        if (!_turns.TryGetValue(mine.Path, out var turn)) _turns[mine.Path] = turn = new TurnTail(mine.Path);
+        return turn.CatchUp() is { } activity
+            ? new AgentLiveStatus(activity.State, "codex-rollout:" + activity.Event, session)
+            : new AgentLiveStatus(AgentActivity.Idle, "codex-rollout:no turn yet", session);
     }
 
     public void Forget(string key) { }
@@ -102,36 +107,53 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
             .Select(t => t.Pid)
             .FirstOrDefault();
 
-    /// <summary>The last turn event of a rollout: started → Working; complete / aborted → Idle.</summary>
-    internal static (AgentActivity State, string Event)? ReadState(string path)
-    {
-        string text;
-        try
-        {
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var take = (int)Math.Min(TailBytes, fs.Length);
-            fs.Seek(fs.Length - take, SeekOrigin.Begin);
-            var buffer = new byte[take];
-            var read = 0;
-            while (read < take) { var n = fs.Read(buffer, read, take - read); if (n <= 0) break; read += n; }
-            text = Encoding.UTF8.GetString(buffer, 0, read);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+    /// <summary>The last turn event of a rollout: started → Working; complete / aborted → Idle. Reads the whole file.</summary>
+    internal static (AgentActivity State, string Event)? ReadState(string path) => new TurnTail(path).CatchUp();
 
-        // Newest first; only whole lines (the first may be cut by the window).
-        var lines = text.Split('\n');
-        for (var i = lines.Length - 1; i >= 1; i--)
+    /// <summary>
+    /// A rollout's last turn event, followed as the file grows: the first read takes the whole file, every
+    /// later one only what was appended. It used to read the last 64 KB, which Codex 0.164 outgrew — a turn
+    /// now opens with tens of KB of tool descriptions and sub-agent records, so a running turn's
+    /// <c>task_started</c> fell out of the window and the tab read idle (measured: 18:52:55 → 18:53:38,
+    /// idle throughout).
+    /// </summary>
+    private sealed class TurnTail(string path)
+    {
+        private long _offset;
+        private readonly StringBuilder _partial = new();
+        private (AgentActivity State, string Event)? _last;
+
+        public (AgentActivity State, string Event)? CatchUp()
         {
-            var line = lines[i];
-            if (!line.Contains("\"event_msg\"")) continue;
-            foreach (var (marker, state) in TurnEvents)
+            try
             {
-                if (!line.Contains(marker)) continue;
-                var ev = marker.Trim('"');
-                return (state, ev);
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (fs.Length < _offset) { _offset = 0; _partial.Clear(); _last = null; }   // rewritten: start over
+                if (fs.Length == _offset) return _last;
+                fs.Seek(_offset, SeekOrigin.Begin);
+                var buf = new byte[fs.Length - _offset];
+                var read = fs.ReadAtLeast(buf, buf.Length, throwOnEndOfStream: false);
+                _offset += read;
+                _partial.Append(Encoding.UTF8.GetString(buf, 0, read));
             }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return _last; }
+
+            var text = _partial.ToString();
+            var lastNl = text.LastIndexOf('\n');
+            if (lastNl < 0) return _last;                 // no whole line yet
+            _partial.Clear().Append(text, lastNl + 1, text.Length - lastNl - 1);
+            foreach (var line in text[..lastNl].Split('\n'))
+            {
+                if (!line.Contains("\"event_msg\"")) continue;
+                foreach (var (marker, state) in TurnEvents)
+                {
+                    if (!line.Contains(marker)) continue;
+                    _last = (state, marker.Trim('"'));
+                    break;
+                }
+            }
+            return _last;
         }
-        return null;
     }
 
     private static readonly (string Marker, AgentActivity State)[] TurnEvents =
@@ -141,7 +163,7 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
         ("\"turn_aborted\"", AgentActivity.Idle),
     };
 
-    private sealed record Rollout(string Path, string Cwd, DateTime Created, DateTime LastWrite);
+    private sealed record Rollout(string Path, string Id, string Cwd, DateTime Created, DateTime LastWrite);
 
     /// <summary>User threads (not Codex's own sub-agents) created since <paramref name="since"/>, newest listing cached briefly.</summary>
     private IReadOnlyList<Rollout> Index(DateTime since)
@@ -162,7 +184,10 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
             foreach (var f in files)
             {
                 if (!_head.TryGetValue(f.FullName, out var head))
-                    _head[f.FullName] = head = ReadHead(f.FullName);
+                {
+                    head = ReadHead(f.FullName, out var settled);
+                    if (settled) _head[f.FullName] = head;   // an unfinished first record is read again next time
+                }
                 if (head is not null) found.Add(head with { LastWrite = f.LastWriteTimeUtc });
             }
         }
@@ -172,8 +197,14 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
     }
 
     /// <summary>session_meta: cwd and creation time of a user thread; null for a sub-agent's or an unreadable one.</summary>
-    private static Rollout? ReadHead(string path)
+    /// <param name="settled">
+    /// False while the first record is not complete. Codex 0.163+ creates a TUI's rollout empty when it starts and
+    /// writes session_meta with the first prompt (measured: file at 18:50:04, first line at 18:50:19); caching that
+    /// early "not a thread" hid the tab's thread for good and left it on the screen rules.
+    /// </param>
+    private static Rollout? ReadHead(string path, out bool settled)
     {
+        settled = false;
         try
         {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -181,7 +212,12 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
             var read = fs.Read(buffer, 0, buffer.Length);
             var text = Encoding.UTF8.GetString(buffer, 0, read);
             var end = text.IndexOf('\n');
-            if (end < 0) return null;   // the first record is not complete yet — the next listing reads it
+            if (end < 0)
+            {
+                settled = read >= HeadBytes;   // a first record longer than the window will never fit it
+                return null;                   // otherwise not complete yet — the next listing reads it
+            }
+            settled = true;
             using var doc = JsonDocument.Parse(text[..end]);
             var root = doc.RootElement;
             if (!root.TryGetProperty("payload", out var p)) return null;
@@ -189,12 +225,18 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
             if (p.TryGetProperty("source", out var src) && src.ValueKind == JsonValueKind.Object) return null;   // {"subagent":…}
             var cwd = p.TryGetProperty("cwd", out var c) ? c.GetString() : null;
             var stamp = p.TryGetProperty("timestamp", out var t) ? t.GetString() : null;
-            if (cwd is null || stamp is null
+            var id = p.TryGetProperty("id", out var i) ? i.GetString() : null;
+            if (cwd is null || stamp is null || id is null
                 || !DateTime.TryParse(stamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var created))
                 return null;
-            return new Rollout(path, cwd, created, DateTime.MinValue);
+            return new Rollout(path, id, cwd, created, DateTime.MinValue);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            settled = false;   // locked or vanished for a moment: try again
+            return null;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
             return null;
         }
@@ -235,7 +277,7 @@ public sealed class CodexLiveStatusSource : IAgentLiveStatusSource
     }
 }
 
-/// <summary>Asks each source in turn; the first answer wins (Claude's status file, then Codex's rollout).</summary>
+/// <summary>Asks each source in turn; the first answer wins (Claude's status file, Codex's rollout, Hermes' database).</summary>
 public sealed class CompositeLiveStatusSource(params IAgentLiveStatusSource[] sources) : IAgentLiveStatusSource
 {
     public void BeginPass()

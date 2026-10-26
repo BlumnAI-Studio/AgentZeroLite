@@ -306,8 +306,18 @@ What differs from the WPF host, and why:
   working, `task_complete` / `turn_aborted` → done. The tab's thread is the user thread (not a guardian sub-agent)
   created in the workspace folder right after the codex process below the tab's shell started (19:27:23 →
   19:27:24 measured); with several Codex tabs a thread belongs to the TUI that started last before it. Approvals
-  are not in the rollout, so a Blocked screen wins over a reported Working. `CompositeLiveStatusSource` asks
-  Claude's source, then Codex's. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
+  are not in the rollout, so a Blocked screen wins over a reported Working. The rollout is followed incrementally
+  (`TurnTail`), not read as a 64 KB tail: Codex 0.164 opens a turn with tens of KB of tool descriptions and a running
+  turn's `task_started` fell out of the window (idle throughout, measured); and a rollout created empty (0.163+ writes
+  session_meta with the first prompt) is read again rather than cached as "not a thread". Sub-agents (`spawn_agent`)
+  are `SubAgentActivity` started/completed events in the parent's rollout plus a rollout each (`CodexSubagentReader`,
+  Agent Stage's crew, like `ClaudeSubagentReader` / `HermesSubagentReader`). **Hermes** (`HermesLiveStatusSource`)
+  leases its conversation in `<home>/runtime/active_sessions.json` (pid = the Python below `hermes.exe` below the
+  tab's shell; home = `$HERMES_HOME`, `%LOCALAPPDATA%\hermes` / `~/.hermes`, plus `profiles/*`) and writes every
+  message to `<home>/state.db` as the turn runs: last row user / tool / assistant-with-tool_calls → working, any
+  other assistant row → done (measured; Ctrl+C leaves "Operation interrupted."). Its approval box is screen-only
+  (`AgentManifestCatalog.Hermes`), and the Blocked check uses the *reporting* agent's rules, not the title's.
+  `CompositeLiveStatusSource` asks Claude's source, then Codex's, then Hermes'. Wrappers: `AgentZeroLite.ps1` / `AgentZeroLite.sh`.
 - **Agent CLI install lives in both hosts' settings** (`AgentCliTools` in ZeroCommon; the panel is
   `SettingsViewModel`/`SettingsView` here and the CLI Definitions tab of WPF's `SettingsPanel`): selecting a
   definition that launches Claude, Codex, AgentOne or Netclaw probes PATH and, when the tool is missing, installs it

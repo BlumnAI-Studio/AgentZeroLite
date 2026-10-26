@@ -5,7 +5,7 @@
  * running terminals, each one's agent and detected state) and draws it as a live stage:
  *   · a zone per workspace, coloured from its name; the active workspace framed in teal (as in
  *     the sidebar);
- *   · an avatar per terminal — Claude ✳, Codex ◆, AgentOne ❖, Netclaw ✦, a shell ›_ —
+ *   · an avatar per terminal — Claude ✳, Codex ◆, AgentOne ❖, Netclaw ✦, Hermes (its desktop icon), a shell ›_ —
  *     whose motion says what it is doing: orbiting sparks, a thinking ring and typing bars while
  *     working, a red pulse when it needs you, a burst when it finishes;
  *   · a Claude session's sub-agents (the Agent / Task tool) as a crew around its avatar — each
@@ -25,8 +25,18 @@
     codex:    { color: '#3CCB8F', glyph: '◆', name: 'Codex' },
     agentone: { color: '#B48CFF', glyph: '❖', name: 'AgentOne' },
     netclaw:  { color: '#F2C94C', glyph: '✦', name: 'Netclaw' },
+    // Hermes Agent's own desktop icon (img/NOTICE.md), ink on a pearl orb; ⚕ — the mark its TUI prints — until it loads.
+    hermes:   { color: '#E4DEF0', glyph: '⚕', name: 'Hermes', img: 'img/hermes.png' },
     shell:    { color: '#8A93A3', glyph: '›_', name: 'Shell' },
   };
+  // Agents drawn with a picture: loaded once, drawn only when complete (the glyph stands in until then
+  // and if the file is missing).
+  for (const ag of Object.values(AGENTS)) {
+    if (!ag.img) continue;
+    const im = new Image();
+    im.src = ag.img;
+    ag.image = im;
+  }
   const STATES = {
     working:     { color: '#E5C07B', label: 'working' },
     blocked:     { color: '#E06C75', label: 'needs you' },
@@ -386,9 +396,17 @@
     ctx.fillStyle = core; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.29); ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = hexA('#ffffff', a.state === 'idle' ? 0.15 : 0.35); ctx.stroke();
     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `700 ${Math.round(r * (ag.glyph.length > 1 ? 0.7 : 0.95))}px "Segoe UI Symbol", "Segoe UI", system-ui, sans-serif`;
     ctx.globalAlpha = a.state === 'idle' ? 0.6 : 1;
-    ctx.fillText(ag.glyph, x, y + 1);
+    if (ag.image && ag.image.complete && ag.image.naturalWidth > 0) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, r - 1, 0, 6.29); ctx.clip();
+      ctx.drawImage(ag.image, x - r, y - r, r * 2, r * 2);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = ag.image ? '#2B2440' : '#ffffff';   // the glyph on a pale orb needs dark ink
+      ctx.font = `700 ${Math.round(r * (ag.glyph.length > 1 ? 0.7 : 0.95))}px "Segoe UI Symbol", "Segoe UI", system-ui, sans-serif`;
+      ctx.fillText(ag.glyph, x, y + 1);
+    }
     ctx.globalAlpha = 1;
 
     // badge
@@ -411,7 +429,7 @@
     const ly = y + r + (working ? 44 : 18);
     ctx.font = '600 12px "Segoe UI", system-ui, sans-serif';
     ctx.fillStyle = a.focused ? '#7fb8ff' : '#d8dee9';
-    ctx.fillText(clip(a.title, 120), x, ly);
+    ctx.fillText(clip(labelOf(a), 120), x, ly);
     ctx.font = '10px "Cascadia Mono", Consolas, monospace';
     ctx.fillStyle = st.color;
     ctx.fillText(st.label, x, ly + 14);
@@ -636,6 +654,12 @@
     }
     return null;
   }
+  // The tab's title, led by the agent's name when the title does not say it: hermes typed into a
+  // "PW5" tab, or a Claude tab renamed "agent개선", read as a shell by their titles alone.
+  function labelOf(a) {
+    const name = a.agent !== 'shell' && AGENTS[a.agent] ? AGENTS[a.agent].name : '';
+    return name && !(a.title || '').toLowerCase().includes(name.toLowerCase()) ? `${name} · ${a.title}` : a.title;
+  }
   canvas.addEventListener('mousemove', (ev) => {
     hover = pick(ev);
     canvas.style.cursor = hover ? 'pointer' : 'default';
@@ -687,7 +711,7 @@
         { name: 'AgentZeroLite', path: '/demo/azl', tabs: [['Claude', 'claude'], ['Codex', 'codex'], ['bash', 'shell']] },
         { name: 'web-shop', path: '/demo/shop', tabs: [['Claude-2', 'claude'], ['AgentOne', 'agentone']] },
         { name: 'infra', path: '/demo/infra', tabs: [['Codex-2', 'codex']] },
-        { name: 'research', path: '/demo/research', tabs: [['Netclaw', 'netclaw'], ['Claude-3', 'claude']] },
+        { name: 'research', path: '/demo/research', tabs: [['Netclaw', 'netclaw'], ['Hermes', 'hermes'], ['Claude-3', 'claude']] },
       ].map((w, g) => ({ group: g, name: w.name, path: w.path, active: g === 0,
         sessions: w.tabs.map(([title, agent], t) => ({ group: g, tab: t, title, agent, state: agent === 'shell' ? 'running' : 'idle', focused: g === 0 && t === 0, needsAttention: false })) }));
       // The first Claude opens at work, so the preview shows a crew from the start.

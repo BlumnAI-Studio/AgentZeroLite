@@ -44,7 +44,7 @@ public sealed class AgentActivityTracker
     /// from a finished turn. A terminal it has no answer for keeps the screen rules.
     /// </summary>
     public IAgentLiveStatusSource? LiveStatus { get; init; } =
-        new CompositeLiveStatusSource(new ClaudeLiveStatusSource(), new CodexLiveStatusSource());
+        new CompositeLiveStatusSource(new ClaudeLiveStatusSource(), new CodexLiveStatusSource(), new HermesLiveStatusSource());
 
     /// <summary>
     /// One detection pass over every started terminal. <paramref name="active"/> is the
@@ -122,11 +122,12 @@ public sealed class AgentActivityTracker
                     rule = reported.Rule;
                     _quietPasses.Remove(key);
 
-                    // A record that only knows "a turn is running" (Codex's rollout has no approval
-                    // events) cannot see the turn stop for a question; the screen can, and a
-                    // Blocked screen is a positive signal — it wins over Working.
+                    // A record that only knows "a turn is running" (Codex's rollout, Hermes' database —
+                    // no approval events) cannot see the turn stop for a question; the screen can, and
+                    // a Blocked screen is a positive signal — it wins over Working. The rules are the
+                    // reporting agent's, not the title's: a renamed Hermes tab still gets Hermes' rules.
                     if (activity == AgentActivity.Working
-                        && AgentStateDetector.Detect(AgentManifestCatalog.ForAgent(tab.Title), new ScreenSnapshot(lines, title))
+                        && AgentStateDetector.Detect(AgentManifestCatalog.ForAgent(reported.Session?.Agent ?? tab.Title), new ScreenSnapshot(lines, title))
                             is { State: AgentActivity.Blocked, StateChanged: true } screen)
                     {
                         activity = AgentActivity.Blocked;

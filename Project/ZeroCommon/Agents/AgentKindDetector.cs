@@ -5,7 +5,7 @@ using Agent.Common.Services;
 namespace Agent.Common.Agents;
 
 /// <summary>
-/// Which agent a terminal tab is running — "claude", "codex", "agentone", "netclaw" or "shell" —
+/// Which agent a terminal tab is running — "claude", "codex", "agentone", "netclaw", "hermes" or "shell" —
 /// for web plugins (<c>sessions.list</c>: Agent Stage draws Claude ✳, Codex ◆ …).
 ///
 /// <para>It used to be the tab's title alone: a tab renamed "agent개선", a custom profile such as
@@ -13,8 +13,8 @@ namespace Agent.Common.Agents;
 /// plain PowerShell tab where claude was typed by hand all showed a shell. Now the evidence goes,
 /// strongest first:</para>
 /// <list type="number">
-/// <item>the conversation the agent reported itself (Claude's status file);</item>
-/// <item>the processes below the tab's shell — <c>claude.exe</c>, <c>codex.exe</c>, <c>agent-one</c>, <c>netclaw</c>;</item>
+/// <item>the conversation the agent reported itself (Claude's status file, Hermes' lease);</item>
+/// <item>the processes below the tab's shell — <c>claude.exe</c>, <c>codex.exe</c>, <c>agent-one</c>, <c>netclaw</c>, <c>hermes.exe</c>;</item>
 /// <item>the tab's CLI definition — the built-in rows, and a profile command named after the tool
 /// (<c>claude-sam</c>, <c>codex-work</c>);</item>
 /// <item>the title, as before.</item>

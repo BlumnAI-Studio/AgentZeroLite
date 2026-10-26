@@ -34,6 +34,8 @@ public sealed class AgentCliToolsTests : IDisposable
     [InlineData("C:\\Users\\me\\AppData\\Roaming\\npm\\agent-one.cmd", "chat", "AgentOne")]
     [InlineData("powershell.exe", "-NoExit -Command netclaw chat", "Netclaw")]
     [InlineData("/bin/zsh", "-l -c \"netclaw chat; exec zsh -l\"", "Netclaw")]
+    [InlineData("powershell.exe", "-NoExit -Command hermes", "Hermes")]
+    [InlineData(@"C:\Users\me\AppData\Local\hermes\bin\hermes.exe", null, "Hermes")]
     public void A_definition_that_launches_an_agent_is_matched_to_it(string exe, string? args, string expected)
     {
         var tool = AgentCliTools.Match(new CliDefinition { ExePath = exe, Arguments = args });
@@ -56,7 +58,7 @@ public sealed class AgentCliToolsTests : IDisposable
     [Fact]
     public void Every_built_in_tool_names_exactly_one_install_route_and_docs()
     {
-        Assert.Equal(new[] { "Claude", "Codex", "AgentOne", "Netclaw" }, AgentCliTools.All.Select(t => t.Name));
+        Assert.Equal(new[] { "Claude", "Codex", "AgentOne", "Netclaw", "Hermes" }, AgentCliTools.All.Select(t => t.Name));
         foreach (var tool in AgentCliTools.All)
         {
             Assert.False(string.IsNullOrWhiteSpace(tool.Command));
@@ -97,6 +99,22 @@ public sealed class AgentCliToolsTests : IDisposable
         Assert.Equal("/bin/bash", posix.Exe);
         Assert.Equal("curl -sSL https://releases.netclaw.dev/install.sh | bash", posix.CommandLine);
         Assert.Equal("Netclaw installer", posix.Installer);
+    }
+
+    [Fact]
+    public void Hermes_launches_bare_and_installs_with_the_vendor_script()
+    {
+        var hermes = AgentCliTools.Hermes;
+        Assert.Equal("hermes", hermes.Launch);   // the bare command is the interactive agent
+        Assert.Equal("install script", hermes.InstallRoute);
+
+        var win = AgentCliTools.PlanInstall(hermes, isWindows: true);
+        Assert.Equal("powershell.exe", win.Exe);
+        Assert.Equal("iex (irm https://hermes-agent.nousresearch.com/install.ps1)", win.CommandLine);
+        Assert.Equal("Hermes installer", win.Installer);
+
+        var posix = AgentCliTools.PlanInstall(hermes, isWindows: false);
+        Assert.Equal("curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash", posix.CommandLine);
     }
 
     [Fact]

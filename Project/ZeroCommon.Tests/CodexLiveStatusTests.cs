@@ -97,9 +97,41 @@ public sealed class CodexLiveStatusTests : IDisposable
     {
         Rollout("fresh", _t0.AddSeconds(1), _work);
         var src = Source(new() { [120] = _t0 });
-        Assert.Equal(new AgentLiveStatus(AgentActivity.Idle, "codex-rollout:no turn yet"), src.StatusOf("tab", 100, _work, false));
+        var status = src.StatusOf("tab", 100, _work, false)!;
+        Assert.Equal((AgentActivity.Idle, "codex-rollout:no turn yet"), (status.Activity, status.Rule));
+        // The thread is named, so its sub-agents can be found and the tab is known as Codex.
+        Assert.Equal(new AgentSessionRef("codex", _home, "fresh", _work), status.Session);
         Assert.Null(src.StatusOf("cmd", 999, _work, false));
         Assert.Null(src.StatusOf("nopid", null, _work, true));
+    }
+
+    [Fact]
+    public void A_rollout_created_empty_is_read_again_once_its_first_record_lands()
+    {
+        // Codex 0.163+: the TUI's rollout exists, empty, until the first prompt writes session_meta.
+        var path = Rollout("late", _t0.AddSeconds(1), _work, events: new[] { "task_started" });
+        var full = File.ReadAllText(path);
+        File.WriteAllText(path, "");
+        var src = Source(new() { [120] = _t0 });
+        Assert.Null(src.StatusOf("tab", 100, _work, false));
+
+        File.WriteAllText(path, full);
+        Assert.Equal(AgentActivity.Working, src.StatusOf("tab", 100, _work, false)!.Activity);
+    }
+
+    [Fact]
+    public void A_turn_stays_working_when_more_than_64_KB_follows_its_start()
+    {
+        // Codex 0.164 opens a turn with tens of KB of tool descriptions, then sub-agent records.
+        var path = Rollout("big", _t0, _work, events: new[] { "task_started" });
+        var filler = "{\"type\":\"response_item\",\"payload\":{\"type\":\"additional_tools\",\"text\":\"" + new string('x', 90_000) + "\"}}";
+        File.AppendAllLines(path, new[] { filler, Event("token_count") });
+        Assert.Equal((AgentActivity.Working, "task_started"), CodexLiveStatusSource.ReadState(path));
+
+        var src = Source(new() { [120] = _t0.AddSeconds(-1) });
+        Assert.Equal(AgentActivity.Working, src.StatusOf("tab", 100, _work, false)!.Activity);
+        File.AppendAllLines(path, new[] { Event("task_complete") });   // followed from where it left off
+        Assert.Equal(AgentActivity.Idle, src.StatusOf("tab", 100, _work, false)!.Activity);
     }
 
     [Fact]

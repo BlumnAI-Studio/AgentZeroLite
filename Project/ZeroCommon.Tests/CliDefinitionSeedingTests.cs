@@ -40,9 +40,9 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         using var db = Open();
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: true);
         var names = db.CliDefinitions.OrderBy(d => d.SortOrder).Select(d => d.Name).ToList();
-        Assert.Equal(new[] { "CMD", "PW5", "PW7", "Claude", "Codex", "AgentOne", "Netclaw" }, names);
+        Assert.Equal(new[] { "CMD", "PW5", "PW7", "Claude", "Codex", "AgentOne", "Netclaw", "Hermes" }, names);
 
-        foreach (var (name, launch) in new[] { ("Claude", "claude"), ("Codex", "codex"), ("AgentOne", "agent-one chat"), ("Netclaw", "netclaw chat") })
+        foreach (var (name, launch) in new[] { ("Claude", "claude"), ("Codex", "codex"), ("AgentOne", "agent-one chat"), ("Netclaw", "netclaw chat"), ("Hermes", "hermes") })
         {
             var row = db.CliDefinitions.Single(d => d.Name == name);
             // PowerShell 5 is the base: every Windows install has powershell.exe, so the
@@ -53,7 +53,7 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         }
 
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: true);
-        Assert.Equal(7, db.CliDefinitions.Count());
+        Assert.Equal(8, db.CliDefinitions.Count());
     }
 
     [Fact]
@@ -100,19 +100,19 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         using var db = Open();
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, PosixShell.MacLike);
         var posix = db.CliDefinitions.AsEnumerable().Where(d => !d.ExePath.EndsWith(".exe")).OrderBy(d => d.SortOrder).ToList();
-        Assert.Equal(new[] { "zsh", "bash", "Claude", "Codex", "AgentOne", "Netclaw" }, posix.Select(d => d.Name));
+        Assert.Equal(new[] { "zsh", "bash", "Claude", "Codex", "AgentOne", "Netclaw", "Hermes" }, posix.Select(d => d.Name));
         Assert.All(posix, d => Assert.True(d.IsBuiltIn));
-        foreach (var (name, launch) in new[] { ("Claude", "claude"), ("Codex", "codex"), ("AgentOne", "agent-one chat"), ("Netclaw", "netclaw chat") })
+        foreach (var (name, launch) in new[] { ("Claude", "claude"), ("Codex", "codex"), ("AgentOne", "agent-one chat"), ("Netclaw", "netclaw chat"), ("Hermes", "hermes") })
         {
             var row = posix.Single(d => d.Name == name);
             Assert.Equal("/bin/zsh", row.ExePath);
             // `exec zsh -l` keeps the tab alive after the agent quits.
             Assert.Contains(launch + "; exec zsh -l", row.Arguments!);
         }
-        Assert.Equal(9, db.CliDefinitions.Count());   // 3 migrated + 6 seeded
+        Assert.Equal(10, db.CliDefinitions.Count());   // 3 migrated + 7 seeded
 
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, PosixShell.MacLike);
-        Assert.Equal(9, db.CliDefinitions.Count());
+        Assert.Equal(10, db.CliDefinitions.Count());
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class CliDefinitionSeedingTests : IDisposable
         AppDbContext.EnsureDefaultCliDefinitions(db, isWindows: false, ubuntu);
 
         var posix = db.CliDefinitions.AsEnumerable().Where(d => !d.ExePath.EndsWith(".exe")).OrderBy(d => d.SortOrder).ToList();
-        Assert.Equal(new[] { "bash", "Claude", "Codex", "AgentOne", "Netclaw" }, posix.Select(d => d.Name));
+        Assert.Equal(new[] { "bash", "Claude", "Codex", "AgentOne", "Netclaw", "Hermes" }, posix.Select(d => d.Name));
         var claude = posix.Single(d => d.Name == "Claude");
         Assert.Equal("/bin/bash", claude.ExePath);
         Assert.Equal("-l -i -c \"claude; exec bash -l\"", claude.Arguments);
