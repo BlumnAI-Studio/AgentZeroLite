@@ -381,6 +381,17 @@ crew가 나온다(전에는 화면 규칙으로 떨어져 done이 없었다). Su
 먼저 냈다(Setup.exe·zip·linux deb/tar.gz·osx pkg). 패키지 157 MB, 업로드 약 40초, 첫 Save에 1.26.3.0만 Validated,
 첫 Submit 클릭에 In certification.
 
+### 15차 제출 (1.26.4.0, 2026-10-26)
+
+내용: Hermes Agent(Nous Research)를 기본 에이전트로 채택 — 기본 CLI 정의(`hermes`), 미설치 시 공식 설치 스크립트,
+`runtime/active_sessions.json` + `state.db`로 working/done 추적, 승인 박스는 화면 규칙으로 blocked. Agent Stage 0.3.0(공식
+플러그인, main 반영): Hermes 데스크톱 아이콘 아바타(MIT, `img/NOTICE.md`), 라벨에 에이전트 이름(`Hermes · PW5`), Codex
+(`spawn_agent`)·Hermes(`delegate_task`) 하위 에이전트 crew. Codex 0.164에서 작업 중인 탭이 idle로 보이던 두 버그 수정(64 KB
+꼬리 읽기 → 이어 읽기, 빈 rollout 캐시). Submission 12. 새 권한 없음; 개인정보 처리방침에 Hermes 폴더(읽기 전용)와 설치
+스크립트 접속처를 추가(`doc-v1.52.0`, 반영 확인) 후 제출. GitHub 릴리스 `v0.26.4`를 먼저 냈다(Setup.exe·zip·linux
+deb/tar.gz·osx pkg). 패키지 157 MB, 업로드 약 30초 + 분석 약 20초, Save에 1.26.4.0만 Validated, 리스팅 What's new와
+기능 두 줄(Hermes) 갱신, 첫 Submit 클릭에 In certification.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>

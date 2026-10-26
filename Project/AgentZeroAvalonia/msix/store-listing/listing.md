@@ -95,11 +95,11 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 ## Features (one per line, ≤ 200 chars each)
 - Real terminal tabs (ConPTY + xterm.js) for Claude Code, Codex, agent-one and any shell
 - Split panes and per-project workspaces, remembered between sessions
-- Agent CLI check and one-click install for Claude Code, Codex, agent-one and netclaw
+- Agent CLI check and one-click install for Claude Code, Codex, agent-one, netclaw and Hermes Agent
 - Built-in assistant that can read and drive your terminals, on a local model or any OpenAI-compatible API
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Agent Stage, Voice Note, live music recognition and token dashboards, installed from the official list
-- Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's and Codex's own status, and Agent Stage showing Claude's sub-agents as a crew
+- Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's, Codex's and Hermes' own status, and Agent Stage showing their sub-agents as a crew
 - Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, and its git log
 - Resume a Claude Code or Codex conversation when its terminal opens
 - Git worktrees listed under their workspace, including those Claude Code and Codex create
