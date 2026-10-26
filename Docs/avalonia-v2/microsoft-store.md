@@ -370,6 +370,17 @@ Linux .deb/.tar.gz · macOS .pkg, Latest).
 - Bash 도구에서 heredoc으로 쓴 `.mjs`의 `/\\/g`가 `/\/g`로 바뀌어 문법 오류가 났다 — 경로 정리는
   `split(String.fromCharCode(92)).join('/')`로 쓰면 이스케이프를 타지 않는다.
 
+### 14차 제출 (1.26.3.0, 2026-10-26)
+
+내용: Agent Stage가 탭의 에이전트를 이름이 아니라 실제로 돌고 있는 것으로 알아본다 — 에이전트가 남긴 상태 →
+탭 셸 아래 프로세스(claude.exe 등) → CLI 정의(claude-sam 같은 프로필 명령 포함) → 탭 이름 순. 한글로 이름을 바꾼
+탭, 두 번째 계정 프로필, 손으로 친 claude가 셸 아이콘으로 보이던 문제. 그리고 Claude 상태 파일을 모든 프로필
+폴더(`~/.claude`, `~/.claude-<이름>`, `~/.claude-profiles/<이름>`)에서 읽어 두 번째 계정도 working/waiting/done과
+crew가 나온다(전에는 화면 규칙으로 떨어져 done이 없었다). Submission 11. 새 권한·네트워크 흐름 없음; 개인정보
+처리방침에 프로필 폴더를 명시(`doc-v1.51.0`, md/html 날짜도 맞춤)하고 반영 확인 후 제출. GitHub 릴리스 `v0.26.3`을
+먼저 냈다(Setup.exe·zip·linux deb/tar.gz·osx pkg). 패키지 157 MB, 업로드 약 40초, 첫 Save에 1.26.3.0만 Validated,
+첫 Submit 클릭에 In certification.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
