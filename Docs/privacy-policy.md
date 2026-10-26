@@ -27,8 +27,9 @@ encrypted at rest with Windows DPAPI (tied to your Windows account).
 
 **Files of other programs the app reads, on your computer only:** to offer resuming a
 conversation and to show whether an agent is working, the app reads the session and status
-files Claude Code and Codex keep in your user folder (`.claude` and Claude's profile folders such
-as `.claude-<name>`, `.codex`) and the list of
+files Claude Code, Codex and Hermes Agent keep in your user folder (`.claude` and Claude's profile
+folders such as `.claude-<name>`, `.codex`, and Hermes' folder — `%LOCALAPPDATA%\hermes` or
+`~/.hermes` — whose conversation database is opened read-only) and the list of
 running processes (to find which terminal an agent runs in); to show git worktrees, it reads
 a workspace's `.git` folder. Nothing from them leaves your computer.
 
@@ -41,7 +42,7 @@ Only for features you use, and only to the service involved:
 | External LLM (Settings → LLM) | The endpoint **you** configure (e.g. an OpenAI-compatible API, or a server on your own network) | Your prompts, and the context the assistant includes with them |
 | Model downloads (local LLM, voice, music) | huggingface.co, github.com | A standard download request |
 | Web tools of the assistant | html.duckduckgo.com, the pages it opens, wttr.in (weather) | The search query or page address |
-| Agent CLI install (Settings → CLI Definitions) | The npm registry (`npm install -g`), or releases.netclaw.dev for netclaw's installer | A standard package or download request |
+| Agent CLI install (Settings → CLI Definitions) | The npm registry (`npm install -g`), or releases.netclaw.dev / hermes-agent.nousresearch.com for the netclaw / Hermes installers | A standard package or download request |
 | Voice with the OpenAI provider (Settings → Voice) | api.openai.com, with **your** API key | The text to speak, or the recorded speech to transcribe |
 | MCP servers (Settings → MCP) | The servers **you** add | The tool calls the assistant makes and their arguments |
 | Plugins page — official list and install | api.github.com, raw.githubusercontent.com, github.com (or the address you paste) | A standard download request |
@@ -49,7 +50,7 @@ Only for features you use, and only to the service involved:
 | Code view — a Markdown file shown rendered | The web addresses of pictures written in that file (for example a badge in a README) | A standard image request; the file's text itself stays on your computer |
 
 Programs you run inside the app's terminal tabs (for example Claude Code, Codex,
-agent-one or netclaw) are separate software with their own privacy policies; the app
+agent-one, netclaw or Hermes) are separate software with their own privacy policies; the app
 does not see or forward their traffic.
 
 ## Microphone and system audio

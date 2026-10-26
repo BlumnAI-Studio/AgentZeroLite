@@ -50,9 +50,10 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
       Uninstalling does not delete this folder; you can delete it yourself.</li>
   </ul>
   <p><strong>Files of other programs the app reads, on your computer only:</strong> to offer resuming a
-    conversation and to show whether an agent is working, the app reads the session and status files Claude Code
-    and Codex keep in your user folder (<code>.claude</code> and Claude’s profile folders such as
-    <code>.claude-&lt;name&gt;</code>, <code>.codex</code>) and the list of running processes
+    conversation and to show whether an agent is working, the app reads the session and status files Claude Code,
+    Codex and Hermes Agent keep in your user folder (<code>.claude</code> and Claude’s profile folders such as
+    <code>.claude-&lt;name&gt;</code>, <code>.codex</code>, and Hermes’ folder — <code>%LOCALAPPDATA%\hermes</code> or
+    <code>~/.hermes</code> — whose conversation database is opened read-only) and the list of running processes
     (to find which terminal an agent runs in); to show git worktrees, it reads a workspace’s <code>.git</code>
     folder; and the code view’s GIT LOG tab runs your installed <code>git</code> program in the workspace folder
     (<code>git log</code>, read-only, no network) to list its recent commits — subject, message, author and date.
@@ -75,7 +76,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
       <tr><td>External LLM (Settings → LLM)</td><td>The endpoint <strong>you</strong> configure (e.g. an OpenAI-compatible API, or a server on your own network)</td><td>Your prompts, and the context the assistant includes with them</td></tr>
       <tr><td>Model downloads (local LLM, voice, music)</td><td>huggingface.co, github.com</td><td>A standard download request</td></tr>
       <tr><td>Web tools of the assistant</td><td>html.duckduckgo.com, the pages it opens, wttr.in (weather)</td><td>The search query or page address</td></tr>
-      <tr><td>Agent CLI install (Settings → CLI Definitions)</td><td>The npm registry (<code>npm install -g</code>), or releases.netclaw.dev for netclaw’s installer</td><td>A standard package or download request</td></tr>
+      <tr><td>Agent CLI install (Settings → CLI Definitions)</td><td>The npm registry (<code>npm install -g</code>), or releases.netclaw.dev / hermes-agent.nousresearch.com for the netclaw / Hermes installers</td><td>A standard package or download request</td></tr>
       <tr><td>Voice with the OpenAI provider (Settings → Voice)</td><td>api.openai.com, with <strong>your</strong> API key</td><td>The text to speak, or the recorded speech to transcribe</td></tr>
       <tr><td>MCP servers (Settings → MCP)</td><td>The servers <strong>you</strong> add</td><td>The tool calls the assistant makes and their arguments</td></tr>
       <tr><td>Plugins page — official list and install</td><td>api.github.com, raw.githubusercontent.com, github.com (or the address you paste)</td><td>A standard download request</td></tr>
@@ -84,7 +85,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 40px; border-top: 1px
     </tbody>
   </table>
   </div>
-  <p>Programs you run inside the app’s terminal tabs (for example Claude Code, Codex, agent-one or netclaw) are
+  <p>Programs you run inside the app’s terminal tabs (for example Claude Code, Codex, agent-one, netclaw or Hermes) are
     separate software with their own privacy policies; the app does not see or forward their traffic.</p>
 
   <h2>Microphone and system audio</h2>

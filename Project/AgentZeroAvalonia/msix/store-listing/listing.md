@@ -24,7 +24,14 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.26.3.0 — submission 14)
+## What's new in this version (1.26.4.0 — submission 15)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Hermes Agent (Nous Research) is now a built-in agent: a ready-made terminal profile, an install button when it is missing, and live status in Active sessions and on Agent Stage — working, waiting for your approval, done.
+- Agent Stage shows the parallel sub-agents of Codex and Hermes as a crew around their terminal, as it already did for Claude.
+- Fixed: a Codex tab could read as idle while it was working, with recent Codex versions.
+
+## What's new in version 1.26.3.0 (submission 14)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Agent Stage knows a Claude tab by what runs in it, not by its name: a renamed tab, a second-account profile (such as a claude-sam command) or claude typed into a plain PowerShell tab now shows Claude ✳ — the same for Codex, AgentOne and Netclaw.
