@@ -63,6 +63,7 @@
                 <Button Classes="nav" Classes.selected="{Binding IsTerminal}" Content="Terminal" Command="{Binding ShowTerminalCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsVoice}" Content="Voice" Command="{Binding ShowVoiceCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsModels}" Content="Models" Command="{Binding ShowModelsCommand}" />
+                <Button Classes="nav" Classes.selected="{Binding IsNotifications}" Content="Notifications" Command="{Binding ShowNotificationsCommand}" />
             </StackPanel>
         </Border>
 
@@ -278,6 +279,35 @@
                         <Button Content="Apply and save" Command="{Binding SaveTerminalCommand}" />
                     </StackPanel>
                     <TextBlock Classes="status" Text="{Binding TerminalStatus}" />
+                </StackPanel>
+
+                <!-- ═══ Notifications ═══ -->
+                <StackPanel IsVisible="{Binding IsNotifications}" MaxWidth="640" HorizontalAlignment="Left">
+                  <StackPanel DataContext="{Binding Notifications}" x:DataType="vm:NotificationSettingsViewModel">
+                    <TextBlock Classes="h1" Text="Notifications" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="When an agent in any terminal starts needing you — blocked on input or an approval, or finished a turn you have not looked at — say so outside the sidebar: a small popup in the screen corner (click it to go to that terminal) and the taskbar / Dock. Each terminal alerts once per change, not again while it stays that way." />
+                    <StackPanel Spacing="4" Margin="0,10,0,0">
+                        <CheckBox Content="Notify me" IsChecked="{Binding Enabled}" />
+                        <StackPanel Spacing="4" Margin="22,0,0,0" IsEnabled="{Binding Enabled}">
+                            <CheckBox Content="when an agent is blocked (input or approval)" IsChecked="{Binding OnBlocked}" />
+                            <CheckBox Content="when an agent finished and I have not looked" IsChecked="{Binding OnDone}" />
+                            <CheckBox Content="only while AgentZero is not the active window" IsChecked="{Binding OnlyWhenInactive}" />
+                            <TextBlock Classes="h2" Text="HOW" />
+                            <CheckBox Content="{Binding FlashLabel}" IsChecked="{Binding FlashWindow}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="Corner popup for" IsChecked="{Binding Popup}" VerticalAlignment="Center" />
+                                <NumericUpDown Value="{Binding PopupSeconds}" Minimum="3" Maximum="60" Increment="1" Width="120" IsEnabled="{Binding Popup}" />
+                                <TextBlock Classes="lbl" Text="seconds" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                        <Button Content="Save" Command="{Binding SaveCommand}" />
+                        <Button Content="Test" Command="{Binding TestCommand}" />
+                    </StackPanel>
+                    <TextBlock Classes="status" Text="{Binding Status}" />
+                  </StackPanel>
                 </StackPanel>
 
                 <!-- ═══ MCP ═══ -->

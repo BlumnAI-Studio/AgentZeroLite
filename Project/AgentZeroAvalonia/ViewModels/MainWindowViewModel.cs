@@ -157,6 +157,8 @@ public partial class MainWindowViewModel : ObservableObject
         Settings = new SettingsViewModel();
         Settings.CliDefinitionsChanged += ReloadCliDefinitions;
         Settings.AppearanceChanged += () => TerminalAppearanceChanged?.Invoke();
+        Settings.Notifications.Changed += ReloadAttentionSettings;
+        Settings.Notifications.TestRequested += TestAttention;
     }
 
     /// <summary>Re-read the definitions this OS can launch (after the settings page changed them).</summary>

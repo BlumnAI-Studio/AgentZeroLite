@@ -23,6 +23,7 @@ public partial class MainWindow : Window
         DataContextChanged += (_, _) =>
         {
             AttachBot(Vm);
+            AttachAttention(Vm);
             if (Vm is { } vm)
                 vm.ClipboardWriter = text => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
         };
@@ -167,6 +168,42 @@ public partial class MainWindow : Window
         _botWindow = new AgentBotWindow { DataContext = _botVm.Bot };
         _botWindow.EmbedRequested += () => _botVm.EmbedBot();
         _botWindow.Show(this);
+    }
+
+    // ── Attention: the corner popup and the taskbar flash / Dock bounce ──────
+
+    private MainWindowViewModel? _attentionVm;
+    private AttentionPopup? _attentionPopup;
+
+    private void AttachAttention(MainWindowViewModel? vm)
+    {
+        if (ReferenceEquals(_attentionVm, vm)) return;
+        if (_attentionVm is not null) _attentionVm.AttentionRaised -= OnAttentionRaised;
+        _attentionVm = vm;
+        if (vm is null) return;
+        vm.IsAppActive = () => IsActive && WindowState != WindowState.Minimized;
+        vm.AttentionRaised += OnAttentionRaised;
+    }
+
+    private void OnAttentionRaised(IReadOnlyList<(Agent.Common.Agents.AttentionAlert Alert, string Workspace)> alerts)
+    {
+        if (_attentionVm is not { } vm) return;
+        var settings = vm.AttentionSettings;
+        if (settings.FlashWindow && !IsActive) Services.WindowAttention.Request(this);
+        if (!settings.Popup) return;
+
+        if (_attentionPopup is null)
+        {
+            _attentionPopup = new AttentionPopup();
+            _attentionPopup.GoRequested += alert =>
+            {
+                if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+                Activate();
+                vm.GoToAlert(alert);
+            };
+            _attentionPopup.Closed += (_, _) => _attentionPopup = null;
+        }
+        _attentionPopup.Push(alerts.Select(a => new AttentionPopupItem(a.Alert, a.Workspace)), this, settings.ResolvePopupSeconds());
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)

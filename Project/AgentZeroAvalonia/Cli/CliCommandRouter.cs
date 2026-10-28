@@ -67,6 +67,9 @@ internal sealed class CliCommandRouter
     /// <summary>The sidebar's git worktrees: <c>worktree list|open</c> (verb, arg) → reply; null in tests.</summary>
     public Func<string, string, Task<string>>? WorktreeCommand { get; set; }
 
+    /// <summary>Agent-needs-you notifications: <c>attention status|test</c> (verb) → reply; null in tests.</summary>
+    public Func<string, Task<string>>? AttentionCommand { get; set; }
+
     public CliCommandRouter(IClassicDesktopStyleApplicationLifetime? desktop) => _desktop = desktop;
 
     public Task<string> HandleAsync(string json, CancellationToken ct)
@@ -154,6 +157,11 @@ internal sealed class CliCommandRouter
                         return WorktreeCommand is null
                             ? Task.FromResult(CliIpcProtocol.ErrorJson("worktrees are not available in this host"))
                             : WorktreeCommand(Str(root, "verb").ToLowerInvariant(), Str(root, "arg"));
+
+                    case "attention":
+                        return AttentionCommand is null
+                            ? Task.FromResult(CliIpcProtocol.ErrorJson("notifications are not available in this host"))
+                            : AttentionCommand(Str(root, "verb").ToLowerInvariant());
 
                     default:
                         return Task.FromResult(CliIpcProtocol.ErrorJson($"unknown command '{command}' (not ported to the Avalonia host yet)"));

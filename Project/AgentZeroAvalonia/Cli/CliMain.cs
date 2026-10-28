@@ -78,6 +78,7 @@ internal static class CliMain
             "code" => Code(client, rest),
             "worktree" => Worktree(client, rest),
             "agent-state" => AgentState(client),
+            "attention" => Attention(client, rest),
             _ => Unknown(command),
         };
     }
@@ -231,6 +232,23 @@ internal static class CliMain
         return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
     }
 
+    private static int Attention(CliClient client, string[] args)
+    {
+        var verb = args.Length > 0 ? args[0].ToLowerInvariant() : "status";
+        if (verb is "help" or "--help" or "-h")
+        {
+            Console.WriteLine("Usage: AgentZeroLite -cli attention status | test");
+            Console.WriteLine("  status   The notification settings in effect (Settings -> Notifications)");
+            Console.WriteLine("  test     Fire a sample \"needs you\" alert: corner popup + taskbar flash / Dock bounce");
+            return 0;
+        }
+        var payload = new System.Text.Json.Nodes.JsonObject { ["command"] = "attention", ["verb"] = verb };
+        var reply = client.Send(payload.ToJsonString());
+        if (reply is null) return client.NoWait ? 0 : 1;
+        Console.WriteLine(reply);
+        return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
+    }
+
     private static int Unknown(string command)
     {
         Console.Error.WriteLine($"Unknown or not-yet-ported command: {command}");
@@ -260,6 +278,7 @@ internal static class CliMain
         Console.WriteLine("  mcp list|import|refresh|allow|deny|call ...   MCP servers for AI mode; 'mcp help' for options");
         Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
         Console.WriteLine("  agent-state                          Detected agent state per terminal + attention rollup");
+        Console.WriteLine("  attention status | test              \"An agent needs you\" notifications (popup + taskbar / Dock)");
         Console.WriteLine("  code open [path] | close | status    The code view (bottom panel): the active workspace's files");
         Console.WriteLine("  worktree list | open | close <path|branch>   Git worktrees detected under each workspace (sidebar nesting)");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");

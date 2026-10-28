@@ -112,6 +112,7 @@ public partial class App : Application
                 FloatingCount = () => vm.FloatingCount,
                 CodeCommand = vm.CodeCommandAsync,
                 WorktreeCommand = vm.WorktreeCommandAsync,
+                AttentionCommand = verb => Dispatcher.UIThread.InvokeAsync(() => vm.AttentionCommand(verb)).GetTask(),
             };
             _cliServer = CliServer.Start(router);
 

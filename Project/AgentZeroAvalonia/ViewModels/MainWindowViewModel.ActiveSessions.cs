@@ -170,6 +170,81 @@ public partial class MainWindowViewModel
         return true;
     }
 
+    // ── Attention: popup + taskbar flash / Dock bounce when an agent starts needing you ──
+
+    private readonly AttentionNotifier _attention = new();
+
+    /// <summary>What to announce (Settings → Notifications). Re-read by <see cref="ReloadAttentionSettings"/>.</summary>
+    public AttentionSettings AttentionSettings { get; private set; } = AttentionSettingsStore.Load();
+
+    /// <summary>Whether the main window has the focus — set by the view; "active" keeps the default rule quiet.</summary>
+    public Func<bool> IsAppActive { get; set; } = () => false;
+
+    /// <summary>Alerts of one detection pass, each with its workspace name. Raised on the UI thread.</summary>
+    public event Action<IReadOnlyList<(AttentionAlert Alert, string Workspace)>>? AttentionRaised;
+
+    public void ReloadAttentionSettings() => AttentionSettings = AttentionSettingsStore.Load();
+
+    private void RaiseAttention()
+    {
+        var alerts = _attention.Observe(_agentTracker.Snapshot(), AttentionSettings, IsAppActive(), DateTime.UtcNow);
+        if (alerts.Count == 0) return;
+        var named = alerts.Select(a => (a, a.Group >= 0 && a.Group < Workspaces.Count ? Workspaces[a.Group].DisplayName : "")).ToList();
+        AppLogger.Log($"[Attention] {string.Join(", ", named.Select(n => $"{n.Item2}/{n.a.Title}={n.a.Kind}"))}");
+        AttentionRaised?.Invoke(named);
+    }
+
+    /// <summary>
+    /// Fire a sample alert through the same path (Settings → Notifications → Test), ignoring the
+    /// "only when inactive" rule — the user is looking at the settings page when they press it.
+    /// </summary>
+    public void TestAttention()
+    {
+        var target = ActiveWorkspace?.ActiveTab;
+        var g = ActiveWorkspace is { } w ? Workspaces.IndexOf(w) : -1;
+        var alert = new AttentionAlert(g, ActiveWorkspace?.ActiveTabIndex ?? -1, target?.Title ?? "Test terminal", AttentionKind.Blocked);
+        AttentionRaised?.Invoke([(alert, ActiveWorkspace?.DisplayName ?? "AgentZero")]);
+    }
+
+    /// <summary>The <c>attention status|test</c> CLI reply.</summary>
+    public string AttentionCommand(string verb)
+    {
+        var s = AttentionSettings;
+        var settings = new System.Text.Json.Nodes.JsonObject
+        {
+            ["enabled"] = s.Enabled, ["onBlocked"] = s.OnBlocked, ["onDone"] = s.OnDone,
+            ["onlyWhenInactive"] = s.OnlyWhenInactive, ["flashWindow"] = s.FlashWindow,
+            ["popup"] = s.Popup, ["popupSeconds"] = s.ResolvePopupSeconds(),
+        };
+        switch (verb)
+        {
+            case "" or "status":
+                return new System.Text.Json.Nodes.JsonObject { ["ok"] = true, ["settings"] = settings, ["attention"] = AttentionCount }.ToJsonString();
+            case "test":
+                TestAttention();
+                return new System.Text.Json.Nodes.JsonObject { ["ok"] = true, ["fired"] = true, ["settings"] = settings }.ToJsonString();
+            default:
+                return Agent.Common.Platform.CliIpcProtocol.ErrorJson($"unknown attention verb '{verb}' (status | test)");
+        }
+    }
+
+    /// <summary>
+    /// Go to the terminal an alert named. Indexes can shift while the popup is up (a tab closed),
+    /// so the title is checked and, if it no longer matches, looked up by title instead.
+    /// </summary>
+    public void GoToAlert(AttentionAlert alert)
+    {
+        TerminalTabViewModel? target = null;
+        if (alert.Group >= 0 && alert.Group < Workspaces.Count
+            && alert.Tab >= 0 && alert.Tab < Workspaces[alert.Group].Tabs.Count
+            && Workspaces[alert.Group].Tabs[alert.Tab].Title == alert.Title)
+            target = Workspaces[alert.Group].Tabs[alert.Tab];
+        target ??= Workspaces.SelectMany(w => w.Tabs).FirstOrDefault(t => t.IsTerminalStarted && t.Title == alert.Title);
+        if (target is null) return;
+        Page = AppPage.Terminals;
+        SelectTab(target);
+    }
+
     public void StopAgentStateMonitor()
     {
         _agentTimer?.Stop();
@@ -188,6 +263,7 @@ public partial class MainWindowViewModel
                 ? (gi, aw.ActiveTabIndex)
                 : ((int, int)?)null;
             var stateChanged = _agentTracker.Update(Groups, active);
+            RaiseAttention();
 
             // Which rows exist: started terminals, in workspace then tab order.
             var running = new List<(int G, int T, WorkspaceViewModel W, TerminalTabViewModel Tab)>();

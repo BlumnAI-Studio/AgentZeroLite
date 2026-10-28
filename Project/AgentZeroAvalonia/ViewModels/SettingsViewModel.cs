@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentZeroAvalonia.ViewModels;
 
-public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models }
+public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models, Notifications }
 
 /// <summary>A catalog model for the local-LLM combo.</summary>
 public sealed record ModelChoice(LlmModelCatalogEntry Entry)
@@ -120,8 +120,14 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Settings → Models: the plugins' on-device models (AST, Florence-2, Sherpa).</summary>
     public OnDeviceModelsViewModel OnDeviceModels { get; } = new();
 
+    /// <summary>Settings → Notifications: the "an agent needs you" popup and flash.</summary>
+    public NotificationSettingsViewModel Notifications { get; } = new();
+
+    public bool IsNotifications => Section == SettingsSection.Notifications;
+
     partial void OnSectionChanged(SettingsSection value)
     {
+        OnPropertyChanged(nameof(IsNotifications));
         OnPropertyChanged(nameof(IsLlm));
         OnPropertyChanged(nameof(IsCli));
         OnPropertyChanged(nameof(IsTerminal));
@@ -137,6 +143,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand] private void ShowVoice() => Section = SettingsSection.Voice;
     [RelayCommand] private void ShowMcp() => Section = SettingsSection.Mcp;
     [RelayCommand] private void ShowModels() => Section = SettingsSection.Models;
+    [RelayCommand] private void ShowNotifications() => Section = SettingsSection.Notifications;
 
     /// <summary>The definitions changed — the shell reloads its new-tab menu.</summary>
     public event Action? CliDefinitionsChanged;
