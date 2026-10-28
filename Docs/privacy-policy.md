@@ -1,6 +1,6 @@
 # AgentZero Lite — Privacy Policy
 
-_Last updated: 2026-10-26._
+_Last updated: 2026-10-28._
 
 Published page: <https://psmon.github.io/AgentZeroLite/Home/privacy-policy.html>
 (this Markdown file is its source — keep the two in step).
@@ -31,7 +31,11 @@ files Claude Code, Codex and Hermes Agent keep in your user folder (`.claude` an
 folders such as `.claude-<name>`, `.codex`, and Hermes' folder — `%LOCALAPPDATA%\hermes` or
 `~/.hermes` — whose conversation database is opened read-only) and the list of
 running processes (to find which terminal an agent runs in); to show git worktrees, it reads
-a workspace's `.git` folder. Nothing from them leaves your computer.
+a workspace's `.git` folder. To estimate what the agents have cost (Settings → Budget), it
+reads the token counts Claude Code and Codex record in those session files. To show a
+workspace's history and changes (the code view's GIT LOG and DIFF tabs), it runs the git
+installed on your computer in that folder, which reads the folder's files. Nothing from them
+leaves your computer.
 
 ## When the app connects to the internet
 

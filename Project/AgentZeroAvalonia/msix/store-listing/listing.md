@@ -24,7 +24,15 @@ Your data stays on your PC: no account, no telemetry. The project is open source
 
 Support: psmon@live.co.kr, or open an issue at https://github.com/psmon/AgentZeroLite/issues
 
-## What's new in this version (1.26.4.0 — submission 15)
+## What's new in this version (1.26.5.0 — submission 16)
+Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
+
+- Know when an agent needs you: when an agent in any terminal is blocked on a question or finishes its work, a small popup appears in the corner of the screen (click it to go to that terminal) and the taskbar button flashes. Settings → Notifications.
+- Budget: see what the agents in your terminals have cost this month, by model and by project, against an optional monthly cap. The month's spend is on the status bar. Prices are editable, and the built-in prices now follow the current Claude models.
+- Diff review: a DIFF tab beside the code view shows the workspace's changes, new files included. Add a note to any line and send all notes to the agent in the terminal or to the assistant. Files the assistant wrote in AI mode can be kept or reverted one by one.
+- Command palette (Ctrl+Shift+P) to jump to any terminal, workspace, page or command, and Settings → Shortcuts to change the keys.
+
+## What's new in version 1.26.4.0 (submission 15)
 Paste into Store listings → English → "What's new in this version" (≤ 1500 chars).
 
 - Hermes Agent (Nous Research) is now a built-in agent: a ready-made terminal profile, an install button when it is missing, and live status in Active sessions and on Agent Stage — working, waiting for your approval, done.
@@ -100,7 +108,8 @@ Paste into Store listings → English → "What's new in this version" (≤ 1500
 - Scriptable from any shell: AgentZeroLite.exe -cli
 - Web plugins: Agent Stage, Voice Note, live music recognition and token dashboards, installed from the official list
 - Active-sessions sidebar showing which agent is working, waiting for you or done — from Claude Code's, Codex's and Hermes' own status, and Agent Stage showing their sub-agents as a crew
-- Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, and its git log
+- Code view: the workspace's files with VS Code syntax highlighting, Markdown with Mermaid diagrams, its git log, and a diff to review and annotate
+- Notifications when an agent needs you, a monthly cost view by model and project, and a command palette
 - Resume a Claude Code or Codex conversation when its terminal opens
 - Git worktrees listed under their workspace, including those Claude Code and Codex create
 - No account, no telemetry — settings and history stay on your PC
