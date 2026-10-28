@@ -19,9 +19,18 @@ description: |
 
 # AgentZero Lite — CLI control surface
 
-`AgentZeroLite.exe` is **one binary, two modes**. Normally it launches the WPF
-GUI. When its args contain `-cli`, `CliHandler` takes over, runs the command,
-prints to the console, and exits — the GUI message loop never starts. This
+`AgentZeroLite.exe` is **one binary, two modes**. Normally it launches the
+GUI. When its args contain `-cli`, the CLI takes over, runs the command,
+prints to the console, and exits — the GUI message loop never starts.
+
+**Two hosts ship that exe name.** The official one is the **Avalonia** host
+(`Project/AgentZeroAvalonia` — Windows, macOS, Linux, Microsoft Store); the
+**WPF** host (`Project/AgentZeroWpf`) is the Windows reference/lab build. Both
+answer the same JSON for the shared verbs, but each has verbs the other lacks
+(see the map below), and **each exe talks only to its own kind of GUI**: the
+Avalonia CLI over a named pipe (`AgentZeroLite.cli`; a *Debug* Avalonia build
+uses `AgentZeroLite.cli.debug` and so reaches only a Debug GUI), the WPF CLI
+over `WM_COPYDATA`. Use the exe of the GUI you mean to drive. This
 skill is the operator's manual for that CLI: the parts `-cli help` cannot teach
 you (where the exe lives, how to invoke it reliably on Windows, and how
 terminals talk to each other).
@@ -35,20 +44,23 @@ don't trust a memorized list (this one included).
 
 ## Mission 0 — Locate the exe (do this first, every session)
 
-The exe is frequently **not on PATH**, and for local development you almost
-always want the *Debug build* (internal test build) over an installed copy.
-Resolve in this priority order:
+The exe is frequently **not on PATH**. Resolve in this priority order:
 
-1. **Debug build (internal test — PREFER THIS when developing):**
-   `<repo>\Project\AgentZeroWpf\bin\Debug\net10.0-windows\AgentZeroLite.exe`
-2. **Release build:**
-   `<repo>\Project\AgentZeroWpf\bin\Release\net10.0-windows\AgentZeroLite.exe`
-3. **Installed (Inno Setup default `{autopf}\AgentZeroLite`):**
+0. **The exe of a running GUI** — it is the one that can reach that GUI
+   (`Get-Process AgentZeroLite | Select Path`; a Debug GUI wins when several run).
+1. **Avalonia Debug build (internal test — PREFER THIS when developing):**
+   `<repo>\Project\AgentZeroAvalonia\bin\Debug\net10.0\AgentZeroLite.exe`
+2. **Avalonia Release build:**
+   `<repo>\Project\AgentZeroAvalonia\bin\Release\net10.0\AgentZeroLite.exe`
+3. **Installed (Inno Setup default `{autopf}\AgentZeroLite`, the Avalonia installer keeps it):**
    `%ProgramFiles%\AgentZeroLite\AgentZeroLite.exe`
-4. **On PATH:** `Get-Command AgentZeroLite.exe`
+4. **Microsoft Store:** `(Get-AppxPackage webnori.AgentZeroLite).InstallLocation\AgentZeroLite.exe`
+5. **WPF reference build:** `<repo>\Project\AgentZeroWpf\bin\{Debug|Release}\net10.0-windows\AgentZeroLite.exe`
+6. **On PATH:** `Get-Command AgentZeroLite.exe`
 
 Run the locator (PowerShell) — it returns the first hit by that priority and
-verifies build identity:
+verifies build identity (`-HostKind avalonia|wpf` restricts it to one host,
+`-NoRunning` ignores running GUIs):
 
 ```powershell
 & .claude/skills/agentzero-cli/scripts/find-cli.ps1
@@ -57,11 +69,12 @@ verifies build identity:
 Or inline, from the repo root:
 
 ```powershell
-$c = @(
-  "Project\AgentZeroWpf\bin\Debug\net10.0-windows\AgentZeroLite.exe",
-  "Project\AgentZeroWpf\bin\Release\net10.0-windows\AgentZeroLite.exe",
+$c = (Get-Process AgentZeroLite -ErrorAction SilentlyContinue | Select-Object -First 1).Path
+if (-not $c) { $c = @(
+  "Project\AgentZeroAvalonia\bin\Debug\net10.0\AgentZeroLite.exe",
+  "Project\AgentZeroAvalonia\bin\Release\net10.0\AgentZeroLite.exe",
   "$env:ProgramFiles\AgentZeroLite\AgentZeroLite.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
+) | Where-Object { Test-Path $_ } | Select-Object -First 1 }
 if (-not $c) { $c = (Get-Command AgentZeroLite.exe -ErrorAction SilentlyContinue).Source }
 $Exe = (Resolve-Path $c).Path
 ```
@@ -122,24 +135,37 @@ round-trip) and `--timeout <ms>` (default 5000). Output is UTF-8.
 
 Full, version-matched listing: `-cli help`. Grouped here by what they touch:
 
-| Group | Commands | Needs GUI? |
-|-------|----------|-----------|
-| App | `status`, `open-win`, `close-win`, `console`, `copy`, `version`, `log` | version/open-win: no · rest: yes |
-| **Terminals** | `terminal-list`, `terminal-read`, `terminal-send`, `terminal-key`, `terminal-wait` | **yes** |
-| Agent state | `agent-state`, `agent-resume`, `agent-resume-cmd` | state/resume: yes · resume-cmd: no |
-| Peer channel | `bot-chat "<text>" --from <name>` | yes |
-| Worktrees | `worktree list\|add\|remove` | no (in-process git) |
-| Multi-agent | `orchestrate list\|create\|status\|run` | run: yes · rest: no |
-| Scheduling | `automation create\|list\|remove\|due` | no (GUI scheduler fires them) |
-| Cost | `cost` | no (reads local DB) |
-| **Native OS control** | `os list-windows\|screenshot\|element-tree\|activate\|mouse-*\|keypress\|…` | **no** |
-| Integration | `agent-hook*`, `trust-workspace`, `skill-stub-*` | no |
+| Group | Commands | Needs GUI? | Host |
+|-------|----------|-----------|------|
+| App | `status`, `open-win`, `close-win`, `version` | version/open-win: no · rest: yes | both |
+| App (WPF) | `console`, `copy`, `log` | console/log: no · copy: yes | WPF |
+| **Terminals** | `terminal-list`, `terminal-read`, `terminal-send`, `terminal-key`, `terminal-wait`, `terminal-alias` | **yes** | both |
+| Layout | `layout status\|split-right\|split-down\|close-tab\|…\|workspace <name>` | yes | both |
+| Agent state | `agent-state` | yes | both |
+| Agent resume | `agent-resume`, `agent-resume-launch`, `agent-resume-cmd` | resume-cmd: no · rest: yes | WPF (Avalonia asks in a dialog when a tab starts) |
+| Peer channel | `bot-chat "<text>" --from <name>` | yes | both |
+| Bot (AI mode) | `bot-ask <text…>` | yes | Avalonia |
+| Worktrees | `worktree list\|open\|close` (Avalonia: the sidebar's worktrees) · `worktree list\|add\|remove` (WPF: in-process git) | Avalonia: yes · WPF: no | both, different verbs |
+| Code panel | `code open [path]\|close\|view\|tab files\|gitlog\|diff\|ai\|status` | yes | Avalonia |
+| Notifications | `attention status\|test` | yes | Avalonia |
+| Cost | `cost` (Avalonia: `[--all] [--json]`, by model + project vs the cap) | no (reads local DB) | both |
+| Web | `web open\|search\|read\|tabs` | yes | both (Avalonia: headless) |
+| MCP / plugins | `mcp list\|import\|refresh\|allow\|deny\|call`, `plugin list\|open\|call\|capture\|detach\|dock` | yes | Avalonia |
+| Self-test | `selftest pty\|ipc\|secrets\|all` | no | Avalonia |
+| Multi-agent | `orchestrate list\|create\|status\|run` | run: yes · rest: no | WPF |
+| Scheduling | `automation create\|list\|remove\|due` | no (GUI scheduler fires them) | WPF |
+| **Native OS control** | `os list-windows\|screenshot\|element-tree\|activate\|mouse-*\|keypress\|…` | **no** | WPF |
+| Integration | `agent-hook*`, `trust-workspace`, `skill-stub-*` | no | WPF |
+
+"WPF" verbs are not ported to the Avalonia host yet — it answers *unknown or
+not-yet-ported command*. Use the WPF reference build (`find-cli.ps1 -HostKind wpf`)
+for them; `-cli help` on the exe you resolved is the final word.
 
 Two important classes:
-- **IPC commands** round-trip to the running GUI over `WM_COPYDATA` (marker
-  `"AL"` / `0x414C`) and read a JSON reply from a named memory-mapped file.
-  These need the GUI up; if it isn't, you get *"AgentZero Lite GUI is not
-  running"* — start it with `open-win`.
+- **IPC commands** round-trip to the running GUI — Avalonia over a named pipe,
+  WPF over `WM_COPYDATA` (marker `"AL"` / `0x414C`) with the JSON reply in a
+  named memory-mapped file. These need the GUI up; if it isn't, you get
+  *"AgentZero Lite GUI is not running"* — start it with `open-win`.
 - **In-process commands** (`os *`, `worktree`, `cost`, `automation`,
   `agent-hook-install`, …) run entirely inside the CLI invocation and work with
   **no GUI**.

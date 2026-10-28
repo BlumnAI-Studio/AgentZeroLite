@@ -15,12 +15,16 @@ Windows-only. Prefer PowerShell.
 
 ## 1. Locate the exe (first, every session)
 
-Not usually on PATH. Prefer the **Debug build (internal test)**:
+Not usually on PATH. The official host is **Avalonia**; WPF is the reference build.
+Each exe reaches only its own kind of GUI (a Debug Avalonia exe only a Debug GUI),
+so the exe of the GUI that is running wins:
 
-1. `<repo>\Project\AgentZeroWpf\bin\Debug\net10.0-windows\AgentZeroLite.exe`
-2. `<repo>\Project\AgentZeroWpf\bin\Release\net10.0-windows\AgentZeroLite.exe`
-3. `%ProgramFiles%\AgentZeroLite\AgentZeroLite.exe` (Inno default)
-4. `Get-Command AgentZeroLite.exe`
+0. A running GUI's exe: `(Get-Process AgentZeroLite).Path`
+1. `<repo>\Project\AgentZeroAvalonia\bin\Debug\net10.0\AgentZeroLite.exe` (internal test)
+2. `<repo>\Project\AgentZeroAvalonia\bin\Release\net10.0\AgentZeroLite.exe`
+3. `%ProgramFiles%\AgentZeroLite\AgentZeroLite.exe` (Inno default) · Store: `(Get-AppxPackage webnori.AgentZeroLite).InstallLocation`
+4. WPF: `<repo>\Project\AgentZeroWpf\bin\{Debug|Release}\net10.0-windows\AgentZeroLite.exe` — for `os`, `orchestrate`, `automation`, `agent-hook*` (not in Avalonia yet)
+5. `Get-Command AgentZeroLite.exe`
 
 Helper: `powershell -File .claude/skills/agentzero-cli/scripts/find-cli.ps1`
 (returns the path on its last line and prints build identity).

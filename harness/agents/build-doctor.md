@@ -33,7 +33,7 @@ because:
 
 ## Scope
 
-1. **Version pipeline** — `Project/AgentZeroWpf/version.txt`, the Release post-build
+1. **Version pipeline** — `Project/version.txt`, the Release post-build
    target, and any tag/release skill (`agent-zero-build`).
 2. **Native DLL pinning** — verify the two `<Content Include=...>` entries in
    `AgentZeroWpf.csproj` resolve under the current `$(NuGetPackageRoot)`. Missing files = fail.

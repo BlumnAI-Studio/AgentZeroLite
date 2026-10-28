@@ -30,8 +30,8 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ github.event.inputs.tag }}"
-          $ver = if ($tag) { $tag.TrimStart('v') } else { (Get-Content Project/AgentZeroWpf/version.txt -Raw).Trim() }
-          Set-Content -NoNewline Project/AgentZeroWpf/version.txt $ver
+          $ver = if ($tag) { $tag.TrimStart('v') } else { (Get-Content Project/version.txt -Raw).Trim() }
+          Set-Content -NoNewline Project/version.txt $ver
           echo "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       # The Release configuration bumps version.txt after the build; the assemblies are

@@ -27,10 +27,11 @@
     <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
-  <!-- One version for both hosts: read the WPF project's version.txt. The Release bump
-       target stays in the WPF csproj only — one project bumps, both read. -->
+  <!-- One version for both hosts: Project/version.txt, beside both projects (it used to
+       live in the WPF project). The release workflows write it from the tag; the WPF csproj's
+       Release target still bumps it after a local Release build — one bumps, both read. -->
   <PropertyGroup>
-    <AppVersion>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../AgentZeroWpf/version.txt').Trim())</AppVersion>
+    <AppVersion>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../version.txt').Trim())</AppVersion>
     <Version>$(AppVersion)</Version>
     <AssemblyVersion>$(AppVersion).0</AssemblyVersion>
     <FileVersion>$(AppVersion).0</FileVersion>
@@ -112,7 +113,7 @@
     <Content Include="..\AgentZeroWpf\Assets\mermaid.min.js" Link="Wasm\markdown\mermaid.min.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\AgentZeroWpf\Wasm\voice-test\**\*" Link="Wasm\voice-test\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\AgentZeroWpf\Wasm\chat-test\**\*" Link="Wasm\chat-test\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\AgentZeroWpf\version.txt" Link="version.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\version.txt" Link="version.txt" CopyToOutputDirectory="PreserveNewest" />
     <!-- The app icon is AgentZero's own, linked rather than copied so the two hosts
          cannot drift: ApplicationIcon stamps the Windows exe (taskbar, desktop shortcut,
          Explorer), the AvaloniaResource is what the windows show in their title bar.

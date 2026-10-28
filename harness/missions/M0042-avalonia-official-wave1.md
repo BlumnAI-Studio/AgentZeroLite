@@ -3,7 +3,7 @@ id: M0042
 title: 아발로니아 공식판 1차 기능 묶음 (알림 · 비용 · Diff 리뷰 · 팔레트/단축키 · 정리)
 operator: psmon
 language: ko
-status: in_progress
+status: in_progress   # 1–5 구현·커밋 완료, operator e2e 대기
 priority: high
 created: 2026-10-28
 related: [M0033, M0041]
@@ -21,7 +21,7 @@ operator가 종합 e2e 로컬 테스트를 한 뒤 머지한다.
 - [x] 2. 비용/예산 — 이미 수집 중인 토큰 사용량을 보여 줄 설정 → Budget, `-cli cost`, 상태바 이번 달 지출
 - [x] 3. Diff 리뷰 + AI 변경 검토 — 코드 패널 DIFF 탭, 줄 코멘트 → 에이전트로 전송, AI 모드 파일 쓰기 기록·되돌리기
 - [x] 4. 커맨드 팔레트(Ctrl+Shift+P — Ctrl+J는 터미널 줄바꿈과 겹쳐서 변경) + 설정 → Shortcuts
-- [ ] 5. 정리 — 버전 소스 호스트 중립화, `agentzero-cli` 스킬이 아발로니아 exe를 우선 찾고 없는 동사를 안내하지 않게
+- [x] 5. 정리 — 버전 소스 호스트 중립화, `agentzero-cli` 스킬이 아발로니아 exe를 우선 찾고 없는 동사를 안내하지 않게
 
 ## Notes
 

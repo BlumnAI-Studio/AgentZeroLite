@@ -48,7 +48,7 @@ jobs:
       - name: Zip win-x64
         shell: pwsh
         run: |
-          $v = (Get-Content Project/AgentZeroWpf/version.txt -Raw).Trim()
+          $v = (Get-Content Project/version.txt -Raw).Trim()
           Compress-Archive -Path publish-avalonia/win-x64/* -DestinationPath "publish-avalonia/AgentZeroLite-Avalonia-v$v-win-x64.zip"
       - uses: actions/upload-artifact@v4
         with:
@@ -84,7 +84,7 @@ jobs:
           publish-avalonia/osx-arm64/AgentZeroLite.sh version
       - name: Bundle .app (ad-hoc signed)
         run: |
-          v=$(tr -d '[:space:]' < Project/AgentZeroWpf/version.txt)
+          v=$(tr -d '[:space:]' < Project/version.txt)
           sh Project/AgentZeroAvalonia/macos/build-app.sh publish-avalonia/osx-arm64 publish-avalonia/AgentZeroLite.app "$v"
           publish-avalonia/AgentZeroLite.app/Contents/MacOS/AgentZeroLite.sh version
           cd publish-avalonia && ditto -c -k --keepParent AgentZeroLite.app "AgentZeroLite-Avalonia-v$v-osx-arm64.zip"
@@ -120,7 +120,7 @@ jobs:
           publish-avalonia/linux-x64/AgentZeroLite -cli selftest all
       - name: Package .deb + tar.gz
         run: |
-          v=$(tr -d '[:space:]' < Project/AgentZeroWpf/version.txt)
+          v=$(tr -d '[:space:]' < Project/version.txt)
           bash Project/AgentZeroAvalonia/linux/build-deb.sh publish-avalonia/linux-x64 publish-avalonia/dist "$v"
       # The package as a user gets it: apt resolves Depends (WebKitGTK, GTK, ICU…), then the
       # installed command runs and the .desktop entry validates.

@@ -34,7 +34,7 @@ param(
     [string]$Publisher = "CN=AgentZeroLite-Dev",
     [string]$PublisherDisplayName = "AgentZero Lite (dev)",
     [string]$DisplayName = "AgentZero Lite",
-    # Four-part MSIX version. Empty: derived from Project/AgentZeroWpf/version.txt (see below).
+    # Four-part MSIX version. Empty: derived from Project/version.txt (see below).
     [string]$Version = "",
     [string]$OutDir = "",
     [switch]$Register,
@@ -72,7 +72,7 @@ $stage = Join-Path $OutDir ($(if ($Register) { "stage-dev" } else { "stage" }))
 # later 1.0.0 → 2.0.0.0. The mapping is monotonic, which is the property the Store needs —
 # it always serves the highest version, and a lower one would never reach anyone.
 if (-not $Version) {
-    $app = (Get-Content (Join-Path $repo "Project\AgentZeroWpf\version.txt") -Raw).Trim()
+    $app = (Get-Content (Join-Path $repo "Project\version.txt") -Raw).Trim()
     $p = $app.Split('.')
     if ($p.Count -ne 3) { throw "version.txt is '$app' — expected major.minor.patch" }
     $Version = "{0}.{1}.{2}.0" -f ([int]$p[0] + 1), [int]$p[1], [int]$p[2]

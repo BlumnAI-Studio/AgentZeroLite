@@ -2,7 +2,7 @@
 name: agent-zero-build
 description: |
   Run the AgentZero Lite release pipeline end-to-end — sync any pending
-  git work, bump the SemVer in Project/AgentZeroWpf/version.txt, push an
+  git work, bump the SemVer in Project/version.txt, push an
   annotated tag, and hand off to the GitHub Actions release workflow so
   that a self-contained win-x64 ZIP + Inno Setup installer are published
   to the GitHub Releases page. Use this skill whenever the user asks to
@@ -50,7 +50,7 @@ conflict.
 
 - Work only on **`main`**. If `git branch --show-current` is anything
   else, stop and tell the user.
-- The version lives in **`Project/AgentZeroWpf/version.txt`**. It is a
+- The version lives in **`Project/version.txt`**. It is a
   single line `X.Y.Z`. The tag is always `v<that>`. No other format.
 - Never push `--force`, never rewrite published history, never skip
   git hooks (no `--no-verify`, `--no-gpg-sign`).
@@ -98,7 +98,7 @@ bypass the policy.
 
 ## Step 2 — Bump the version
 
-Read `Project/AgentZeroWpf/version.txt` and decide how to bump. The
+Read `Project/version.txt` and decide how to bump. The
 default is **patch**. Let the user's language override:
 
 | Cue from the user                           | Bump level |
@@ -118,9 +118,9 @@ Before writing, confirm the target: **"Current 0.1.3 → proposed
 ```bash
 # write new version (single line, trailing newline)
 # replace X.Y.Z with the computed value
-echo "X.Y.Z" > Project/AgentZeroWpf/version.txt
+echo "X.Y.Z" > Project/version.txt
 
-git add Project/AgentZeroWpf/version.txt
+git add Project/version.txt
 git commit -m "chore: bump version to X.Y.Z"
 git push
 ```

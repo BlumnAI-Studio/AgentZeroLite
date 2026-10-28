@@ -88,7 +88,7 @@ Everything below is exposed by `Project/AgentZeroWpf/Wasm/common/zero-bridge.js`
 
 | Call | Returns | Notes |
 |---|---|---|
-| `zero.version()` | `{ version }` | App SemVer (matches `Project/AgentZeroWpf/version.txt`). |
+| `zero.version()` | `{ version }` | App SemVer (matches `Project/version.txt`). |
 | `zero.invoke(op, args)` | `Promise<any>` | Low-level RPC; the namespaced helpers below are sugar over this. |
 | `zero.on(channel, handler)` | `() => void` | Subscribe to a host-pushed event. Returns an unsubscribe fn. |
 

@@ -71,7 +71,7 @@ asc review submit --app 6825237056 --version-id <버전ID> --build-id <새 빌�
 ```
 
 - 빌드 번호는 실패한 업로드까지 포함해 매번 올린다(1: ITMS-90296 실패, 2: 제출본 → 다음은 **3**).
-- `dotnet publish`가 `Project/AgentZeroWpf/version.txt`나 `Project/AgentOne/version.txt`를 올리면 커밋 전에 되돌린다.
+- `dotnet publish`가 `Project/version.txt`나 `Project/AgentOne/version.txt`를 올리면 커밋 전에 되돌린다.
 - 반려 대응으로 엔타이틀먼트를 바꾸면 `MAS_SANDBOX_TEST=1` 번들로 GUI 기동·`-cli status`·zsh 탭을 먼저 확인한다
   (워크스페이스는 컨테이너 DB `CliGroups`에 한 줄 넣으면 된다). 확인 뒤 테스트 데이터는 지운다.
 - 심사 메모 수정: `asc review details-update --id 87f61568-ec0b-4507-988b-67ee3eb1d369 --notes "…"`

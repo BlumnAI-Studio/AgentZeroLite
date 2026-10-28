@@ -157,14 +157,16 @@
        same file feeds AssemblyVersion below; copying it to the output
        directory means CLI output and installer label always match. -->
   <ItemGroup>
-    <Content Include="version.txt">
+    <!-- One file for both hosts, beside them in Project/ (it lived here until the
+         Avalonia host became the official one). -->
+    <Content Include="..\version.txt" Link="version.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <!-- Auto-version: read from version.txt, embed as assembly version -->
   <PropertyGroup>
-    <VersionFile>$(MSBuildProjectDirectory)\version.txt</VersionFile>
+    <VersionFile>$(MSBuildProjectDirectory)\..\version.txt</VersionFile>
     <AppVersion>$([System.IO.File]::ReadAllText($(VersionFile)).Trim())</AppVersion>
     <Version>$(AppVersion)</Version>
     <AssemblyVersion>$(AppVersion)</AssemblyVersion>

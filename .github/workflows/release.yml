@@ -61,7 +61,7 @@ jobs:
           elif [[ -n "${{ github.event.inputs.version }}" ]]; then
             ver="${{ github.event.inputs.version }}"
           else
-            ver="$(tr -d '[:space:]' < Project/AgentZeroWpf/version.txt)"
+            ver="$(tr -d '[:space:]' < Project/version.txt)"
           fi
           echo "version=$ver" >> "$GITHUB_OUTPUT"
           echo "tag=v$ver" >> "$GITHUB_OUTPUT"
@@ -81,7 +81,7 @@ jobs:
       # (in the runner only) so the binary, the installer and the tag agree.
       - name: Stamp version
         shell: pwsh
-        run: Set-Content -NoNewline Project/AgentZeroWpf/version.txt '${{ needs.version.outputs.version }}'
+        run: Set-Content -NoNewline Project/version.txt '${{ needs.version.outputs.version }}'
 
       - name: Publish Avalonia (self-contained, win-x64, with the wearable host)
         run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ./publish
@@ -126,7 +126,7 @@ jobs:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
       - name: Stamp version
-        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/AgentZeroWpf/version.txt
+        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/version.txt
       - name: Publish osx-arm64
         run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r osx-arm64 --self-contained true -p:UseAppHost=true -o publish-avalonia/osx-arm64
       - name: Check the published build (no display)
@@ -213,7 +213,7 @@ jobs:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
       - name: Stamp version
-        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/AgentZeroWpf/version.txt
+        run: printf '%s' '${{ needs.version.outputs.version }}' > Project/version.txt
       - name: Publish linux-x64
         run: dotnet publish Project/AgentZeroAvalonia/AgentZeroAvalonia.csproj -c Release -r linux-x64 --self-contained true -p:UseAppHost=true -o publish-avalonia/linux-x64
       - name: Check the published build (no display)

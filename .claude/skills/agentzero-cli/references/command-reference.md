@@ -8,6 +8,12 @@ All examples assume `$Exe` resolved via `find-cli.ps1` and invocation through
 `Start-Process $Exe -ArgumentList '-cli',… -NoNewWindow -Wait` (or the
 `AgentZeroLite.ps1` wrapper). `<G>`/`<T>` = group/tab index (zero-based).
 
+**Hosts.** Sections marked **(WPF host)** exist only in the WPF reference build
+(`find-cli.ps1 -HostKind wpf`); sections marked **(Avalonia host)** only in the
+official Avalonia build. Unmarked sections answer the same JSON on both. The
+Avalonia CLI reaches its GUI over a named pipe, not `WM_COPYDATA`; the global
+options are the same.
+
 ## Global options
 
 | Option | Effect |
@@ -72,7 +78,7 @@ Exit codes: `0` reached/idle · `2` timeout · `3` stalled.
 
 The group's default `--timeout` is 45 s (page loads). Replies are produced asynchronously on the GUI side and carry a `req` id; the CLI waits for the matching one. The wearable host is the main caller (its `web_*` tools), which is why the page opens in the GUI: the user sees what the watch's agent is reading. Exit code 0 when the JSON's `ok` is true.
 
-## Worktrees (in-process git — no GUI)
+## Worktrees (WPF host: in-process git — no GUI)
 
 | Command | Notes |
 |---------|-------|
@@ -80,7 +86,12 @@ The group's default `--timeout` is 45 s (page loads). Replies are produced async
 | `worktree add <path> [branch] [--trust]` | Create isolated checkout. `--trust` pre-marks the folder trusted for hosted agent CLIs so their trust prompt won't eat injected keystrokes. |
 | `worktree remove <path> [--force]` | Remove a worktree. |
 
-## Orchestration (supervised multi-agent DAG)
+The **Avalonia host**'s `worktree` is about the sidebar instead (GUI required):
+`worktree list` (workspaces, their branch, the worktrees detected under each),
+`worktree open <path|branch>` (switch to it, opening it as a workspace the first
+time), `worktree close <path|branch>` (close that workspace; the folder stays).
+
+## Orchestration (supervised multi-agent DAG) — (WPF host)
 
 | Command | GUI? | Notes |
 |---------|------|-------|
@@ -89,7 +100,7 @@ The group's default `--timeout` is 45 s (page loads). Replies are produced async
 | `orchestrate status <runId>` | no | Task states + dependency arrows. |
 | `orchestrate run <runId>` | yes | Hands off to the GUI coordinator to dispatch live agents. Workers signal done with `bot-chat "DONE(...)" --from <worker>`. |
 
-## Automation (scheduled runs — no GUI to create; GUI scheduler fires)
+## Automation (scheduled runs — no GUI to create; GUI scheduler fires) — (WPF host)
 
 | Command | Notes |
 |---------|-------|
@@ -103,8 +114,9 @@ The group's default `--timeout` is 45 s (page loads). Replies are produced async
 | Command | Notes |
 |---------|-------|
 | `cost` | Estimated USD from recorded token usage, total + per-model. Prices are editable defaults, not a live feed. |
+| `cost [--all] [--json]` (Avalonia host) | This month against the Settings → Budget cap, by model and by project folder (the workspace that holds the agent's cwd), all-time total, models no price matched. `--all` lists every project; `--json` prints one object. |
 
-## Native OS control (`os …` — in-process, no GUI)
+## Native OS control (`os …` — in-process, no GUI) — (WPF host)
 
 Read-only verbs always available; input verbs gated by `--allow-input` or env
 `AGENTZERO_OS_INPUT_ALLOWED=1`. All return JSON. HWND = decimal or `0x`-hex.
@@ -124,7 +136,7 @@ Read-only verbs always available; input verbs gated by `--allow-input` or env
 | `os keypress <spec> [--allow-input]` | Gated. `'ctrl+c'`, `'alt+f4'`, `'f5'`, `'escape'`, `'ctrl+shift+t'`. |
 | `os audit [--last N]` | Today's OS-control audit log. |
 
-## Integration / installer helpers (in-process, modify user profiles — consented)
+## Integration / installer helpers (in-process, modify user profiles — consented) — (WPF host)
 
 | Command | Notes |
 |---------|-------|
@@ -132,3 +144,15 @@ Read-only verbs always available; input verbs gated by `--allow-input` or env
 | `agent-hook --event <e> [--state s] [--session id] [--detail t]` | Fire a state report (fire-and-forget). Installed hooks call this. |
 | `trust-workspace [path]` | Pre-trust a folder for Cursor/Copilot/Codex CLIs (default CWD). |
 | `skill-stub-install` / `skill-stub-uninstall` | Inject/remove the tiny anti-drift AgentZero discovery stub into `~/.claude*` skills. |
+
+## Avalonia host only (GUI required unless noted)
+
+| Command | Notes |
+|---------|-------|
+| `layout status\|split-right\|split-down\|close-tab\|close-pane\|add\|next-tab\|prev-tab\|move-tab\|focus-<dir>\|float\|dock` | The active workspace's panes and tabs. `layout workspace <name\|index>` switches workspace. |
+| `bot-ask <text…>` | Ask AgentBot in AI mode (starts an agent-loop turn). |
+| `code open [path]\|close\|status` | The code view (bottom panel). `code view preview\|plain` for Markdown; `code tab files\|gitlog\|diff\|ai` picks the face — `diff` is the working tree against HEAD (untracked included), `ai` what the bot's AI mode wrote this run. `code status` carries `gitLog` and `diff` (source, summary, rows, notes, aiChanges). |
+| `attention status\|test` | "An agent needs you" notifications: the settings in effect, or a sample alert (corner popup + taskbar flash / Dock bounce). |
+| `mcp list\|import\|refresh\|allow\|deny\|call …` | MCP servers for AI mode; `mcp help`. |
+| `plugin list\|open\|call\|capture\|detach\|dock …` | The Plugins page; `call` runs `window.zero.invoke` inside the page. |
+| `selftest pty\|ipc\|secrets\|all` | CI self-checks; **no GUI**. |

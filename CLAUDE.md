@@ -18,7 +18,9 @@ dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Debug
 # Build just the wearable host (the smartwatch's BLE/actor process)
 dotnet build Project/ZeroWearable/ZeroWearable.csproj -c Debug
 
-# Release build — auto-bumps version.txt (patch+1, 9→minor+1) in a post-build target
+# Release build — auto-bumps Project/version.txt (patch+1, 9→minor+1) in a post-build target.
+# That one file versions both hosts (it lived in Project/AgentZeroWpf/ until Avalonia became
+# the official host); the release workflows write it from the tag.
 dotnet build Project/AgentZeroWpf/AgentZeroWpf.csproj -c Release
 
 # Headless tests — fast, no desktop session needed
@@ -106,7 +108,7 @@ Actor names sometimes contain user input (workspace names, terminal IDs). Route 
 The `web` command group (M0032, `Services/Browser/WebCliCommands.cs`) is the one group whose GUI handler answers **asynchronously** (a navigation takes seconds and WndProc must return at once). Two guards keep the polling CLI honest: `HandleWebCommand` clears its MMF synchronously before the work starts, and the reply echoes the request's `req` id, which the CLI insists on. Default `--timeout` for the group is 45 s.
 
 ### CLI test skills (agent-facing usage guides)
-`.claude/skills/agentzero-cli/` is a **guide-level skill authored to exercise the `-cli` surface** — it teaches an agent to locate the exe (Debug build preferred for internal testing), invoke it on Windows (WinExe → `Start-Process -NoNewWindow -Wait` or the `.ps1` wrapper), drive terminal tabs, run the handshake / `DONE()` reverse channel and two-terminal discussion loop, and use the native `os` control verbs. It's a testing/dev aid, not product code; `dotnet` builds ignore it. `scripts/find-cli.ps1` resolves the exe by priority; `references/` holds the full command + interaction detail. `codex/prompts/agentzero-cli.md` is the project-bundled Codex analog (Codex has no `skills/` auto-discovery — copy/symlink it into `~/.codex/prompts/` to get `/agentzero-cli`). Both stay thin pointers to `-cli help agentzero` so they can't drift from the binary. Official plugin packaging is tracked separately.
+`.claude/skills/agentzero-cli/` is a **guide-level skill authored to exercise the `-cli` surface** — it teaches an agent to locate the exe (the running GUI's own exe first — each exe reaches only its own kind of GUI, a Debug Avalonia build only a Debug GUI — then the Avalonia Debug build, then installed / Store, then the WPF reference build; the command map marks which verbs each host has), invoke it on Windows (WinExe → `Start-Process -NoNewWindow -Wait` or the `.ps1` wrapper), drive terminal tabs, run the handshake / `DONE()` reverse channel and two-terminal discussion loop, and use the native `os` control verbs. It's a testing/dev aid, not product code; `dotnet` builds ignore it. `scripts/find-cli.ps1` resolves the exe by priority; `references/` holds the full command + interaction detail. `codex/prompts/agentzero-cli.md` is the project-bundled Codex analog (Codex has no `skills/` auto-discovery — copy/symlink it into `~/.codex/prompts/` to get `/agentzero-cli`). Both stay thin pointers to `-cli help agentzero` so they can't drift from the binary. Official plugin packaging is tracked separately.
 
 ### Wearable host (M0031) — a second process on purpose
 
