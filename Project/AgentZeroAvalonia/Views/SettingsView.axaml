@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+             xmlns:tel="using:Agent.Common.Telemetry"
              x:Class="AgentZeroAvalonia.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
@@ -64,6 +65,7 @@
                 <Button Classes="nav" Classes.selected="{Binding IsVoice}" Content="Voice" Command="{Binding ShowVoiceCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsModels}" Content="Models" Command="{Binding ShowModelsCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsNotifications}" Content="Notifications" Command="{Binding ShowNotificationsCommand}" />
+                <Button Classes="nav" Classes.selected="{Binding IsBudget}" Content="Budget" Command="{Binding ShowBudgetCommand}" />
             </StackPanel>
         </Border>
 
@@ -307,6 +309,94 @@
                         <Button Content="Test" Command="{Binding TestCommand}" />
                     </StackPanel>
                     <TextBlock Classes="status" Text="{Binding Status}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- ═══ Budget ═══ -->
+                <StackPanel IsVisible="{Binding IsBudget}" MaxWidth="780" HorizontalAlignment="Left">
+                  <StackPanel DataContext="{Binding Budget}" x:DataType="vm:BudgetViewModel">
+                    <TextBlock Classes="h1" Text="Budget" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="What the agents in your terminals (Claude Code, Codex) have cost, estimated from the token usage they record — read from their own logs, nothing is sent anywhere. Prices are editable per model; the shared file is budget-settings.json." />
+
+                    <TextBlock Text="{Binding SpendText}" Foreground="{Binding SpendBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,2" />
+                    <TextBlock Text="{Binding AllTimeText}" FontSize="11" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
+
+                    <Grid Classes="form" ColumnDefinitions="130,*" Margin="0,10,0,0">
+                        <TextBlock Classes="lbl" Text="Monthly cap (USD)" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <TextBox Text="{Binding CapText}" Width="120" Watermark="0 = no cap" />
+                            <Button Content="Save" Command="{Binding SaveCommand}" />
+                            <Button Content="Refresh" Command="{Binding RefreshNowCommand}" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Classes="status" Text="{Binding Status}" />
+
+                    <Grid ColumnDefinitions="*,16,*" Margin="0,8,0,0">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Classes="h2" Text="THIS MONTH BY MODEL" />
+                            <ItemsControl ItemsSource="{Binding ByModel}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="tel:CostLine">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,1">
+                                            <TextBlock Text="{Binding Key}" FontSize="12" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Turns, StringFormat='{}{0:N0} turns'}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="8,0" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Usd, StringFormat='${0:F2}'}" FontSize="12" Foreground="{DynamicResource CyberTealBrush}" MinWidth="70" TextAlignment="Right" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Classes="h2" Text="THIS MONTH BY PROJECT FOLDER" />
+                            <ItemsControl ItemsSource="{Binding ByProject}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="tel:CostLine">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,1">
+                                            <TextBlock Text="{Binding Key}" FontSize="12" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Turns, StringFormat='{}{0:N0} turns'}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="8,0" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Usd, StringFormat='${0:F2}'}" FontSize="12" Foreground="{DynamicResource CyberTealBrush}" MinWidth="70" TextAlignment="Right" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Classes="h2" Text="PRICE OVERRIDES (USD PER MILLION TOKENS)" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="A row matches any model whose name contains its key (lower case) and is tried before the built-in table (Claude Fable / Opus / Sonnet / Haiku by generation, then gpt-4o, o3, gpt). First match wins." />
+                    <Border Background="#33FFC24D" CornerRadius="4" Padding="8,6" Margin="0,6,0,0" IsVisible="{Binding HasUnpriced}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Add rows for these" Command="{Binding AddUnpricedCommand}" Margin="8,0,0,0" />
+                            <TextBlock Text="{Binding UnpricedText}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <Grid ColumnDefinitions="200,90,90,90,90,Auto" Margin="0,8,0,2">
+                        <TextBlock Classes="lbl" Text="model key" />
+                        <TextBlock Classes="lbl" Grid.Column="1" Text="input" />
+                        <TextBlock Classes="lbl" Grid.Column="2" Text="output" />
+                        <TextBlock Classes="lbl" Grid.Column="3" Text="cache write" />
+                        <TextBlock Classes="lbl" Grid.Column="4" Text="cache read" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Prices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PriceRowViewModel">
+                                <Grid ColumnDefinitions="200,90,90,90,90,Auto" Margin="0,2">
+                                    <TextBox Text="{Binding Key}" Margin="0,0,6,0" Watermark="e.g. fable" />
+                                    <NumericUpDown Grid.Column="1" Value="{Binding Input}" Minimum="0" Increment="0.1" FormatString="0.##" ShowButtonSpinner="False" Margin="0,0,6,0" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding Output}" Minimum="0" Increment="0.1" FormatString="0.##" ShowButtonSpinner="False" Margin="0,0,6,0" />
+                                    <NumericUpDown Grid.Column="3" Value="{Binding CacheWrite}" Minimum="0" Increment="0.1" FormatString="0.##" ShowButtonSpinner="False" Margin="0,0,6,0" />
+                                    <NumericUpDown Grid.Column="4" Value="{Binding CacheRead}" Minimum="0" Increment="0.01" FormatString="0.###" ShowButtonSpinner="False" Margin="0,0,6,0" />
+                                    <Button Grid.Column="5" Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove this row" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                        <Button Content="+ Add price" Command="{Binding AddPriceCommand}" />
+                        <Button Content="Save" Command="{Binding SaveCommand}" />
+                    </StackPanel>
                   </StackPanel>
                 </StackPanel>
 

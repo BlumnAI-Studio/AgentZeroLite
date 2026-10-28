@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentZeroAvalonia.ViewModels;
 
-public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models, Notifications }
+public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models, Notifications, Budget }
 
 /// <summary>A catalog model for the local-LLM combo.</summary>
 public sealed record ModelChoice(LlmModelCatalogEntry Entry)
@@ -125,9 +125,16 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool IsNotifications => Section == SettingsSection.Notifications;
 
+    /// <summary>Settings → Budget: month-to-date agent spend, the cap, price overrides.</summary>
+    public BudgetViewModel Budget { get; } = new();
+
+    public bool IsBudget => Section == SettingsSection.Budget;
+
     partial void OnSectionChanged(SettingsSection value)
     {
         OnPropertyChanged(nameof(IsNotifications));
+        OnPropertyChanged(nameof(IsBudget));
+        if (value == SettingsSection.Budget) Budget.Refresh();
         OnPropertyChanged(nameof(IsLlm));
         OnPropertyChanged(nameof(IsCli));
         OnPropertyChanged(nameof(IsTerminal));
@@ -144,6 +151,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand] private void ShowMcp() => Section = SettingsSection.Mcp;
     [RelayCommand] private void ShowModels() => Section = SettingsSection.Models;
     [RelayCommand] private void ShowNotifications() => Section = SettingsSection.Notifications;
+    [RelayCommand] private void ShowBudget() => Section = SettingsSection.Budget;
 
     /// <summary>The definitions changed — the shell reloads its new-tab menu.</summary>
     public event Action? CliDefinitionsChanged;

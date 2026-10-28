@@ -14,15 +14,33 @@ public sealed class TokenCostCalculatorTests
         => new() { Model = model, InputTokens = input, OutputTokens = output, CacheCreateTokens = cacheCreate, CacheReadTokens = cacheRead };
 
     [Theory]
-    [InlineData("claude-opus-4-8", "opus")]
-    [InlineData("claude-sonnet-5", "sonnet")]
-    [InlineData("claude-haiku-4-5", "haiku")]
+    [InlineData("claude-opus-4-8", "opus-4-8")]
+    [InlineData("claude-opus-5-5", "opus-5-5")]
+    [InlineData("claude-opus-5", "opus-5")]
+    [InlineData("claude-opus-4-1", "opus")]
+    [InlineData("claude-sonnet-5", "sonnet-5")]
+    [InlineData("claude-sonnet-5-5", "sonnet-5")]
+    [InlineData("claude-sonnet-4-6", "sonnet")]
+    [InlineData("claude-haiku-4-5", "haiku-4-5")]
+    [InlineData("claude-haiku-5-5", "haiku-5")]
+    [InlineData("claude-fable-5-1", "fable-5-1")]
+    [InlineData("claude-fable-5", "fable")]
     [InlineData("gpt-4o-mini", "gpt-4o")]
     public void Lookup_MatchesModelFamilyBySubstring(string model, string expectedKey)
     {
         var p = TokenCostCalculator.Lookup(model);
         var expected = TokenCostCalculator.DefaultTable.First(t => t.Key == expectedKey).Pricing;
         Assert.Equal(expected, p);
+    }
+
+    [Fact]
+    public void Lookup_specific_keys_come_before_their_family_fallback()
+    {
+        var keys = TokenCostCalculator.DefaultTable.Select(t => t.Key).ToList();
+        for (int i = 0; i < keys.Count; i++)
+            for (int j = 0; j < i; j++)
+                Assert.False(keys[i].Contains(keys[j], StringComparison.Ordinal),
+                    $"'{keys[i]}' can never match: '{keys[j]}' comes first and is a substring of it");
     }
 
     [Fact]
@@ -34,8 +52,8 @@ public sealed class TokenCostCalculatorTests
     [Fact]
     public void CostUsd_PricesEachTokenClassSeparately()
     {
-        // 1M input + 1M output on sonnet = 3.00 + 15.00 = 18.00
-        var r = Rec("claude-sonnet-5", 1_000_000, 1_000_000);
+        // 1M input + 1M output on sonnet 4.x = 3.00 + 15.00 = 18.00
+        var r = Rec("claude-sonnet-4-6", 1_000_000, 1_000_000);
         Assert.Equal(18.00m, TokenCostCalculator.CostUsd(r));
     }
 
@@ -58,11 +76,11 @@ public sealed class TokenCostCalculatorTests
     {
         var records = new[]
         {
-            Rec("claude-sonnet-5", 1_000_000, 0),   // 3.00
-            Rec("claude-haiku-4-5", 1_000_000, 0),  // 0.80
+            Rec("claude-sonnet-5", 1_000_000, 0),   // 2.00
+            Rec("claude-haiku-4-5", 1_000_000, 0),  // 1.00
             Rec("unknown", 5_000_000, 0),           // 0
         };
-        Assert.Equal(3.80m, TokenCostCalculator.TotalUsd(records));
+        Assert.Equal(3.00m, TokenCostCalculator.TotalUsd(records));
     }
 
     [Fact]
@@ -70,13 +88,13 @@ public sealed class TokenCostCalculatorTests
     {
         var records = new[]
         {
-            Rec("claude-haiku-4-5", 1_000_000, 0),  // 0.80
-            Rec("claude-opus-4-8", 1_000_000, 0),   // 15.00
-            Rec("claude-opus-4-8", 1_000_000, 0),   // 15.00
+            Rec("claude-haiku-4-5", 1_000_000, 0),  // 1.00
+            Rec("claude-opus-4-8", 1_000_000, 0),   // 5.00
+            Rec("claude-opus-4-8", 1_000_000, 0),   // 5.00
         };
         var by = TokenCostCalculator.ByModel(records);
         Assert.Equal("claude-opus-4-8", by[0].Model);
-        Assert.Equal(30.00m, by[0].Usd);
+        Assert.Equal(10.00m, by[0].Usd);
         Assert.Equal(2, by[0].Records);
     }
 }

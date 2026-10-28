@@ -124,6 +124,7 @@ public partial class App : Application
             vm.Wearable?.AutoStart();
             vm.StartAgentStateMonitor();
             vm.StartWorktreeMonitor();
+            vm.StartCostMonitor();
 
             desktop.ShutdownRequested += (_, _) =>
             {

@@ -79,6 +79,7 @@ internal static class CliMain
             "worktree" => Worktree(client, rest),
             "agent-state" => AgentState(client),
             "attention" => Attention(client, rest),
+            "cost" => Cost(rest),
             _ => Unknown(command),
         };
     }
@@ -249,6 +250,67 @@ internal static class CliMain
         return CliClient.Ok(CliClient.Parse(reply)) ? 0 : 1;
     }
 
+    /// <summary>
+    /// Month-to-date agent spend, by model and project, priced with Settings → Budget. Reads the
+    /// shared database in this process, like the WPF host's <c>cost</c> — no GUI needed.
+    /// </summary>
+    private static int Cost(string[] args)
+    {
+        if (args.Any(a => a is "help" or "--help" or "-h"))
+        {
+            Console.WriteLine("Usage: AgentZeroLite -cli cost [--all] [--json]");
+            Console.WriteLine("  Estimated spend of the agents in your terminals this month (and all time), by model and");
+            Console.WriteLine("  project folder, against the monthly cap. Prices: Settings -> Budget (budget-settings.json).");
+            return 0;
+        }
+        try
+        {
+            try { Agent.Common.Data.AppDbContext.InitializeDatabase(); } catch { /* the GUI may hold it; reading still works */ }
+            var settings = Agent.Common.Telemetry.BudgetSettingsStore.Load();
+            var r = Agent.Common.Telemetry.CostReport.Load(settings, DateTime.UtcNow);
+            if (args.Contains("--json"))
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    ok = true,
+                    since = r.SinceUtc,
+                    month = new { spentUsd = r.Month.SpentUsd, capUsd = r.Month.CapUsd, hasCap = r.Month.HasCap, overBudget = r.Month.OverBudget, nearingCap = r.Month.NearingCap(), turns = r.MonthTurns },
+                    byModel = r.MonthByModel.Select(l => new { model = l.Key, usd = l.Usd, turns = l.Turns, tokens = l.Tokens }),
+                    byProject = r.MonthByProject.Select(l => new { project = l.Key, usd = l.Usd, turns = l.Turns, tokens = l.Tokens }),
+                    allTime = new { usd = r.AllTimeUsd, turns = r.AllTimeTurns },
+                    unpriced = r.UnpricedModels,
+                }));
+                return 0;
+            }
+            if (r.AllTimeTurns == 0)
+            {
+                Console.WriteLine("No token usage recorded yet.");
+                return 0;
+            }
+            var m = r.Month;
+            Console.WriteLine(m.HasCap
+                ? $"This month: ${m.SpentUsd:F2} of ${m.CapUsd:F2} ({m.FractionUsed * 100:F0}%){(m.OverBudget ? "  OVER BUDGET" : m.NearingCap() ? "  nearing cap" : "")}  ({r.MonthTurns:N0} turns)"
+                : $"This month: ${m.SpentUsd:F2}  (no cap)  ({r.MonthTurns:N0} turns)");
+            Console.WriteLine("By model:");
+            foreach (var l in r.MonthByModel) Console.WriteLine($"  {l.Key,-32} ${l.Usd,10:F2}   ({l.Turns:N0} turns)");
+            var top = args.Contains("--all") ? int.MaxValue : 12;
+            Console.WriteLine("By project:");
+            foreach (var l in r.MonthByProject.Take(top)) Console.WriteLine($"  {l.Key,-32} ${l.Usd,10:F2}   ({l.Turns:N0} turns)");
+            if (r.MonthByProject.Count > top)
+                Console.WriteLine($"  … {r.MonthByProject.Count - top} more (${r.MonthByProject.Skip(top).Sum(l => l.Usd):F2}) — --all lists them");
+            Console.WriteLine($"All time: ${r.AllTimeUsd:F2}  ({r.AllTimeTurns:N0} turns)");
+            if (r.UnpricedModels.Count > 0)
+                Console.WriteLine($"No price for: {string.Join(", ", r.UnpricedModels)} (counted as $0 — add one in Settings -> Budget)");
+            Console.WriteLine("(estimate — prices are editable defaults, not a live feed)");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+    }
+
     private static int Unknown(string command)
     {
         Console.Error.WriteLine($"Unknown or not-yet-ported command: {command}");
@@ -279,6 +341,7 @@ internal static class CliMain
         Console.WriteLine("  plugin list|open|call|capture ...    The Plugins page (WebDev plugins); 'plugin help' for options");
         Console.WriteLine("  agent-state                          Detected agent state per terminal + attention rollup");
         Console.WriteLine("  attention status | test              \"An agent needs you\" notifications (popup + taskbar / Dock)");
+        Console.WriteLine("  cost [--all] [--json]                Agent spend this month by model / project vs the cap (no GUI needed)");
         Console.WriteLine("  code open [path] | close | status    The code view (bottom panel): the active workspace's files");
         Console.WriteLine("  worktree list | open | close <path|branch>   Git worktrees detected under each workspace (sidebar nesting)");
         Console.WriteLine("  layout [status|split-right|split-down|close-tab|close-pane|add|next-tab|prev-tab|move-tab|focus-<dir>]");

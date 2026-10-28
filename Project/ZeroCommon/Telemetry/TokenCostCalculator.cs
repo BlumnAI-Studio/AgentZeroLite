@@ -29,12 +29,28 @@ public static class TokenCostCalculator
     /// Default price table, matched by lower-cased substring against the model
     /// name. Order matters — first match wins, so put specific keys first.
     /// Values are representative defaults; adjust as vendor pricing changes.
+    /// Claude rows: Anthropic's first-party list prices as of 2026-10 (cache write = 1.25×
+    /// input; cache read as published, else 0.1× input). The bare family keys at the end of
+    /// each family keep the older generations' prices, so a model newer than this table falls
+    /// through to them rather than to $0 — the Budget page lists only the unmatched ones.
     /// </summary>
     public static readonly IReadOnlyList<(string Key, ModelPricing Pricing)> DefaultTable = new[]
     {
-        ("opus",   new ModelPricing(15.00m, 75.00m, 18.75m, 1.50m)),
-        ("sonnet", new ModelPricing( 3.00m, 15.00m,  3.75m, 0.30m)),
-        ("haiku",  new ModelPricing( 0.80m,  4.00m,  1.00m, 0.08m)),
+        ("fable-5-1",  new ModelPricing(10.00m, 50.00m, 12.50m, 0.25m)),
+        ("fable",      new ModelPricing(10.00m, 50.00m, 12.50m, 1.00m)),
+        ("mythos",     new ModelPricing(10.00m, 50.00m, 12.50m, 1.00m)),
+        ("opus-5-5",   new ModelPricing( 4.00m, 20.00m,  5.00m, 0.20m)),
+        ("opus-5",     new ModelPricing( 5.00m, 25.00m,  6.25m, 0.50m)),
+        ("opus-4-8",   new ModelPricing( 5.00m, 25.00m,  6.25m, 0.50m)),
+        ("opus-4-7",   new ModelPricing( 5.00m, 25.00m,  6.25m, 0.50m)),
+        ("opus-4-6",   new ModelPricing( 5.00m, 25.00m,  6.25m, 0.50m)),
+        ("opus-4-5",   new ModelPricing( 5.00m, 25.00m,  6.25m, 0.50m)),
+        ("opus",       new ModelPricing(15.00m, 75.00m, 18.75m, 1.50m)),
+        ("sonnet-5",   new ModelPricing( 2.00m, 10.00m,  2.50m, 0.20m)),
+        ("sonnet",     new ModelPricing( 3.00m, 15.00m,  3.75m, 0.30m)),
+        ("haiku-5",    new ModelPricing( 0.10m,  0.50m,  0.125m, 0.01m)),
+        ("haiku-4-5",  new ModelPricing( 1.00m,  5.00m,  1.25m, 0.10m)),
+        ("haiku",      new ModelPricing( 0.80m,  4.00m,  1.00m, 0.08m)),
         ("gpt-4o", new ModelPricing( 2.50m, 10.00m,  2.50m, 1.25m)),
         ("o3",     new ModelPricing( 2.00m,  8.00m,  2.00m, 0.50m)),
         ("gpt",    new ModelPricing( 2.50m, 10.00m,  2.50m, 1.25m)),

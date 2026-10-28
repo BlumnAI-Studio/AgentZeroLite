@@ -391,8 +391,16 @@
                 <TextBlock Grid.Column="1" Text="{Binding BotStatus}" FontSize="11"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextDim}" />
-                <TextBlock Grid.Column="2" Text="{Binding VersionLabel}" FontSize="11"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextDim}" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <!-- Month-to-date agent spend (Settings → Budget); amber near the cap, red over it. -->
+                    <Button Command="{Binding OpenBudgetCommand}" Background="Transparent" BorderThickness="0"
+                            Padding="4,0" Cursor="Hand" IsVisible="{Binding Settings.Budget.ChipText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            ToolTip.Tip="{Binding Settings.Budget.SpendText}">
+                        <TextBlock Text="{Binding Settings.Budget.ChipText}" FontSize="11" Foreground="{Binding Settings.Budget.SpendBrush}" />
+                    </Button>
+                    <TextBlock Text="{Binding VersionLabel}" FontSize="11"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextDim}" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

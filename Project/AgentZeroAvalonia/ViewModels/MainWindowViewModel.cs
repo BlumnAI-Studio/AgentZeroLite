@@ -161,6 +161,27 @@ public partial class MainWindowViewModel : ObservableObject
         Settings.Notifications.TestRequested += TestAttention;
     }
 
+    // ── Spend chip (Settings → Budget) ───────────────────────────────────────
+
+    private Avalonia.Threading.DispatcherTimer? _costTimer;
+
+    /// <summary>Re-price the month every minute for the status bar (the collectors add records as agents work).</summary>
+    public void StartCostMonitor()
+    {
+        if (_costTimer is not null) return;
+        _costTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        _costTimer.Tick += (_, _) => _ = Settings.Budget.RefreshInBackgroundAsync();
+        _costTimer.Start();
+        _ = Settings.Budget.RefreshInBackgroundAsync();
+    }
+
+    [RelayCommand]
+    private void OpenBudget()
+    {
+        Settings.Section = SettingsSection.Budget;
+        Page = AppPage.Settings;
+    }
+
     /// <summary>Re-read the definitions this OS can launch (after the settings page changed them).</summary>
     public void ReloadCliDefinitions()
     {
