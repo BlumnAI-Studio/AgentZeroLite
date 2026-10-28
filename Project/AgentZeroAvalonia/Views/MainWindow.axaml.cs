@@ -178,11 +178,28 @@ public partial class MainWindow : Window
     private void AttachAttention(MainWindowViewModel? vm)
     {
         if (ReferenceEquals(_attentionVm, vm)) return;
-        if (_attentionVm is not null) _attentionVm.AttentionRaised -= OnAttentionRaised;
+        if (_attentionVm is not null)
+        {
+            _attentionVm.AttentionRaised -= OnAttentionRaised;
+            _attentionVm.PaletteRequested -= OpenPalette;
+        }
         _attentionVm = vm;
         if (vm is null) return;
         vm.IsAppActive = () => IsActive && WindowState != WindowState.Minimized;
         vm.AttentionRaised += OnAttentionRaised;
+        vm.PaletteRequested += OpenPalette;
+    }
+
+    private PaletteWindow? _palette;
+
+    /// <summary>Ctrl+Shift+P (Cmd on macOS): a second press while it is open closes it.</summary>
+    private void OpenPalette()
+    {
+        if (_attentionVm is not { } vm) return;
+        if (_palette is not null) { _palette.Close(); return; }
+        _palette = new PaletteWindow(new PaletteViewModel(vm.BuildPaletteItems()));
+        _palette.Closed += (_, _) => _palette = null;
+        _palette.ShowOver(this);
     }
 
     private void OnAttentionRaised(IReadOnlyList<(Agent.Common.Agents.AttentionAlert Alert, string Workspace)> alerts)

@@ -64,7 +64,20 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<CliDefinition> CliDefinitions { get; } = new();
 
     /// <summary>The chords both the renderer and the window answer to.</summary>
-    public IReadOnlyList<HotkeyBinding> Hotkeys { get; }
+    public IReadOnlyList<HotkeyBinding> Hotkeys { get; private set; }
+
+    /// <summary>Settings → Shortcuts saved: the table was rebuilt; open renderers need it too.</summary>
+    public event Action? HotkeysChanged;
+
+    /// <summary>Re-read shortcut-settings.json and rebuild the table (live, no restart).</summary>
+    public void ReloadHotkeys()
+    {
+        ShortcutSettings? shortcuts = null;
+        try { shortcuts = ShortcutSettingsStore.Load(); } catch { }
+        Hotkeys = HotkeyTable.Build(shortcuts, OperatingSystem.IsMacOS());
+        AppLogger.Log($"[Hotkey] table rebuilt | {Hotkeys.Count} chord(s)");
+        HotkeysChanged?.Invoke();
+    }
 
     /// <summary>The AgentBot pane (M0037), fed the active terminal and the workspace list.</summary>
     public AgentBotViewModel Bot { get; }
@@ -159,6 +172,7 @@ public partial class MainWindowViewModel : ObservableObject
         Settings.AppearanceChanged += () => TerminalAppearanceChanged?.Invoke();
         Settings.Notifications.Changed += ReloadAttentionSettings;
         Settings.Notifications.TestRequested += TestAttention;
+        Settings.Shortcuts.Saved += ReloadHotkeys;
     }
 
     // ── Spend chip (Settings → Budget) ───────────────────────────────────────
@@ -691,6 +705,7 @@ public partial class MainWindowViewModel : ObservableObject
             case HotkeyTable.BotToggle: ToggleBot(); break;
             case HotkeyTable.BotEmbedToggle: ToggleBotEmbedded(); break;
             case HotkeyTable.CodeToggle: ToggleCode(); break;
+            case HotkeyTable.PaletteOpen: OpenPalette(); break;
             case HotkeyTable.NextTab: CycleTab(+1); break;
             case HotkeyTable.PrevTab: CycleTab(-1); break;
             case HotkeyTable.MoveTabNextPane: MoveActiveTabToNextPane(); break;

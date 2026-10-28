@@ -32,6 +32,39 @@ public static class HotkeyTable
     /// <summary>Open / close the code view in the bottom panel (VS Code's explorer, read-only).</summary>
     public const string CodeToggle = "code.toggle";
 
+    /// <summary>
+    /// The command palette (M0042). Not WPF's Ctrl+J: inside a terminal Ctrl+J is a line feed,
+    /// and Claude Code's newline key — a palette there would take it from every agent tab.
+    /// </summary>
+    public const string PaletteOpen = "palette.open";
+
+    /// <summary>A binding value that removes a default rather than leaving it in place.</summary>
+    public const string Unbound = "none";
+
+    /// <summary>Every command a chord can run in this host, with what it does — the Shortcuts page and the palette list these.</summary>
+    public static readonly IReadOnlyList<(string Id, string Description)> Commands = new[]
+    {
+        (PaletteOpen, "Open the command palette"),
+        (WindowCommandIds.TerminalAdd, "Add a terminal to the active workspace"),
+        (WindowCommandIds.CloseTab, "Close the active terminal tab"),
+        (NextTab, "Next terminal tab"),
+        (PrevTab, "Previous terminal tab"),
+        (WindowCommandIds.SplitRight, "Split the active terminal to the right"),
+        (WindowCommandIds.SplitDown, "Split the active terminal downwards"),
+        (MoveTabNextPane, "Move the active tab to the next pane"),
+        (ClosePane, "Close the active pane"),
+        (FocusLeft, "Focus the pane to the left"),
+        (FocusRight, "Focus the pane to the right"),
+        (FocusUp, "Focus the pane above"),
+        (FocusDown, "Focus the pane below"),
+        (WindowCommandIds.Float, "Detach the active terminal into its own window"),
+        (WindowCommandIds.Dock, "Dock the active terminal back into the main window"),
+        (WindowCommandIds.PanelToggle, "Show or hide the bot (the WPF panel key)"),
+        (BotToggle, "Show or hide the bot"),
+        (BotEmbedToggle, "Move the bot between the dock and its own window"),
+        (CodeToggle, "Open or close the code view"),
+    };
+
     /// <summary>Host defaults for ids the WPF suggested table does not bind.</summary>
     public static readonly IReadOnlyDictionary<string, string> HostDefaults = new Dictionary<string, string>
     {
@@ -47,6 +80,7 @@ public static class HotkeyTable
         [BotToggle] = "Ctrl+Alt+B",
         [BotEmbedToggle] = "Ctrl+Shift+Backquote",
         [CodeToggle] = "Ctrl+Alt+E",
+        [PaletteOpen] = "Ctrl+Shift+P",
     };
 
     /// <summary>Ids this host implements; anything else in the settings is ignored here.</summary>
@@ -56,30 +90,58 @@ public static class HotkeyTable
         WindowCommandIds.TerminalAdd, WindowCommandIds.PanelToggle,
         WindowCommandIds.Float, WindowCommandIds.Dock,
         NextTab, PrevTab, MoveTabNextPane, ClosePane, FocusLeft, FocusRight, FocusUp, FocusDown, BotToggle,
-        BotEmbedToggle, CodeToggle,
+        BotEmbedToggle, CodeToggle, PaletteOpen,
     };
 
-    public static IReadOnlyList<HotkeyBinding> Build(ShortcutSettings? settings, bool isMac)
+    /// <summary>The binding an id has with no user setting: the WPF suggested table, else this host's default.</summary>
+    public static string? DefaultGesture(string id)
+        => ShortcutSettings.Suggested.TryGetValue(id, out var s) ? s : HostDefaults.TryGetValue(id, out var h) ? h : null;
+
+    /// <summary>
+    /// The gesture each supported id ends up with — what <see cref="Build"/> binds, as text, before
+    /// the Ctrl→Cmd swap. An id that lost its keys to an earlier one, or was set to
+    /// <see cref="Unbound"/>, is absent.
+    /// </summary>
+    public static IReadOnlyDictionary<string, ShortcutGesture> Effective(ShortcutSettings? settings)
     {
         // User bindings first (they win a gesture), then the suggested table for whatever
-        // they left unbound, then the host defaults for the ids the WPF table lacks.
+        // they left unbound, then the host defaults for the ids the WPF table lacks. User
+        // bindings are read for every id this host runs, not only WPF's WindowCommandIds,
+        // so the host's own commands can be rebound too; "none" removes a default.
         var bound = new Dictionary<string, ShortcutGesture>();
+        var removed = new HashSet<string>();
         if (settings is { Enabled: true })
         {
-            foreach (var (gesture, id) in settings.ResolveBindings())
-                if (Supported.Contains(id)) bound[id] = gesture;
+            // A user gesture already claimed by an earlier user binding is dropped (the id then
+            // keeps its default), as ShortcutSettings.ResolveBindings does.
+            var userTaken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (id, text) in settings.Bindings)
+            {
+                if (!Supported.Contains(id)) continue;
+                if (string.Equals(text?.Trim(), Unbound, StringComparison.OrdinalIgnoreCase)) { removed.Add(id); continue; }
+                if (!bound.ContainsKey(id) && ShortcutGesture.TryParse(text, out var g) && userTaken.Add(g.ToString())) bound[id] = g;
+            }
         }
-        foreach (var (id, text) in ShortcutSettings.Suggested)
-            if (Supported.Contains(id) && !bound.ContainsKey(id) && ShortcutGesture.TryParse(text, out var g)) bound[id] = g;
-        foreach (var (id, text) in HostDefaults)
-            if (!bound.ContainsKey(id) && ShortcutGesture.TryParse(text, out var g)) bound[id] = g;
+        foreach (var (id, _) in Commands)   // a fixed order, so which default wins a clash never varies
+            if (!bound.ContainsKey(id) && !removed.Contains(id) && ShortcutGesture.TryParse(DefaultGesture(id), out var g)) bound[id] = g;
 
         // The first binding wins a gesture, as in ShortcutSettings.ResolveBindings.
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var list = new List<HotkeyBinding>();
+        var result = new Dictionary<string, ShortcutGesture>();
         foreach (var (id, g) in bound)
+            if (taken.Add(g.ToString())) result[id] = g;
+        return result;
+    }
+
+    /// <summary>The gesture as the user will press it on this OS (Ctrl reads Cmd on macOS).</summary>
+    public static string Display(ShortcutGesture g, bool isMac)
+        => isMac ? g.ToString().Replace("Ctrl+", "Cmd+") : g.ToString();
+
+    public static IReadOnlyList<HotkeyBinding> Build(ShortcutSettings? settings, bool isMac)
+    {
+        var list = new List<HotkeyBinding>();
+        foreach (var (id, g) in Effective(settings))
         {
-            if (!taken.Add(g.ToString())) continue;
             var ctrl = g.Modifiers.HasFlag(ShortcutModifiers.Control);
             var meta = g.Modifiers.HasFlag(ShortcutModifiers.Windows);
             if (isMac && ctrl) { ctrl = false; meta = true; }

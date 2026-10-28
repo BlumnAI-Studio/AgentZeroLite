@@ -66,6 +66,7 @@
                 <Button Classes="nav" Classes.selected="{Binding IsModels}" Content="Models" Command="{Binding ShowModelsCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsNotifications}" Content="Notifications" Command="{Binding ShowNotificationsCommand}" />
                 <Button Classes="nav" Classes.selected="{Binding IsBudget}" Content="Budget" Command="{Binding ShowBudgetCommand}" />
+                <Button Classes="nav" Classes.selected="{Binding IsShortcuts}" Content="Shortcuts" Command="{Binding ShowShortcutsCommand}" />
             </StackPanel>
         </Border>
 
@@ -307,6 +308,48 @@
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
                         <Button Content="Save" Command="{Binding SaveCommand}" />
                         <Button Content="Test" Command="{Binding TestCommand}" />
+                    </StackPanel>
+                    <TextBlock Classes="status" Text="{Binding Status}" />
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- ═══ Shortcuts ═══ -->
+                <StackPanel IsVisible="{Binding IsShortcuts}" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel DataContext="{Binding Shortcuts}" x:DataType="vm:ShortcutsViewModel">
+                    <TextBlock Classes="h1" Text="Shortcuts" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}"
+                               Text="The keys for the window's commands. Type a binding (Ctrl+Alt+K), leave it blank for the default, or type none to give the keys back to the programs in your terminals. They work inside a focused terminal too, and a save applies at once. The file (shortcut-settings.json) is shared with the WPF host." />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextDim}" Text="{Binding ModifierNote}" Margin="0,4,0,0" />
+                    <Grid ColumnDefinitions="300,140,180,Auto" Margin="0,12,0,4">
+                        <TextBlock Classes="lbl" Text="command" />
+                        <TextBlock Classes="lbl" Grid.Column="1" Text="default" />
+                        <TextBlock Classes="lbl" Grid.Column="2" Text="your keys" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShortcutRowViewModel">
+                                <StackPanel Margin="0,2">
+                                    <Grid ColumnDefinitions="300,140,180,Auto">
+                                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{DynamicResource TextPrimary}"
+                                                   VerticalAlignment="Center" ToolTip.Tip="{Binding Id}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DefaultText}" FontSize="11" Foreground="{DynamicResource TextDim}"
+                                                   FontFamily="Cascadia Mono, Consolas, Menlo, monospace" VerticalAlignment="Center" />
+                                        <TextBox Grid.Column="2" Text="{Binding Text}" Watermark="(default)" Margin="0,0,6,0"
+                                                 FontFamily="Cascadia Mono, Consolas, Menlo, monospace" />
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                                            <Button Content="↺" ToolTip.Tip="Back to the default" Command="{Binding ResetCommand}" />
+                                            <Button Content="none" ToolTip.Tip="No keys — free them for the terminal" Command="{Binding RemoveCommand}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" FontSize="11"
+                                               Foreground="{DynamicResource CyberYellowBrush}" Margin="300,1,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+                        <Button Content="Save" Command="{Binding SaveCommand}" />
+                        <Button Content="All to defaults" Command="{Binding ResetAllCommand}" />
                     </StackPanel>
                     <TextBlock Classes="status" Text="{Binding Status}" />
                   </StackPanel>

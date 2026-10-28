@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+        x:Class="AgentZeroAvalonia.Views.PaletteWindow"
+        x:DataType="vm:PaletteViewModel"
+        Title="Command palette"
+        Width="640" SizeToContent="Height"
+        SystemDecorations="None" ShowInTaskbar="False" CanResize="False"
+        WindowStartupLocation="Manual"
+        Background="Transparent" TransparencyLevelHint="Transparent">
+
+    <!-- Its own window, not an overlay: an Avalonia surface drawn over a terminal's native
+         web view is invisible on macOS. -->
+    <Border Background="#252526" BorderBrush="#4EC9B0" BorderThickness="1" CornerRadius="6" Padding="8">
+        <StackPanel Spacing="6">
+            <TextBox x:Name="SearchBox" Text="{Binding Query}" FontSize="15" Watermark="Go to a terminal, run a command, open a page…"
+                     FontFamily="Cascadia Mono, Consolas, Menlo, monospace" />
+            <ListBox x:Name="ResultList" ItemsSource="{Binding Results}" SelectedIndex="{Binding SelectedIndex}"
+                     MaxHeight="420" Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PaletteItem">
+                        <Grid ColumnDefinitions="110,*,Auto">
+                            <TextBlock Text="{Binding Category}" FontSize="11" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" Foreground="{DynamicResource TextPrimary}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Hint}" FontSize="11" Foreground="{DynamicResource CyberTealBrush}"
+                                       Margin="12,0,0,0" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{Binding Footer}" FontSize="10.5" Foreground="{DynamicResource TextDim}" HorizontalAlignment="Right" />
+        </StackPanel>
+    </Border>
+</Window>

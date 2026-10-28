@@ -20,7 +20,7 @@ operator가 종합 e2e 로컬 테스트를 한 뒤 머지한다.
 - [x] 1. 에이전트 호출 알림 — blocked / 미확인 done 전환 시 구석 팝업 + 작업표시줄 깜빡임(Win) / Dock 바운스(mac), 설정 → Notifications, `-cli attention`
 - [x] 2. 비용/예산 — 이미 수집 중인 토큰 사용량을 보여 줄 설정 → Budget, `-cli cost`, 상태바 이번 달 지출
 - [x] 3. Diff 리뷰 + AI 변경 검토 — 코드 패널 DIFF 탭, 줄 코멘트 → 에이전트로 전송, AI 모드 파일 쓰기 기록·되돌리기
-- [ ] 4. 커맨드 팔레트(Ctrl+J) + 설정 → Shortcuts
+- [x] 4. 커맨드 팔레트(Ctrl+Shift+P — Ctrl+J는 터미널 줄바꿈과 겹쳐서 변경) + 설정 → Shortcuts
 - [ ] 5. 정리 — 버전 소스 호스트 중립화, `agentzero-cli` 스킬이 아발로니아 exe를 우선 찾고 없는 동사를 안내하지 않게
 
 ## Notes

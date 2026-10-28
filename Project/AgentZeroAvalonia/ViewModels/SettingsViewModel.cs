@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AgentZeroAvalonia.ViewModels;
 
-public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models, Notifications, Budget }
+public enum SettingsSection { Llm, Mcp, Cli, Terminal, Voice, Models, Notifications, Budget, Shortcuts }
 
 /// <summary>A catalog model for the local-LLM combo.</summary>
 public sealed record ModelChoice(LlmModelCatalogEntry Entry)
@@ -130,10 +130,17 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool IsBudget => Section == SettingsSection.Budget;
 
+    /// <summary>Settings → Shortcuts: every chord this host runs, rebindable (shortcut-settings.json, shared with WPF).</summary>
+    public ShortcutsViewModel Shortcuts { get; } = new();
+
+    public bool IsShortcuts => Section == SettingsSection.Shortcuts;
+
     partial void OnSectionChanged(SettingsSection value)
     {
         OnPropertyChanged(nameof(IsNotifications));
         OnPropertyChanged(nameof(IsBudget));
+        OnPropertyChanged(nameof(IsShortcuts));
+        if (value == SettingsSection.Shortcuts) Shortcuts.Load();
         if (value == SettingsSection.Budget) Budget.Refresh();
         OnPropertyChanged(nameof(IsLlm));
         OnPropertyChanged(nameof(IsCli));
@@ -152,6 +159,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand] private void ShowModels() => Section = SettingsSection.Models;
     [RelayCommand] private void ShowNotifications() => Section = SettingsSection.Notifications;
     [RelayCommand] private void ShowBudget() => Section = SettingsSection.Budget;
+    [RelayCommand] private void ShowShortcuts() => Section = SettingsSection.Shortcuts;
 
     /// <summary>The definitions changed — the shell reloads its new-tab menu.</summary>
     public event Action? CliDefinitionsChanged;

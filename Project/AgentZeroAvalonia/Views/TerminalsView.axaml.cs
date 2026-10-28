@@ -62,6 +62,7 @@ public partial class TerminalsView : UserControl
             _vm.FocusPaneRequested -= OnFocusPane;
             _vm.RestartRequested -= Restart;
             _vm.TerminalAppearanceChanged -= OnAppearanceChanged;
+            _vm.HotkeysChanged -= OnHotkeysChanged;
             _vm.FloatRequested -= OnFloatRequested;
         }
         _vm = vm;
@@ -73,6 +74,7 @@ public partial class TerminalsView : UserControl
         _vm.FocusPaneRequested += OnFocusPane;
         _vm.RestartRequested += Restart;
         _vm.TerminalAppearanceChanged += OnAppearanceChanged;
+        _vm.HotkeysChanged += OnHotkeysChanged;
         _vm.CliDefinitions.CollectionChanged += (_, _) => NewTerminalMenuButton.Flyout = BuildDefinitionsFlyout(null);
         NewTerminalMenuButton.Flyout = BuildDefinitionsFlyout(null);
         OnActiveTerminalChanged();
@@ -82,6 +84,17 @@ public partial class TerminalsView : UserControl
     private void OnAppearanceChanged()
     {
         foreach (var control in _controls.Values) control.PostAppearance();
+    }
+
+    /// <summary>Settings → Shortcuts saved: every renderer matches the new chords (they travel in the config message).</summary>
+    private void OnHotkeysChanged()
+    {
+        if (_vm is null) return;
+        foreach (var control in _controls.Values)
+        {
+            control.Hotkeys = _vm.Hotkeys;
+            control.PostAppearance();
+        }
     }
 
     /// <summary>A menu of the CLI definitions this OS can launch; picking one opens it in <paramref name="pane"/> (null = the active pane).</summary>
