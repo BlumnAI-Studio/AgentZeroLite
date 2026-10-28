@@ -177,7 +177,12 @@ public sealed partial class DiffReviewViewModel : ObservableObject
                 if (generation != _generation) return;
                 Apply(result.Files.Select(f => (File: f, FullPath: (string?)null)).ToList(),
                     result.Ok && result.Files.Count == 0 ? "No changes against HEAD." : null,
-                    result.Ok ? null : $"Not a git working tree here — {result.Error}. The AI changes view works anywhere.");
+                    result.Ok ? null
+                        : result.Error == "not a git repository" ? "Not a git repository — the AI changes view works in any folder."
+                        : $"git diff failed — {result.Error}. The AI changes view works in any folder.",
+                    result.UntrackedOmitted > 0
+                        ? $" · showing {GitDiffRunner.MaxUntrackedFiles} of {result.UntrackedTotal} new files"
+                        : "");
             }
         }
         catch (Exception ex)
@@ -190,7 +195,7 @@ public sealed partial class DiffReviewViewModel : ObservableObject
         }
     }
 
-    private void Apply(IReadOnlyList<(GitDiffReader.DiffFile File, string? FullPath)> files, string? empty, string? error)
+    private void Apply(IReadOnlyList<(GitDiffReader.DiffFile File, string? FullPath)> files, string? empty, string? error, string tail = "")
     {
         // Keep the notes whose line is still there.
         var kept = Rows.Where(r => r.HasNotes).SelectMany(r => r.Notes.Select(n => n.Note)).ToList();
@@ -227,7 +232,7 @@ public sealed partial class DiffReviewViewModel : ObservableObject
             if (row is not null) row.Notes.Add(NewNote(row, note));
         }
         NoteCount = Rows.Sum(r => r.Notes.Count);
-        Summary = error ?? empty ?? $"{files.Count} file{(files.Count == 1 ? "" : "s")} · +{adds} −{dels}";
+        Summary = error ?? empty ?? $"{files.Count} file{(files.Count == 1 ? "" : "s")} · +{adds} −{dels}{tail}";
     }
 
     // ── notes ───────────────────────────────────────────────────────────────

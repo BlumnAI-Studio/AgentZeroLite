@@ -5,8 +5,12 @@ using Agent.Common.Module;
 namespace Agent.Common.Workspace;
 
 /// <summary>What the DIFF tab shows for a repository: the parsed files, or why there are none.</summary>
-public sealed record GitDiffResult(bool Ok, IReadOnlyList<GitDiffReader.DiffFile> Files, string? Error)
+/// <param name="UntrackedTotal">New files git reported; only the first <see cref="GitDiffRunner.MaxUntrackedFiles"/> are in <paramref name="Files"/>.</param>
+public sealed record GitDiffResult(bool Ok, IReadOnlyList<GitDiffReader.DiffFile> Files, string? Error, int UntrackedTotal = 0)
 {
+    /// <summary>New files left out of <see cref="Files"/> by the cap — the view must say so, or 50 reads as "all".</summary>
+    public int UntrackedOmitted => Math.Max(0, UntrackedTotal - GitDiffRunner.MaxUntrackedFiles);
+
     public static GitDiffResult Fail(string error) => new(false, Array.Empty<GitDiffReader.DiffFile>(), error);
 }
 
@@ -27,6 +31,14 @@ public static class GitDiffRunner
 
     public static async Task<GitDiffResult> ReadAsync(string directory, CancellationToken ct = default)
     {
+        // Ask first, so a plain folder reads "not a git repository" rather than git diff's own
+        // advice ("Use --no-index to compare two paths outside a working tree").
+        var (inside, answer, why) = await RunAsync(directory, ct, "rev-parse", "--is-inside-work-tree");
+        if (!inside || answer.Trim() != "true")
+            return GitDiffResult.Fail(why.Contains("not a git repository", StringComparison.OrdinalIgnoreCase) || inside
+                ? "not a git repository"
+                : why);
+
         var (ok, output, error) = await RunAsync(directory, ct, "diff", "HEAD", "--no-color", "-U3", "--no-ext-diff");
         if (!ok)
         {
@@ -36,10 +48,10 @@ public static class GitDiffRunner
         var files = GitDiffReader.Parse(output).ToList();
 
         var (uok, untracked, _) = await RunAsync(directory, ct, "ls-files", "--others", "--exclude-standard", "-z");
-        if (uok)
-            foreach (var rel in untracked.Split('\0', StringSplitOptions.RemoveEmptyEntries).Take(MaxUntrackedFiles))
-                files.Add(Untracked(directory, rel));
-        return new GitDiffResult(true, files, null);
+        var newFiles = uok ? untracked.Split('\0', StringSplitOptions.RemoveEmptyEntries) : [];
+        foreach (var rel in newFiles.Take(MaxUntrackedFiles))
+            files.Add(Untracked(directory, rel));
+        return new GitDiffResult(true, files, null, newFiles.Length);
     }
 
     private static GitDiffReader.DiffFile Untracked(string root, string rel)

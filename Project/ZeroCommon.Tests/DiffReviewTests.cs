@@ -199,10 +199,27 @@ public sealed class GitDiffRunnerTests : IDisposable
     }
 
     [Fact]
-    public async Task A_folder_that_is_not_a_repository_says_why()
+    public async Task A_folder_that_is_not_a_repository_says_so_plainly()
     {
+        if (!Git("--version")) return;   // no git on this machine
         var r = await GitDiffRunner.ReadAsync(_repo);
         Assert.False(r.Ok);
-        Assert.False(string.IsNullOrEmpty(r.Error));
+        // Not git diff's own advice ("Use --no-index to compare two paths …").
+        Assert.Equal("not a git repository", r.Error);
+    }
+
+    [Fact]
+    public async Task New_files_past_the_cap_are_counted_not_dropped_silently()
+    {
+        if (!Git("init", "-q")) return;
+        for (int i = 0; i < GitDiffRunner.MaxUntrackedFiles + 3; i++)
+            File.WriteAllText(Path.Combine(_repo, $"n{i:D3}.txt"), $"{i}\n");
+
+        var r = await GitDiffRunner.ReadAsync(_repo);
+
+        Assert.True(r.Ok, r.Error);
+        Assert.Equal(GitDiffRunner.MaxUntrackedFiles, r.Files.Count);
+        Assert.Equal(GitDiffRunner.MaxUntrackedFiles + 3, r.UntrackedTotal);
+        Assert.Equal(3, r.UntrackedOmitted);
     }
 }

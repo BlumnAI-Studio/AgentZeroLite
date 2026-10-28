@@ -115,7 +115,20 @@ public class DiffReviewViewModelTests : IDisposable
         var vm = Vm((_, _) => Task.FromResult(GitDiffResult.Fail("not a git repository")));
         await vm.LoadAsync();
         Assert.Empty(vm.Rows);
-        Assert.Contains("not a git repository", vm.Summary);
-        Assert.Contains("AI changes", vm.Summary);
+        Assert.Equal("Not a git repository — the AI changes view works in any folder.", vm.Summary);
+    }
+
+    [Fact]
+    public async Task The_summary_says_when_new_files_were_left_out()
+    {
+        // Measured on music-harness: 6 changed + 362 new files read as "56 files" with no hint of the rest.
+        var shown = TextDiff.Compute("new.txt", null, "x\n");
+        var vm = Vm((_, _) => Task.FromResult(new GitDiffResult(true, [shown], null, UntrackedTotal: 362)));
+        await vm.LoadAsync();
+        Assert.Equal("1 file · +1 −0 · showing 50 of 362 new files", vm.Summary);
+
+        var vm2 = Vm((_, _) => Task.FromResult(new GitDiffResult(true, [shown], null, UntrackedTotal: 1)));
+        await vm2.LoadAsync();
+        Assert.Equal("1 file · +1 −0", vm2.Summary);
     }
 }
