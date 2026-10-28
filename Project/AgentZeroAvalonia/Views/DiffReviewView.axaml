@@ -1,0 +1,180 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AgentZeroAvalonia.ViewModels"
+             x:Class="AgentZeroAvalonia.Views.DiffReviewView"
+             x:Name="Root"
+             x:DataType="vm:DiffReviewViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.bar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Button.bar:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
+        <Style Selector="Button.src">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style Selector="Button.src.on">
+            <Setter Property="BorderBrush" Value="{DynamicResource CyberCyanBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="TextBlock.mono">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#D4D4D4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.num">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#6E7681" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+        <Style Selector="Border.add">
+            <Setter Property="Background" Value="#0C2A12" />
+        </Style>
+        <Style Selector="Border.del">
+            <Setter Property="Background" Value="#341414" />
+        </Style>
+        <Style Selector="Button.note">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource CyberCyanBrush}" />
+        </Style>
+        <Style Selector="Border.line:pointerover Button.note">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter, ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Background="#1E1E1E">
+        <!-- Toolbar: the source, what it holds, and what to do with the notes. -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource CyberBgToolbar}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="6,2">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="bar" Content="{Binding SendLabel}" IsVisible="{Binding HasNotes}"
+                            Command="{Binding SendNotesToTerminalCommand}"
+                            ToolTip.Tip="Type every note, as one line, into the active terminal (e.g. the Claude Code / Codex that made the change)" />
+                    <Button Classes="bar" Content="{Binding AskLabel}" IsVisible="{Binding HasNotes}"
+                            Command="{Binding AskBotWithNotesCommand}" ToolTip.Tip="Start an AI-mode turn of the bot with the notes" />
+                    <Button Classes="bar" Content="Clear notes" IsVisible="{Binding HasNotes}" Command="{Binding ClearNotesCommand}" />
+                    <Button Classes="bar" Content="↶ Revert all" IsVisible="{Binding IsAiChanges}" Command="{Binding RevertAllCommand}"
+                            ToolTip.Tip="Put back every file the AI mode changed in this workspace (files it created are deleted)" />
+                    <TextBlock Text="loading…" IsVisible="{Binding IsLoading}" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextDim}" />
+                    <Button Classes="bar" Content="⟳" ToolTip.Tip="Read the changes again" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="src" Classes.on="{Binding IsWorkingTree}" Content="Working tree"
+                            Command="{Binding ShowWorkingTreeCommand}" ToolTip.Tip="git: the working tree against HEAD, new files included" />
+                    <Button Classes="src" Classes.on="{Binding IsAiChanges}" Content="{Binding AiTabLabel}"
+                            Command="{Binding ShowAiChangesCommand}" ToolTip.Tip="What the bot's AI mode wrote this run — in any folder, with Revert / Keep" />
+                    <TextBlock Text="{Binding Summary}" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"
+                               Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Status}" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   FontSize="11" Foreground="{DynamicResource CyberTealBrush}" Margin="10,3" TextWrapping="Wrap" />
+
+        <ListBox ItemsSource="{Binding Rows}" Background="Transparent"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiffRowViewModel">
+                    <StackPanel>
+                        <!-- File header -->
+                        <Border IsVisible="{Binding IsFile}" Background="#252526" BorderBrush="#333" BorderThickness="0,1,0,1"
+                                Padding="10,4" Margin="0,6,0,0">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasChangeActions}">
+                                    <Button Classes="bar" Content="↶ Revert" CommandParameter="{Binding}"
+                                            Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).RevertFileCommand}"
+                                            ToolTip.Tip="Put the original back (a file the AI created is deleted)" />
+                                    <Button Classes="bar" Content="✓ Keep" CommandParameter="{Binding}"
+                                            Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).KeepFileCommand}"
+                                            ToolTip.Tip="Accept the change and stop tracking it" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="{Binding Text}" FontWeight="Bold" Foreground="#4EC9B0" FontSize="12" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Badge}" FontSize="11" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Hunk header -->
+                        <Border IsVisible="{Binding IsHunk}" Background="#2D2D30" Padding="10,1">
+                            <TextBlock Classes="mono" Text="{Binding Text}" Foreground="#569CD6" FontSize="11" />
+                        </Border>
+
+                        <!-- A line: numbers, marker, text; 💬 on hover adds a note. -->
+                        <Border IsVisible="{Binding IsLine}" Classes="line" Classes.add="{Binding IsAdd}" Classes.del="{Binding IsDelete}">
+                            <Grid ColumnDefinitions="22,44,44,16,*">
+                                <Button Grid.Column="0" Classes="note" Content="💬" CommandParameter="{Binding}"
+                                        Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).StartNoteCommand}"
+                                        ToolTip.Tip="Add a note on this line" />
+                                <TextBlock Grid.Column="1" Classes="num" Text="{Binding OldNo}" />
+                                <TextBlock Grid.Column="2" Classes="num" Text="{Binding NewNo}" />
+                                <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Marker}" Foreground="#6E7681" />
+                                <TextBlock Grid.Column="4" Classes="mono" Text="{Binding Text}" TextWrapping="NoWrap" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Notes on the line -->
+                        <ItemsControl ItemsSource="{Binding Notes}" IsVisible="{Binding HasNotes}" Margin="106,2,12,2">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DiffNoteViewModel">
+                                    <Border Background="#33FFC24D" CornerRadius="4" Padding="8,4" Margin="0,1">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Classes="bar" Content="✕" CommandParameter="{Binding}"
+                                                    Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).RemoveNoteCommand}"
+                                                    ToolTip.Tip="Remove this note" />
+                                            <TextBlock Text="{Binding Text}" FontSize="12" Foreground="{DynamicResource TextPrimary}"
+                                                       TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Note editor -->
+                        <Border IsVisible="{Binding IsEditing}" Background="#252526" BorderBrush="{DynamicResource CyberCyanBrush}"
+                                BorderThickness="1" CornerRadius="4" Padding="6" Margin="106,2,12,4">
+                            <StackPanel Spacing="4">
+                                <TextBox Text="{Binding Draft}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48"
+                                         Watermark="What should change on this line?" FontSize="12" />
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                    <Button Content="Cancel" CommandParameter="{Binding}"
+                                            Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).CancelNoteCommand}" />
+                                    <Button Content="Add note" Classes="accent" CommandParameter="{Binding}"
+                                            Command="{Binding #Root.((vm:DiffReviewViewModel)DataContext).SaveNoteCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

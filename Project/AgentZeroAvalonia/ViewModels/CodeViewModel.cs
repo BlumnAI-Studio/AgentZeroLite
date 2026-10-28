@@ -121,8 +121,35 @@ public sealed partial class CodeViewModel : ObservableObject
         };
     }
 
-    [RelayCommand] private void ShowFiles() => ShowGitLog = false;
+    [RelayCommand] private void ShowFiles() { ShowGitLog = false; ShowDiff = false; }
     [RelayCommand] private void ShowHistory() { if (GitLog.IsAvailable) ShowGitLog = true; }
+    [RelayCommand] private void ShowChanges() => ShowDiff = true;
+
+    /// <summary>The DIFF tab's content: the working tree's changes, or the AI mode's writes.</summary>
+    public DiffReviewViewModel Diff { get; } = new(Services.WorkspaceToolHost.AiChanges);
+
+    /// <summary>True while the panel shows DIFF (the third tab). Exclusive with <see cref="ShowGitLog"/>.</summary>
+    [ObservableProperty] private bool _showDiff;
+
+    /// <summary>The files pane is in front: neither GIT LOG nor DIFF.</summary>
+    public bool ShowFilesPane => !ShowGitLog && !ShowDiff;
+
+    partial void OnShowGitLogChanged(bool value)
+    {
+        if (value) ShowDiff = false;
+        OnPropertyChanged(nameof(ShowFilesPane));
+    }
+
+    partial void OnShowDiffChanged(bool value)
+    {
+        if (value)
+        {
+            ShowGitLog = false;
+            Diff.Directory = Root;
+            _ = Diff.LoadAsync();
+        }
+        OnPropertyChanged(nameof(ShowFilesPane));
+    }
 
     /// <summary>A folder selected in the tree: its entries are listed where a file would show.</summary>
     [ObservableProperty] private string? _currentFolder;
@@ -268,6 +295,8 @@ public sealed partial class CodeViewModel : ObservableObject
         Nodes.Clear();
         ClearFile("Select a file in the tree.");
         _ = GitLog.LoadAsync(directory);
+        Diff.Directory = directory;
+        if (ShowDiff) _ = Diff.LoadAsync();   // a git diff can take a while: read it only when the tab is in front
         if (string.IsNullOrEmpty(directory)) return;
 
         // The WPF NOTE page's rule: never touch a workspace folder bare on the UI thread.
@@ -378,6 +407,15 @@ public sealed partial class CodeViewModel : ObservableObject
                 ["commits"] = GitLog.Commits.Count,
                 ["shown"] = ShowGitLog,
                 ["note"] = GitLog.Note.Length == 0 ? null : GitLog.Note,
+            },
+            ["diff"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["shown"] = ShowDiff,
+                ["source"] = Diff.IsAiChanges ? "ai" : "git",
+                ["summary"] = Diff.Summary,
+                ["rows"] = Diff.Rows.Count,
+                ["notes"] = Diff.NoteCount,
+                ["aiChanges"] = Diff.AiChangeCount,
             },
         }.ToJsonString();
 

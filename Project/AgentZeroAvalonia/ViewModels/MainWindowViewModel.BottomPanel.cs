@@ -39,19 +39,42 @@ public partial class MainWindowViewModel
     /// ⎇ GIT LOG sits beside 📄 CODE and shares its pane: it is the code panel showing history
     /// instead of files (<see cref="CodeViewModel.ShowGitLog"/>), so it floats and closes with it.
     /// </summary>
-    public bool CodeFilesTabSelected => ShowCodeInDock && !Code.ShowGitLog;
+    public bool CodeFilesTabSelected => ShowCodeInDock && Code.ShowFilesPane;
     public bool GitLogTabSelected => ShowCodeInDock && Code.ShowGitLog;
 
+    /// <summary>± DIFF, the third face of the code panel (M0042): the working tree's changes, or the AI mode's writes.</summary>
+    public bool DiffTabSelected => ShowCodeInDock && Code.ShowDiff;
+
     private void WireCodeTabs()
-        => Code.PropertyChanged += (_, e) =>
+    {
+        Code.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(CodeViewModel.ShowGitLog)) RaiseCodeTabs();
+            if (e.PropertyName is nameof(CodeViewModel.ShowGitLog) or nameof(CodeViewModel.ShowDiff)) RaiseCodeTabs();
         };
+        // Review notes go to whoever made the change: the agent in the terminal, or the bot.
+        Code.Diff.SendToTerminal = SendReviewToActiveTerminal;
+        Code.Diff.AskBot = text =>
+        {
+            BotVisible = true;
+            Bot.AttachActors();
+            Bot.AskAi(text);
+        };
+    }
+
+    private string? SendReviewToActiveTerminal(string text)
+    {
+        var tab = ActiveWorkspace?.ActiveTab;
+        if (tab?.Session is not { } session || !tab.IsTerminalStarted) return "The active tab has no running terminal.";
+        _ = Agent.Common.Agents.TerminalTextSender.SendAsync(session, text);
+        AppLogger.Log($"[DiffReview] sent {text.Length} chars to {ActiveWorkspace?.DisplayName}/{tab.Title}");
+        return null;
+    }
 
     private void RaiseCodeTabs()
     {
         OnPropertyChanged(nameof(CodeFilesTabSelected));
         OnPropertyChanged(nameof(GitLogTabSelected));
+        OnPropertyChanged(nameof(DiffTabSelected));
     }
 
     partial void OnCodeVisibleChanged(bool value)
@@ -98,6 +121,14 @@ public partial class MainWindowViewModel
     {
         BottomTab = BottomTab.Code;
         Code.ShowGitLog = false;
+        Code.ShowDiff = false;
+    }
+
+    [RelayCommand]
+    private void SelectDiffTab()
+    {
+        BottomTab = BottomTab.Code;
+        Code.ShowDiff = true;
     }
 
     [RelayCommand]
@@ -148,12 +179,22 @@ public partial class MainWindowViewModel
                 Code.MarkdownPreview = path == "preview";
                 break;
             case "tab":
-                // The panel's two faces: the files, or the GIT LOG beside them.
-                if (path is not ("files" or "gitlog"))
-                    return Agent.Common.Platform.CliIpcProtocol.ErrorJson("usage: code tab files|gitlog");
+                // The panel's faces: the files, the GIT LOG, or the DIFF (working tree, or the AI's writes).
+                if (path is not ("files" or "gitlog" or "diff" or "ai"))
+                    return Agent.Common.Platform.CliIpcProtocol.ErrorJson("usage: code tab files|gitlog|diff|ai");
                 if (path == "gitlog" && !Code.GitLog.IsAvailable)
                     return Agent.Common.Platform.CliIpcProtocol.ErrorJson("git log unavailable: " + Code.GitLog.Note);
-                Code.ShowGitLog = path == "gitlog";
+                if (path is "diff" or "ai")
+                {
+                    Code.Diff.Source = path == "ai" ? DiffSource.AiChanges : DiffSource.WorkingTree;
+                    Code.ShowDiff = true;
+                    await Code.Diff.LoadAsync();
+                }
+                else
+                {
+                    Code.ShowDiff = false;
+                    Code.ShowGitLog = path == "gitlog";
+                }
                 break;
             case "status" or "":
                 break;

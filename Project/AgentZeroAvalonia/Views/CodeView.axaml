@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AgentZeroAvalonia.ViewModels"
              xmlns:ae="using:AvaloniaEdit"
+             xmlns:views="using:AgentZeroAvalonia.Views"
              x:Class="AgentZeroAvalonia.Views.CodeView"
              x:DataType="vm:CodeViewModel">
 
@@ -45,7 +46,7 @@
     <!-- VS Code's explorer + editor, read-only: the tree follows the active workspace and
          loads a folder when it is expanded; the editor uses VS Code's TextMate grammars. -->
     <Panel>
-    <Grid ColumnDefinitions="240,4,*" IsVisible="{Binding !ShowGitLog}">
+    <Grid ColumnDefinitions="240,4,*" IsVisible="{Binding ShowFilesPane}">
 
         <!-- Explorer -->
         <DockPanel Grid.Column="0" Background="{DynamicResource CyberBgPanel}">
@@ -184,6 +185,11 @@
             </ItemsControl>
         </ScrollViewer>
     </DockPanel>
+    </Panel>
+
+    <!-- DIFF (the third tab): the working tree's changes, or the AI mode's writes, with notes. -->
+    <Panel IsVisible="{Binding ShowDiff}">
+        <views:DiffReviewView DataContext="{Binding Diff}" />
     </Panel>
     </Panel>
 </UserControl>

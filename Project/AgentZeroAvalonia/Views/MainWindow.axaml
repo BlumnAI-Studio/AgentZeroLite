@@ -366,6 +366,9 @@
                                     IsVisible="{Binding CodeDockVisible}" IsEnabled="{Binding Code.GitLog.IsAvailable}"
                                     ToolTip.Tip="{Binding Code.GitLog.TabTip}" ToolTip.ShowOnDisabled="True"
                                     Command="{Binding SelectGitLogTabCommand}" />
+                            <Button Classes="ptab" Classes.selected="{Binding DiffTabSelected}" Content="± DIFF"
+                                    IsVisible="{Binding CodeDockVisible}" ToolTip.Tip="The workspace's changes and the AI mode's writes — review, note, send, revert"
+                                    Command="{Binding SelectDiffTabCommand}" />
                         </StackPanel>
                     </DockPanel>
                     <Panel>

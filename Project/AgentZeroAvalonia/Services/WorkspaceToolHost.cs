@@ -31,6 +31,12 @@ internal sealed class WorkspaceToolHost : IAgentToolbelt
     private static HeadlessWebToolSurface Web => SharedWeb;
     private static readonly MediaPlaybackTracker MediaTracker = new();
 
+    /// <summary>
+    /// What <c>write_file</c> / <c>edit_file</c> changed this run — the code panel's DIFF tab shows it
+    /// ("AI changes") and can put the originals back. One for the host, like the web surface.
+    /// </summary>
+    internal static Agent.Common.Workspace.AiChangeJournal AiChanges { get; } = new();
+
     private readonly Func<IReadOnlyList<ICliGroupInfo>> _groups;
     private readonly Func<string?> _workspaceRoot;
 
@@ -192,6 +198,7 @@ internal sealed class WorkspaceToolHost : IAgentToolbelt
     {
         var root = Root();
         AppLogger.Log($"[AIMODE] write_file root=\"{root ?? "<none>"}\" path=\"{path}\" len={content.Length}");
+        Journal(root, path);
         return Task.FromResult(FileToolCore.WriteFile(root, path, content));
     }
 
@@ -199,7 +206,15 @@ internal sealed class WorkspaceToolHost : IAgentToolbelt
     {
         var root = Root();
         AppLogger.Log($"[AIMODE] edit_file root=\"{root ?? "<none>"}\" path=\"{path}\" replace_all={replaceAll}");
+        Journal(root, path);
         return Task.FromResult(FileToolCore.Edit(root, path, oldString, newString, replaceAll));
+    }
+
+    /// <summary>Remember the file's original before the tool touches it; a journal fault never stops the write.</summary>
+    private static void Journal(string? root, string path)
+    {
+        try { AiChanges.BeforeWrite(root, path); }
+        catch (Exception ex) { AppLogger.Log($"[AiChanges] could not record {path}: {ex.Message}"); }
     }
 
     public Task<string> GrepAsync(string pattern, string? pathFilter, int maxResults, CancellationToken ct)
