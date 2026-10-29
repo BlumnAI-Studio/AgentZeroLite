@@ -392,6 +392,24 @@ crew가 나온다(전에는 화면 규칙으로 떨어져 done이 없었다). Su
 deb/tar.gz·osx pkg). 패키지 157 MB, 업로드 약 30초 + 분석 약 20초, Save에 1.26.4.0만 Validated, 리스팅 What's new와
 기능 두 줄(Hermes) 갱신, 첫 Submit 클릭에 In certification.
 
+### 16차 제출 (1.26.5.0, 2026-10-29)
+
+내용: 에이전트가 나를 기다릴 때 알림(화면 모서리 팝업 + 작업 표시줄 깜빡임, Settings → Notifications), Budget(이번 달
+에이전트 비용 — 모델·프로젝트별, 월 한도, 상태 표시줄), DIFF 탭(작업 트리 변경 검토 — 줄 메모를 터미널/어시스턴트로 보내기,
+AI 모드가 쓴 파일 유지·되돌리기), 명령 팔레트(Ctrl+Shift+P)와 Settings → Shortcuts. Submission 13. GitHub 릴리스
+`v0.26.5`(10/28, `ci-0.26.5` 선행)와 개인정보 처리방침(`doc-v1.53.0` — Budget의 토큰 수, DIFF의 git)은 먼저 나가 있었고,
+Partner Center에는 10/26에 초안만 열린 채 패키지·목록이 비어 있었다 — 그 초안에 이어서 제출했다. 패키지 157 MB, 업로드
++분석 약 75초, Save에 1.26.5.0만 Validated, 첫 Submit 클릭에 In certification.
+
+이번에 확인한 것:
+
+- **목록의 Features 칸은 지난번에 채운 수만큼만 보인다.** 12칸 화면에 13줄을 넣으면 13번째가 조용히 빠진다 — "Add more"로
+  칸을 늘린 뒤 채우고, 저장 후 다시 읽어 `listing.md`와 줄 단위로 대조했다. 목록 스크립트는 이제 `listing.md`에서
+  What's new와 Features를 직접 읽는다(손으로 옮겨 적지 않는다).
+- 세션이 며칠 지나면 Partner Center 로그인이 풀린다(`pw-edge-partner` 프로필, 9333). 운영자가 다시 로그인했다.
+- "게시본"은 개요의 Store presence 줄(Submission 번호)로, 진행 중인 것은 Product update 줄로 본다 — 초안만 열려
+  있고 패키지가 Unchanged면 아직 아무것도 제출되지 않은 것이다.
+
 ## 참고
 
 - 개인 개발자 무료 등록: <https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer>
