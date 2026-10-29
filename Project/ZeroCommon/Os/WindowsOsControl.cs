@@ -72,6 +72,14 @@ public sealed class WindowsOsControl : IOsControl
         var cls = new StringBuilder(256);
         GetClassName(hwnd, cls, cls.Capacity);
         GetWindowRect(hwnd, out var r);
+        var minimized = IsIconic(hwnd);
+        // A minimized window sits at -32000,-32000, which is on no screen. Report the place it
+        // comes back to instead, so "which monitor is Chrome on" has an answer while it is down.
+        if (minimized)
+        {
+            var placement = new WINDOWPLACEMENT { length = Marshal.SizeOf<WINDOWPLACEMENT>() };
+            if (GetWindowPlacement(hwnd, ref placement)) r = placement.rcNormalPosition;
+        }
         GetWindowThreadProcessId(hwnd, out var pid);
         string? proc = null;
         if (names is null || !names.TryGetValue((int)pid, out proc))
@@ -81,7 +89,7 @@ public sealed class WindowsOsControl : IOsControl
             if (names is not null) names[(int)pid] = proc;
         }
         return new OsWindow(hwnd.ToInt64(), title, cls.ToString(), (int)pid, proc!,
-            r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top, IsIconic(hwnd));
+            r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top, minimized);
     }
 
     public bool Activate(long hwnd)
@@ -128,6 +136,55 @@ public sealed class WindowsOsControl : IOsControl
             Thread.Sleep(50);
         }
         return !IsWindow(h) || !IsWindowVisible(h);
+    }
+
+    // ------------------------------------------------------------------ screens
+
+    public IReadOnlyList<OsScreen> ListScreens()
+    {
+        var found = new List<OsScreen>();
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (monitor, _, _, _) =>
+        {
+            var info = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>() };
+            if (GetMonitorInfo(monitor, ref info))
+            {
+                var m = info.rcMonitor;
+                var w = info.rcWork;
+                found.Add(new OsScreen(0, info.szDevice, (info.dwFlags & MONITORINFOF_PRIMARY) != 0,
+                    m.Left, m.Top, m.Right - m.Left, m.Bottom - m.Top,
+                    w.Left, w.Top, w.Right - w.Left, w.Bottom - w.Top));
+            }
+            return true;
+        }, IntPtr.Zero);
+        return OsScreen.Numbered(found);
+    }
+
+    public OsWindow? MoveToScreen(long hwnd, OsScreen screen, bool maximize)
+    {
+        var h = new IntPtr(hwnd);
+        if (h == IntPtr.Zero || !IsWindow(h)) return null;
+
+        // A maximized window ignores SetWindowPos until it is restored; it is maximized again
+        // on the new screen, which is what "show it on the other monitor" means for it.
+        var wasMaximized = IsZoomed(h);
+        if (wasMaximized || IsIconic(h)) ShowWindow(h, SW_RESTORE);
+
+        GetWindowRect(h, out var r);
+        var from = ListScreens().FirstOrDefault(s => s.Contains((r.Left + r.Right) / 2, (r.Top + r.Bottom) / 2));
+        var width = Math.Min(r.Right - r.Left, screen.WorkWidth);
+        var height = Math.Min(r.Bottom - r.Top, screen.WorkHeight);
+        // Same offset inside the work area it came from, clamped so the whole window lands on the new one.
+        var dx = from is null ? 0 : r.Left - from.WorkX;
+        var dy = from is null ? 0 : r.Top - from.WorkY;
+        var x = screen.WorkX + Math.Clamp(dx, 0, Math.Max(0, screen.WorkWidth - width));
+        var y = screen.WorkY + Math.Clamp(dy, 0, Math.Max(0, screen.WorkHeight - height));
+        SetWindowPos(h, IntPtr.Zero, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+        if (wasMaximized || maximize) ShowWindow(h, SW_MAXIMIZE);
+
+        var len = GetWindowTextLength(h);
+        var title = new StringBuilder(len + 1);
+        GetWindowText(h, title, title.Capacity);
+        return Describe(h, title.ToString());
     }
 
     // ------------------------------------------------------------------ capture
@@ -262,6 +319,28 @@ public sealed class WindowsOsControl : IOsControl
     private struct RECT { public int Left, Top, Right, Bottom; }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPLACEMENT
+    {
+        public int length, flags, showCmd;
+        public POINT ptMinPosition, ptMaxPosition;
+        public RECT rcNormalPosition;
+    }
+
+    private delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, IntPtr rect, IntPtr data);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct MONITORINFOEX
+    {
+        public int cbSize;
+        public RECT rcMonitor, rcWork;
+        public uint dwFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string szDevice;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct BITMAPINFOHEADER
     {
         public uint biSize;
@@ -298,7 +377,8 @@ public sealed class WindowsOsControl : IOsControl
         };
     }
 
-    private const int SW_RESTORE = 9;
+    private const int SW_RESTORE = 9, SW_MAXIMIZE = 3;
+    private const uint SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010, MONITORINFOF_PRIMARY = 1;
     private const int SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77, SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
     private const uint SRCCOPY = 0x00CC0020, CAPTUREBLT = 0x40000000;
     private const uint MOUSEEVENTF_LEFTDOWN = 0x02, MOUSEEVENTF_LEFTUP = 0x04, MOUSEEVENTF_RIGHTDOWN = 0x08, MOUSEEVENTF_RIGHTUP = 0x10;
@@ -313,6 +393,11 @@ public sealed class WindowsOsControl : IOsControl
     [DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hwnd);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attr, out int value, int size);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc cb, IntPtr data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFOEX info);
+    [DllImport("user32.dll")] private static extern bool IsZoomed(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern bool GetWindowPlacement(IntPtr hwnd, ref WINDOWPLACEMENT placement);
+    [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);

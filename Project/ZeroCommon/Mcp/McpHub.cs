@@ -32,6 +32,9 @@ public sealed class McpHub : IAsyncDisposable
     /// <summary>Every tool the agent may call right now, named <c>server.tool</c>.</summary>
     public IReadOnlyList<DynamicToolSpec> EnabledToolSpecs() => EnabledToolSpecs(_settings());
 
+    /// <summary>The configured server named <paramref name="name"/>, as the settings file has it now.</summary>
+    public McpServerConfig? FindServer(string name) => _settings().Find(name);
+
     public static IReadOnlyList<DynamicToolSpec> EnabledToolSpecs(McpSettings settings)
     {
         var list = new List<DynamicToolSpec>();

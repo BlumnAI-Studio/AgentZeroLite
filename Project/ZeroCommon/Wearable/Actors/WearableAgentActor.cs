@@ -1,6 +1,7 @@
 using Akka.Actor;
 using Akka.Event;
 using Agent.Common.Actors;
+using Agent.Common.Mcp;
 
 namespace Agent.Common.Wearable.Actors;
 
@@ -71,6 +72,7 @@ public sealed class WearableAgentActor : ReceiveActor
     private readonly Dictionary<IActorRef, string> _sessionByLoop = new();
 
     private AgentLoopBindings? _bindings;
+    private McpBrowser? _browser;
 
     public IActorRef? Files { get; private set; }
     public IActorRef? Web { get; private set; }
@@ -110,6 +112,8 @@ public sealed class WearableAgentActor : ReceiveActor
         Web = Context.ActorOf(_webProps, "web");
         if (_osProps is not null) Os = Context.ActorOf(_osProps, "os");
         _bindings = _bindingsFactory(new WearableToolActors(Files, Web, Os));
+        // The options are built once per host run, so the browser rule is decided once too.
+        _browser = McpBrowser.Find(_bindings.OptionsFactory().DynamicTools);
         base.PreStart();
     }
 
@@ -152,7 +156,7 @@ public sealed class WearableAgentActor : ReceiveActor
     private void Start(Session session, Ask ask, IActorRef replyTo)
     {
         session.Current = (ask, replyTo);
-        session.Loop.Tell(new StartAgentLoop(WearablePromptFrame.Frame(ask.Prompt, ask.ReplyLanguage)), Self);
+        session.Loop.Tell(new StartAgentLoop(WearablePromptFrame.Frame(ask.Prompt, ask.ReplyLanguage, _browser)), Self);
     }
 
     private void OnProgress(AgentLoopProgress progress)

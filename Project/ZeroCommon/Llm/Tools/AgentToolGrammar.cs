@@ -211,6 +211,13 @@ Available tools:
   - os_close_window            close a window by hwnd (like its X button). Use this to close
                                an app — never alt+f4. closed:false = it is asking to save.
                                args: { "hwnd": <int> }
+  - os_list_screens            the monitors: screen 1 is the primary, the rest left to right,
+                               each with its bounds and which side of the primary it is on.
+                               args: { }
+  - os_move_window             move a window to another monitor ("show it on the second
+                               screen"): os_list_windows gives the hwnd and the screen it is
+                               on now, os_list_screens the numbers. Needs no focus.
+                               args: { "hwnd": <int>, "screen": <int 1..>, "maximize": <bool> }
   - os_element_tree            UI Automation tree dump. Use ONLY for inspection.
                                args: { "hwnd": <int>, "depth": <int 1..50>, "search": <string?> }
 
@@ -333,7 +340,7 @@ Hard rules (apply to BOTH modes):
     public const string Gbnf = """
 root         ::= ws "{" ws "\"tool\"" ws ":" ws toolname ws "," ws "\"args\"" ws ":" ws args ws "}" ws
 
-toolname     ::= "\"list_terminals\"" | "\"read_terminal\"" | "\"send_to_terminal\"" | "\"send_key\"" | "\"wait\"" | "\"os_list_windows\"" | "\"os_screenshot\"" | "\"os_activate\"" | "\"os_close_window\"" | "\"os_element_tree\"" | "\"os_mouse_click\"" | "\"os_key_press\"" | "\"os_type_text\"" | "\"os_launch\"" | "\"read_file\"" | "\"write_file\"" | "\"edit_file\"" | "\"grep\"" | "\"list_files\"" | "\"find_files\"" | "\"open_file\"" | "\"stop_media\"" | "\"delete_file\"" | "\"note_save\"" | "\"note_read\"" | "\"web_search\"" | "\"web_open\"" | "\"web_read\"" | "\"done\""
+toolname     ::= "\"list_terminals\"" | "\"read_terminal\"" | "\"send_to_terminal\"" | "\"send_key\"" | "\"wait\"" | "\"os_list_windows\"" | "\"os_screenshot\"" | "\"os_activate\"" | "\"os_close_window\"" | "\"os_list_screens\"" | "\"os_move_window\"" | "\"os_element_tree\"" | "\"os_mouse_click\"" | "\"os_key_press\"" | "\"os_type_text\"" | "\"os_launch\"" | "\"read_file\"" | "\"write_file\"" | "\"edit_file\"" | "\"grep\"" | "\"list_files\"" | "\"find_files\"" | "\"open_file\"" | "\"stop_media\"" | "\"delete_file\"" | "\"note_save\"" | "\"note_read\"" | "\"web_search\"" | "\"web_open\"" | "\"web_read\"" | "\"done\""
 
 args         ::= "{" ws "}" | "{" ws kv (ws "," ws kv)* ws "}"
 kv           ::= string ws ":" ws value
@@ -401,6 +408,8 @@ ws           ::= ([ \t\n\r])*
         "os_screenshot",
         "os_activate",
         "os_close_window",
+        "os_list_screens",
+        "os_move_window",
         "os_element_tree",
         "os_mouse_click",
         "os_key_press",

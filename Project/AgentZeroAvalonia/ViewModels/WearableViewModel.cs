@@ -45,6 +45,7 @@ public partial class WearableViewModel : ObservableObject
     [ObservableProperty] private string _cliProvider = "echo";
     [ObservableProperty] private bool _webToolsEnabled;
     [ObservableProperty] private bool _osControlEnabled;
+    [ObservableProperty] private bool _mcpToolsEnabled;
 
     /// <summary>The built-in, always-writable work folder (alias <c>home</c>): notes, screenshots, new files.</summary>
     public string HomePath => WearableSettings.HomeDirectory;
@@ -109,6 +110,7 @@ public partial class WearableViewModel : ObservableObject
         CliProvider = CliProviders.Contains(s.CliProvider) ? s.CliProvider : "echo";
         WebToolsEnabled = s.WebToolsEnabled;
         OsControlEnabled = s.OsControlEnabled;
+        McpToolsEnabled = s.McpToolsEnabled;
         AnnounceOnConnect = s.AnnounceOnConnect;
         TalkOnConnectMs = s.TalkOnConnectMs;
         Roots.Clear();
@@ -129,6 +131,7 @@ public partial class WearableViewModel : ObservableObject
         s.CliProvider = CliProvider;
         s.WebToolsEnabled = WebToolsEnabled;
         s.OsControlEnabled = OsControlEnabled;
+        s.McpToolsEnabled = McpToolsEnabled;
         s.AnnounceOnConnect = AnnounceOnConnect ?? "";
         if (TalkOnConnectMs >= 0) s.TalkOnConnectMs = (int)TalkOnConnectMs;
         s.AllowedRoots = Roots

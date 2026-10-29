@@ -3,6 +3,7 @@ using Akka.Configuration;
 using Agent.Common.Actors;
 using Agent.Common.Os;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Voice;
 using Agent.Common.Wearable;
 using Agent.Common.Wearable.Actors;
@@ -461,6 +462,16 @@ public static class Program
             : gui is null
                 ? "web: headless only (AgentZeroLite.exe not found for the Browser page)"
                 : $"web: GUI Browser page when running, else headless ({gui})");
+        if (!settings.McpToolsEnabled)
+        {
+            Log("tools", "info", "mcp: off");
+            return;
+        }
+        var mcpTools = WearableBrainFactory.McpToolSpecs(settings);
+        var servers = mcpTools.Select(t => t.Name.Split('.')[0]).Distinct().ToList();
+        Log("tools", "info", mcpTools.Count == 0
+            ? $"mcp: no allowed tools in {McpSettingsStore.FilePath} (Settings → MCP → Load tools)"
+            : $"mcp: {mcpTools.Count} tools from {string.Join(", ", servers)}");
     }
 
     /// <summary>

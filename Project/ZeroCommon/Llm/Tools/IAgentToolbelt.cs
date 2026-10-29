@@ -61,6 +61,14 @@ public interface IAgentToolbelt
     Task<string> OsCloseWindowAsync(long hwnd, CancellationToken ct)
         => Task.FromResult("{\"ok\":false,\"error\":\"os tools not available in this host\"}");
 
+    /// <summary>The monitors: 1 = primary, then left to right. JSON envelope.</summary>
+    Task<string> OsListScreensAsync(CancellationToken ct)
+        => Task.FromResult("{\"ok\":false,\"error\":\"os tools not available in this host\"}");
+
+    /// <summary>Move a window to another monitor (1-based, numbered as <see cref="OsListScreensAsync"/> does).</summary>
+    Task<string> OsMoveWindowAsync(long hwnd, int screen, bool maximize, CancellationToken ct)
+        => Task.FromResult("{\"ok\":false,\"error\":\"os tools not available in this host\"}");
+
     /// <summary>UI Automation tree dump for a window.</summary>
     Task<string> OsElementTreeAsync(long hwnd, int maxDepth, string? search, CancellationToken ct)
         => Task.FromResult("{\"ok\":false,\"error\":\"os tools not available in this host\"}");

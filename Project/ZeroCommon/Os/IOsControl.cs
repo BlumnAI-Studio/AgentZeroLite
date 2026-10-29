@@ -4,6 +4,24 @@ namespace Agent.Common.Os;
 public sealed record OsWindow(long Hwnd, string Title, string ClassName, int Pid, string Process,
     int X, int Y, int Width, int Height, bool Minimized);
 
+/// <summary>
+/// One monitor. <see cref="Index"/> is how a person counts them: 1 is the primary display, the
+/// rest follow left to right (then top to bottom) — "the second screen" is index 2. The bounds and
+/// the work area (without the taskbar) are virtual-screen pixels; <see cref="Device"/> is Windows'
+/// own name (<c>\\.\DISPLAY2</c>), whose number need not match the index.
+/// </summary>
+public sealed record OsScreen(int Index, string Device, bool Primary,
+    int X, int Y, int Width, int Height, int WorkX, int WorkY, int WorkWidth, int WorkHeight)
+{
+    /// <summary>Whether a point (a window's centre) lies on this screen.</summary>
+    public bool Contains(int x, int y) => x >= X && x < X + Width && y >= Y && y < Y + Height;
+
+    /// <summary>Number <paramref name="screens"/> the way <see cref="Index"/> promises: primary first, then by position.</summary>
+    public static IReadOnlyList<OsScreen> Numbered(IEnumerable<OsScreen> screens)
+        => screens.OrderByDescending(s => s.Primary).ThenBy(s => s.X).ThenBy(s => s.Y)
+            .Select((s, i) => s with { Index = i + 1 }).ToList();
+}
+
 /// <summary>A captured image: PNG bytes plus the size the PNG ended up (after any downscale).</summary>
 public sealed record OsCapture(byte[] Png, int Width, int Height, int SourceWidth, int SourceHeight);
 
@@ -53,6 +71,16 @@ public interface IOsControl
     /// </summary>
     bool Close(long hwnd, TimeSpan wait);
 
+    /// <summary>The monitors, numbered as <see cref="OsScreen.Index"/> describes.</summary>
+    IReadOnlyList<OsScreen> ListScreens();
+
+    /// <summary>
+    /// Put a window on <paramref name="screen"/>: same place and size relative to that screen's work
+    /// area (shrunk to fit), maximized there when it was maximized or <paramref name="maximize"/> asks.
+    /// Needs no focus. Returns the window as it ended up, or null when it is gone.
+    /// </summary>
+    OsWindow? MoveToScreen(long hwnd, OsScreen screen, bool maximize);
+
     /// <summary>
     /// A PNG of one window (hwnd &gt; 0) or of the whole virtual desktop (hwnd 0), shrunk to
     /// fit <paramref name="maxWidth"/>×<paramref name="maxHeight"/>. Null when the window is
@@ -87,6 +115,8 @@ public sealed class UnsupportedOsControl : IOsControl
     public bool Activate(long hwnd) => throw No();
     public OsWindow? Foreground() => throw No();
     public bool Close(long hwnd, TimeSpan wait) => throw No();
+    public IReadOnlyList<OsScreen> ListScreens() => throw No();
+    public OsWindow? MoveToScreen(long hwnd, OsScreen screen, bool maximize) => throw No();
     public OsCapture? Capture(long hwnd, bool grayscale, int maxWidth = 1920, int maxHeight = 1080) => throw No();
     public void Click(int x, int y, bool right = false, bool doubleClick = false) => throw No();
     public bool KeyPress(string spec) => throw No();

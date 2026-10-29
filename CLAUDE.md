@@ -165,8 +165,25 @@ loads the bundles the app already installed:
 
 `WearableToolbelt` (M0032, in `ZeroCommon/Wearable/`) is a thin adapter over two tool
 actors — **files** (`FileToolActor`), **web** (`WebToolActor`) and **os** (`OsToolActor`).
-Terminals stay "not available". The **desktop** (os_list_windows / os_screenshot /
-os_activate / os_close_window / os_mouse_click / os_key_press / os_type_text / os_launch) is on only while
+Terminals stay "not available". **MCP tools** reach the watch too: the app-wide Settings → MCP
+servers (`mcp-settings.json`, the GUI's profile — the host inherits `AGENTZEROLITE_PROFILE`) go into
+the loop as `DynamicTools` and `CallDynamicToolAsync` routes to `McpHub.Shared`, allow list and all;
+`WearableSettings.McpToolsEnabled` (Avalonia Wearable page checkbox — WPF keeps the value, shows no box; default on) switches the watch's share off,
+and with MCP tools present the watch's loop gets 12 turns instead of 8 (a browser takes navigate →
+snapshot → click → snapshot). Chrome is driven over CDP: `chrome` = `chrome-devtools-mcp --browser-url
+http://127.0.0.1:9222`, `playwright` = `@playwright/mcp --cdp-endpoint …` (registered, off by default —
+the same browser twice only doubles the verbs); both need a Chrome started with
+`--remote-debugging-port=9222` and a non-default `--user-data-dir` (Chrome refuses the port on the
+default profile). JS-evaluating, upload and trace tools are denied in the allow list. **A
+controllable browser comes first** (`Mcp/McpBrowser`): measured, "크롬 창을 열어줘" became
+`os_launch chrome` — a second Chrome on the default profile, stuck at its profile picker, which no tool
+could read or click — and `web_open` loads the GUI's Browser page, which nobody is looking at. So while an
+allowed server exposes `new_page`/`navigate_page` (or Playwright's `browser_*`), the watch's prompt frame
+names those tools for anything "in a browser", and `WearableToolbelt.OsLaunchAsync` **refuses** a browser
+program with the tool to use instead — unless the server's CDP endpoint (`--browser-url` /
+`--cdp-endpoint`) does not answer `/json/version`, when a visible Chrome beats none. The **desktop** (os_list_windows / os_screenshot /
+os_activate / os_close_window / os_list_screens / os_move_window / os_mouse_click / os_key_press / os_type_text /
+os_launch) is on only while
 `OsControlEnabled` (Wearable page → OS control): `OsToolActor` holds the rules — program
 NAMES only, never a shell or script host, a file only from the allowed folders, screenshots
 saved to `home/screenshots` and returned as a path, every action in
@@ -177,7 +194,14 @@ written). os_element_tree is not ported (UI Automation is WPF-only). Two measure
 code now handles: a background host may not take the foreground, so `Activate` checks it got it
 (ALT-tap workaround) and reports `ok:false` otherwise — two `alt+f4` once reported ok while the keys
 went to another window; and Win11 Notepad titles only its active tab, so `ListWindows` filters by
-title OR process. Closing is `os_close_window` (WM_CLOSE, no focus, no keys). **`home`**
+title OR process. Closing is `os_close_window` (WM_CLOSE, no focus, no keys). Monitors
+(`os_list_screens`, `os_move_window`, catalog grown on purpose like M0032's): screen **1 is the primary,
+then left to right** (`OsScreen.Numbered`) — Windows' `DISPLAYn` numbers need not match what a person
+calls "the second screen" — and every listed window carries the `screen` its centre is on. A minimized
+window reports its restore rectangle (`GetWindowPlacement`), because -32000,-32000 is on no screen and the
+first "which monitor is Chrome on?" got "it is minimized, I can't tell". A move restores a maximized window,
+keeps its offset inside the target's work area (shrunk to fit), maximizes again, and is reported as
+failed when the window's centre is not on the target afterwards. **`home`**
 (`%LOCALAPPDATA%\AgentZeroLite\home`, alias reserved) is always first and writable
 (`WearableSettings.RootsWithHome`, not stored in the settings file); `note_save` / `note_read`
 keep notes in `home/notes`, `delete_file` removes one file in a writable folder. The file side is sandboxed to the **allow-listed

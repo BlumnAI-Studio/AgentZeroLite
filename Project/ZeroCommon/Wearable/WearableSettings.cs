@@ -179,6 +179,14 @@ public sealed class WearableSettings
     /// </summary>
     public bool WebToolsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Whether the watch's agent may call the MCP servers configured for the whole app
+    /// (Settings → MCP, <c>mcp-settings.json</c>) — a browser driven over CDP, a memory server.
+    /// The per-tool allow list there still applies; this only switches the watch's share off.
+    /// Read once at startup, like everything else in this file.
+    /// </summary>
+    public bool McpToolsEnabled { get; set; } = true;
+
     /// <summary>Hard cap on the page text one <c>web_read</c> hands the model.</summary>
     public int WebMaxChars { get; set; } = 6000;
 

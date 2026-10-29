@@ -1,3 +1,5 @@
+using Agent.Common.Mcp;
+
 namespace Agent.Common.Wearable;
 
 /// <summary>
@@ -9,9 +11,11 @@ namespace Agent.Common.Wearable;
 /// </summary>
 public static class WearablePromptFrame
 {
-    public static string Frame(string prompt, string? replyLanguage)
+    public static string Frame(string prompt, string? replyLanguage, McpBrowser? browser = null)
     {
         var language = LanguageName(replyLanguage, prompt);
+        // Only while a controllable browser is configured: the rule names its tools.
+        var browserRule = browser is null ? "" : "\n " + browser.PromptRule();
         return $"""
                 [The answer is shown on a small round smartwatch screen and read aloud.
                  Answer in {language}, in at most three short sentences, plain text only —
@@ -25,7 +29,8 @@ public static class WearablePromptFrame
                  write elsewhere unless the user named that folder. To show an existing
                  note on the PC, open_file home/notes/<title>.txt directly — do not save it
                  again first. To close a program, find it with os_list_windows (filter by
-                 program, e.g. "notepad") and use os_close_window.]
+                 program, e.g. "notepad") and use os_close_window. To show a window on
+                 another monitor, os_list_screens then os_move_window.{browserRule}]
 
                 {prompt}
                 """;

@@ -108,6 +108,25 @@ public sealed class HomeAndOsToolsTests : TestKit, IDisposable
         public bool KeyPress(string spec) { Calls.Add($"key {spec}"); return KeySpec.TryParse(spec, out _, out _); }
         public void TypeText(string text) => Calls.Add($"type {text}");
         public int Launch(string program, string? filePath = null) { Calls.Add($"launch {program} {filePath}"); return 1234; }
+
+        // Primary 1920x1080 at the origin, a second 2560x1440 to its right.
+        public IReadOnlyList<OsScreen> ListScreens() => OsScreen.Numbered(
+        [
+            new OsScreen(0, @"\\.\DISPLAY2", false, 1920, 0, 2560, 1440, 1920, 0, 2560, 1400),
+            new OsScreen(0, @"\\.\DISPLAY1", true, 0, 0, 1920, 1080, 0, 0, 1920, 1040),
+        ]);
+
+        /// <summary>When true the window "pulls itself back" and stays where it was.</summary>
+        public bool Stubborn { get; set; }
+
+        public OsWindow? MoveToScreen(long hwnd, OsScreen screen, bool maximize)
+        {
+            Calls.Add($"move {hwnd} -> {screen.Index}{(maximize ? " max" : "")}");
+            if (hwnd != 42) return null;
+            return Stubborn
+                ? new OsWindow(42, "제목 없음 - 메모장", "Notepad", 7, "notepad", 10, 20, 800, 600, false)
+                : new OsWindow(42, "제목 없음 - 메모장", "Notepad", 7, "notepad", screen.WorkX + 10, screen.WorkY + 20, 800, 600, false);
+        }
     }
 
     private (IActorRef Actor, FakeOs Os, string AuditDir) OsActor(bool enabled = true)
@@ -208,6 +227,49 @@ public sealed class HomeAndOsToolsTests : TestKit, IDisposable
         Assert.False(stuck.GetProperty("ok").GetBoolean());
         Assert.False(stuck.GetProperty("closed").GetBoolean());
         Assert.Equal(["close 42", "close 43"], os.Calls);
+    }
+
+    [Fact]
+    public void Screens_are_numbered_primary_first_and_windows_say_which_screen_they_are_on()
+    {
+        var (actor, _, _) = OsActor();
+        var screens = AskOs(actor, new OsToolActor.ListScreens());
+        Assert.Equal(2, screens.GetProperty("count").GetInt32());
+        var first = screens.GetProperty("screens")[0];
+        Assert.Equal(1, first.GetProperty("screen").GetInt32());
+        Assert.True(first.GetProperty("primary").GetBoolean());
+        Assert.Equal("right of primary", screens.GetProperty("screens")[1].GetProperty("side").GetString());
+
+        var windows = AskOs(actor, new OsToolActor.ListWindows(null));
+        Assert.Equal(1, windows.GetProperty("windows")[0].GetProperty("screen").GetInt32());
+    }
+
+    [Fact]
+    public void A_window_moves_to_the_second_screen_and_the_reply_says_where_it_landed()
+    {
+        var (actor, os, _) = OsActor();
+        var r = AskOs(actor, new OsToolActor.MoveWindow(42, 2, true));
+        Assert.True(r.GetProperty("ok").GetBoolean());
+        Assert.Equal(2, r.GetProperty("screen").GetInt32());
+        Assert.Equal(1930, r.GetProperty("x").GetInt32());
+        Assert.Equal(["move 42 -> 2 max"], os.Calls);
+    }
+
+    [Fact]
+    public void A_move_to_a_screen_that_does_not_exist_or_that_did_not_happen_is_a_failure()
+    {
+        var (actor, os, _) = OsActor();
+        var none = AskOs(actor, new OsToolActor.MoveWindow(42, 3, false));
+        Assert.False(none.GetProperty("ok").GetBoolean());
+        Assert.Contains("this PC has 2", none.GetProperty("error").GetString());
+        Assert.Empty(os.Calls);
+
+        Assert.False(AskOs(actor, new OsToolActor.MoveWindow(99, 2, false)).GetProperty("ok").GetBoolean());
+
+        os.Stubborn = true;
+        var stuck = AskOs(actor, new OsToolActor.MoveWindow(42, 2, false));
+        Assert.False(stuck.GetProperty("ok").GetBoolean());
+        Assert.Contains("screen 1", stuck.GetProperty("error").GetString());
     }
 
     [Fact]

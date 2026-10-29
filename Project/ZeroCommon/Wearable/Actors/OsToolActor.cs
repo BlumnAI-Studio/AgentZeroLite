@@ -31,6 +31,8 @@ public sealed partial class OsToolActor : ReceiveActor
     public sealed record TypeText(string Text);
     public sealed record Launch(string Program, string? File);
     public sealed record CloseWindow(long Hwnd);
+    public sealed record ListScreens;
+    public sealed record MoveWindow(long Hwnd, int Screen, bool Maximize);
 
     public const string ScreenshotsFolder = "screenshots";
 
@@ -59,6 +61,8 @@ public sealed partial class OsToolActor : ReceiveActor
         Receive<Screenshot>(m => Run("os_screenshot", m, () => ScreenshotJson(m.Hwnd, m.Grayscale)));
         Receive<Activate>(m => Run("os_activate", m, () => ActivateJson(m.Hwnd)));
         Receive<CloseWindow>(m => Run("os_close_window", m, () => CloseJson(m.Hwnd)));
+        Receive<ListScreens>(m => Run("os_list_screens", m, ListScreensJson));
+        Receive<MoveWindow>(m => Run("os_move_window", m, () => MoveJson(m.Hwnd, m.Screen, m.Maximize)));
         Receive<Click>(m => Run("os_mouse_click", m, () =>
         {
             _os.Click(m.X, m.Y, m.Right, m.Double);
@@ -107,6 +111,7 @@ public sealed partial class OsToolActor : ReceiveActor
     private string ListWindowsJson(string? filter)
     {
         var windows = _os.ListWindows(string.IsNullOrWhiteSpace(filter) ? null : filter);
+        var screens = _os.ListScreens();
         return Ok(new
         {
             ok = true,
@@ -115,8 +120,60 @@ public sealed partial class OsToolActor : ReceiveActor
             {
                 hwnd = w.Hwnd, title = w.Title, process = w.Process,
                 x = w.X, y = w.Y, w = w.Width, h = w.Height, minimized = w.Minimized,
+                screen = ScreenOf(screens, w),
             }),
         });
+    }
+
+    private string ListScreensJson()
+    {
+        var screens = _os.ListScreens();
+        return Ok(new
+        {
+            ok = true,
+            count = screens.Count,
+            note = "screen 1 is the primary display; the rest are numbered left to right",
+            screens = screens.Select(s => new
+            {
+                screen = s.Index, primary = s.Primary, device = s.Device,
+                x = s.X, y = s.Y, w = s.Width, h = s.Height,
+                side = Side(screens, s),
+            }),
+        });
+    }
+
+    private string MoveJson(long hwnd, int screen, bool maximize)
+    {
+        var screens = _os.ListScreens();
+        var target = screens.FirstOrDefault(s => s.Index == screen);
+        if (target is null)
+            return ToolJson.Fail(screens.Count == 1
+                ? "this PC has one screen only - there is no other screen to move it to"
+                : $"no screen {screen}: this PC has {screens.Count} (1 = primary, then left to right; os_list_screens)");
+        var moved = _os.MoveToScreen(hwnd, target, maximize);
+        if (moved is null) return ToolJson.Fail($"window {hwnd} is gone - os_list_windows for its current hwnd");
+        // Report where it is, not where it was sent: a program can pull itself back.
+        var landed = ScreenOf(screens, moved);
+        if (landed != screen)
+            return ToolJson.Fail($"window {hwnd} did not move: it is on screen {landed} (Windows refused, or the program pulled it back)");
+        return Ok(new
+        {
+            ok = true, hwnd, title = moved.Title, screen, maximize,
+            x = moved.X, y = moved.Y, w = moved.Width, h = moved.Height,
+        });
+    }
+
+    /// <summary>The screen a window's centre is on, or 0 when it is off every screen.</summary>
+    private static int ScreenOf(IReadOnlyList<OsScreen> screens, OsWindow w)
+        => screens.FirstOrDefault(s => s.Contains(w.X + w.Width / 2, w.Y + w.Height / 2))?.Index ?? 0;
+
+    /// <summary>Where a screen sits against the primary - the words a person uses for "the other monitor".</summary>
+    private static string Side(IReadOnlyList<OsScreen> screens, OsScreen s)
+    {
+        if (s.Primary || screens.FirstOrDefault(p => p.Primary) is not { } p) return "primary";
+        if (s.X >= p.X + p.Width) return "right of primary";
+        if (s.X + s.Width <= p.X) return "left of primary";
+        return s.Y < p.Y ? "above primary" : "below primary";
     }
 
     private string ActivateJson(long hwnd)

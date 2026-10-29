@@ -301,6 +301,17 @@ public sealed class LocalAgentLoop : IAgentLoop
                 return await _host.OsCloseWindowAsync(hwnd, ct);
             }
 
+            case "os_list_screens":
+                return await _host.OsListScreensAsync(ct);
+
+            case "os_move_window":
+            {
+                var hwnd = ReadLong(call.Args, "hwnd", 0);
+                var screen = ReadInt(call.Args, "screen", 0);
+                var maximize = ReadBool(call.Args, "maximize", false);
+                return await _host.OsMoveWindowAsync(hwnd, screen, maximize, ct);
+            }
+
             case "os_type_text":
             {
                 var text = ReadString(call.Args, "text", "");

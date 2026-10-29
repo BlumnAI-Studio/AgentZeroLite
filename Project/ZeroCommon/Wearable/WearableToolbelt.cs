@@ -1,5 +1,7 @@
+using System.Text.Json.Nodes;
 using Akka.Actor;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Wearable.Actors;
 
 namespace Agent.Common.Wearable;
@@ -11,7 +13,8 @@ namespace Agent.Common.Wearable;
 /// thin adapter: every file call is an <c>Ask</c> to <see cref="FileToolActor"/>, every web
 /// call an <c>Ask</c> to <see cref="WebToolActor"/>, every desktop call (windows, screenshot,
 /// mouse, keyboard, launch) an <c>Ask</c> to <see cref="OsToolActor"/> — which answers "turned
-/// off" unless the Wearable page allows it — and the terminal methods are answered "not
+/// off" unless the Wearable page allows it — MCP tools go to <see cref="McpHub"/> when the
+/// host hands one in, and the terminal methods are answered "not
 /// available". The tool actors own the policy (allow-listed folders with the built-in
 /// <c>home</c>, openable file types, GUI-or-headless browsing, which programs may start);
 /// this class owns nothing but the routing.
@@ -27,15 +30,18 @@ public sealed class WearableToolbelt : IAgentToolbelt
     private readonly IActorRef _files;
     private readonly IActorRef _web;
     private readonly IActorRef? _os;
+    private readonly McpHub? _mcp;
+    private McpBrowser? _browser;
 
-    public WearableToolbelt(IActorRef files, IActorRef web, IActorRef? os = null)
+    public WearableToolbelt(IActorRef files, IActorRef web, IActorRef? os = null, McpHub? mcp = null)
     {
         _files = files;
         _web = web;
         _os = os;
+        _mcp = mcp;
     }
 
-    public WearableToolbelt(WearableToolActors tools) : this(tools.Files, tools.Web, tools.Os) { }
+    public WearableToolbelt(WearableToolActors tools, McpHub? mcp = null) : this(tools.Files, tools.Web, tools.Os, mcp) { }
 
     // ── Terminal surface: deliberately absent ────────────────────────────────
     // Returning a truthful envelope (rather than throwing) keeps the model in Mode 1,
@@ -102,6 +108,12 @@ public sealed class WearableToolbelt : IAgentToolbelt
     public Task<string> OsCloseWindowAsync(long hwnd, CancellationToken ct)
         => AskOs(new OsToolActor.CloseWindow(hwnd), ct);
 
+    public Task<string> OsListScreensAsync(CancellationToken ct)
+        => AskOs(new OsToolActor.ListScreens(), ct);
+
+    public Task<string> OsMoveWindowAsync(long hwnd, int screen, bool maximize, CancellationToken ct)
+        => AskOs(new OsToolActor.MoveWindow(hwnd, screen, maximize), ct);
+
     public Task<string> OsMouseClickAsync(int x, int y, bool right, bool dbl, CancellationToken ct)
         => AskOs(new OsToolActor.Click(x, y, right, dbl), ct);
 
@@ -111,8 +123,34 @@ public sealed class WearableToolbelt : IAgentToolbelt
     public Task<string> OsTypeTextAsync(string text, CancellationToken ct)
         => AskOs(new OsToolActor.TypeText(text), ct);
 
-    public Task<string> OsLaunchAsync(string program, string? file, CancellationToken ct)
-        => AskOs(new OsToolActor.Launch(program, file), ct);
+    public async Task<string> OsLaunchAsync(string program, string? file, CancellationToken ct)
+    {
+        if (await RefuseBrowserLaunchAsync(program, ct) is { } refusal) return refusal;
+        return await AskOs(new OsToolActor.Launch(program, file), ct);
+    }
+
+    /// <summary>
+    /// A browser started with os_launch is not the one the MCP server drives: measured, "크롬 창을
+    /// 열어줘" became <c>os_launch chrome</c>, a second Chrome on the default profile stopped at its
+    /// profile picker, and nothing could read or click it. While the MCP browser answers, the launch
+    /// is refused with the tool to use instead — a prompt rule alone is a suggestion a small model
+    /// weighs against the words "open Chrome". When its CDP endpoint is down the launch goes ahead:
+    /// a Chrome the person can see beats none.
+    /// </summary>
+    private async Task<string?> RefuseBrowserLaunchAsync(string program, CancellationToken ct)
+    {
+        if (_mcp is null || !McpBrowser.IsBrowserProgram(program)) return null;
+        _browser ??= McpBrowser.Find(_mcp.EnabledToolSpecs());
+        if (_browser is not { } browser) return null;
+
+        var endpoint = _mcp.FindServer(browser.Server) is { } server ? McpBrowser.CdpEndpoint(server) : null;
+        if (endpoint is not null && !await McpBrowser.CdpAnswersAsync(endpoint, ct)) return null;
+
+        var use = browser.NewTab ?? browser.Navigate;
+        return ToolJson.Fail($"not launched: a browser started this way cannot be controlled. The connected Chrome is " +
+                             $"driven through {browser.Server}.* — open the page with {use}" +
+                             (browser.Front is { } front ? $", and bring it forward with {front} (bringToFront true)" : "") + ".");
+    }
 
     // os_element_tree stays on the interface default: UI Automation is not ported yet.
 
@@ -126,6 +164,13 @@ public sealed class WearableToolbelt : IAgentToolbelt
 
     public Task<string> WebReadAsync(int tab, string? mode, string? find, int maxChars, CancellationToken ct)
         => AskWeb(new WebToolActor.Read(tab, mode, find, maxChars), ct);
+
+    // ── MCP servers (Settings → MCP): McpHub holds the allow list and the connections ──
+
+    public Task<string> CallDynamicToolAsync(string name, JsonObject args, CancellationToken ct)
+        => _mcp is null
+            ? Task.FromResult(ToolJson.Fail("MCP tools are turned off for the watch (Wearable page)"))
+            : _mcp.CallAsync(name, args, ct);
 
     private Task<string> AskFiles(object message, CancellationToken ct) => Ask(_files, message, FileTimeout, ct);
     private Task<string> AskWeb(object message, CancellationToken ct) => Ask(_web, message, WebTimeout, ct);

@@ -2,6 +2,7 @@ using Akka.Actor;
 using Agent.Common.Actors;
 using Agent.Common.Llm;
 using Agent.Common.Llm.Tools;
+using Agent.Common.Mcp;
 using Agent.Common.Wearable;
 using Agent.Common.Wearable.Actors;
 using ZeroWearable.Chat;
@@ -125,7 +126,8 @@ public static class WearableBrainFactory
             }
 
             var runtime = LlmSettingsStore.Load();
-            var options = LoopOptions(Math.Max(256, runtime.AgentToolLoopMaxTokens), runtime.Temperature);
+            var options = LoopOptions(Math.Max(256, runtime.AgentToolLoopMaxTokens), runtime.Temperature, settings);
+            var mcp = McpFor(settings);
             var template = entry.ChatFamily.Equals("llama31", StringComparison.OrdinalIgnoreCase)
                 ? ChatTemplates.Llama31
                 : ChatTemplates.Gemma;
@@ -145,7 +147,7 @@ public static class WearableBrainFactory
                 Name: "agent:" + Short(entry.Id),
                 Status: status,
                 Bindings: tools => new AgentLoopBindings(
-                    ToolbeltFactory: () => new WearableToolbelt(tools),
+                    ToolbeltFactory: () => new WearableToolbelt(tools, mcp),
                     OptionsFactory: () => options,
                     // `opts` (not `options`) carries the actor's progress callbacks.
                     AgentLoopFactory: (opts, host) =>
@@ -172,13 +174,14 @@ public static class WearableBrainFactory
                 return null;
             }
 
-            var options = LoopOptions(Math.Max(256, runtime.External.MaxTokens), runtime.Temperature);
+            var options = LoopOptions(Math.Max(256, runtime.External.MaxTokens), runtime.Temperature, settings);
+            var mcp = McpFor(settings);
             status = $"agent:{Short(model)} at {provider.ProviderName}";
             return new WearableAgentPlan(
                 Name: "agent:" + Short(model),
                 Status: status,
                 Bindings: tools => new AgentLoopBindings(
-                    ToolbeltFactory: () => new WearableToolbelt(tools),
+                    ToolbeltFactory: () => new WearableToolbelt(tools, mcp),
                     OptionsFactory: () => options,
                     AgentLoopFactory: (opts, host) => new ExternalAgentLoop(provider, model, host, opts)),
                 Owned: null);
@@ -188,14 +191,32 @@ public static class WearableBrainFactory
     /// <summary>
     /// The watch asks one question and wants one answer, so the loop is kept short: a
     /// runaway relay would be minutes of silence on a screen with no scrollback. Eight
-    /// turns is list → read → done with room for one web search → open → done.
+    /// turns is list → read → done with room for one web search → open → done. MCP tools
+    /// add four: driving a browser is navigate → snapshot → click → snapshot before the
+    /// answer, and eight ran out mid-page.
     /// </summary>
-    private static AgentLoopOptions LoopOptions(int maxTokensPerTurn, float temperature) => new()
+    private static AgentLoopOptions LoopOptions(int maxTokensPerTurn, float temperature, WearableSettings settings)
     {
-        MaxIterations = 8,
-        MaxTokensPerTurn = maxTokensPerTurn,
-        Temperature = temperature,
-    };
+        var mcpTools = McpToolSpecs(settings);
+        return new AgentLoopOptions
+        {
+            MaxIterations = mcpTools.Count > 0 ? 12 : 8,
+            MaxTokensPerTurn = maxTokensPerTurn,
+            Temperature = temperature,
+            DynamicTools = mcpTools,
+        };
+    }
+
+    /// <summary>
+    /// The MCP tools the watch may call: the app-wide allow list (Settings → MCP) read from the
+    /// tool lists cached at "Load tools", so starting the host never waits on a server. The
+    /// GUI started this process with its profile in the environment, so this is the same
+    /// <c>mcp-settings.json</c> the GUI shows.
+    /// </summary>
+    public static IReadOnlyList<DynamicToolSpec> McpToolSpecs(WearableSettings settings)
+        => settings.McpToolsEnabled ? McpHub.Shared.EnabledToolSpecs() : [];
+
+    private static McpHub? McpFor(WearableSettings settings) => settings.McpToolsEnabled ? McpHub.Shared : null;
 
     /// <summary>Drops the vendor prefix ("google/gemma-4-e4b" → "gemma-4-e4b") — the device
     /// keeps 24 bytes for the status line and the name is the informative half.</summary>
